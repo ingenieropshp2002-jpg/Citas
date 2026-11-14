@@ -79,3 +79,16 @@ export async function sendRemindersNow() {
   revalidatePath('/panel/marketing');
   return { ok: true, sent: n };
 }
+
+/** Modo manual de WhatsApp: marca que el recordatorio ya se envió desde el WhatsApp del negocio. */
+export async function markReminderSent(id: string) {
+  const { business } = await requireBusiness('agenda');
+  await db.appointment.updateMany({ where: { id, businessId: business.id }, data: { reminderSent: true } });
+  revalidatePath('/panel/recordatorios');
+}
+/** El cliente confirmó (por WhatsApp o llamada). */
+export async function markClientConfirmed(id: string, value: boolean) {
+  const { business } = await requireBusiness('agenda');
+  await db.appointment.updateMany({ where: { id, businessId: business.id }, data: { clientConfirmedAt: value ? new Date() : null } });
+  revalidatePath('/panel/recordatorios'); revalidatePath('/panel/agenda');
+}

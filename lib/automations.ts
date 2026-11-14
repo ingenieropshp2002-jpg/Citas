@@ -1,12 +1,13 @@
 import { db } from './db';
 import { bogota, fechaLarga, hm, time12 } from './format';
-import { fillVars, sendWhatsapp } from './notify';
+import { fillVars, sendWhatsapp, waConfigured } from './notify';
 import { subscriptionState } from './subscription';
 
 const appUrl = () => process.env.APP_URL || 'http://localhost:3000';
 
 /** Recordatorios de citas por WhatsApp, pidiendo confirmación (responder 1 para confirmar, 2 para reprogramar). */
 export async function sendReminders(businessId: string) {
+  if (!waConfigured()) return 0; // modo manual: se envían desde /panel/recordatorios
   const b = await db.business.findUniqueOrThrow({ where: { id: businessId } });
   const until = new Date(Date.now() + b.reminderHours * 3600000);
   const list = await db.appointment.findMany({ where: { businessId, reminderSent: false, status: { in: ['CONFIRMADA', 'PENDIENTE'] }, start: { gt: new Date(), lte: until } }, include: { customer: true, staff: true, services: { include: { service: true } } } });
@@ -26,6 +27,7 @@ export async function sendReminders(businessId: string) {
 export async function sendBirthdays(businessId: string, force = false) {
   const b = await db.business.findUniqueOrThrow({ where: { id: businessId } });
   const now = bogota(new Date());
+  if (!waConfigured()) return 0;
   if (!b.birthdayEnabled || (!force && now.h < 9)) return 0;
   const list = (await db.customer.findMany({ where: { businessId, birthday: { not: null }, phone: { not: null } } }))
     .filter(c => { const d = bogota(c.birthday!); return d.m === now.m && d.d === now.d && c.birthdayGreetedYear !== now.y; });
