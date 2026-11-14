@@ -1,0 +1,489 @@
+// Registro Citas – modelo de datos
+// PostgreSQL (Supabase). Las tablas viven en el esquema "citas".
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters", "queryCompiler"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ───────────── Usuarios y acceso ─────────────
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String?  @unique
+  phone        String?  @unique
+  passwordHash String?
+  googleId     String?  @unique
+  role         String   @default("CLIENT") // CLIENT | OWNER | STAFF | ADMIN
+  avatar       String?
+  createdAt    DateTime @default(now())
+  businesses   Business[] @relation("owner")
+  staffProfile Staff?
+  customers    Customer[]
+  reviews      Review[]
+}
+
+model OtpCode {
+  id        String   @id @default(cuid())
+  phone     String
+  codeHash  String
+  expiresAt DateTime
+  attempts  Int      @default(0)
+  createdAt DateTime @default(now())
+  @@index([phone])
+}
+
+// ───────────── Negocio ─────────────
+model Business {
+  id                String   @id @default(cuid())
+  slug              String   @unique
+  name              String
+  category          String   // PELUQUERIA | BARBERIA | SPA | UNAS
+  tagline           String?
+  description       String
+  city              String
+  zone              String?
+  address           String
+  lat               Float?
+  lng               Float?
+  phone             String?
+  whatsapp          String?
+  instagram         String?
+  images            String   @default("[]") // JSON: string[]
+  logo              String?
+  rating            Float    @default(0)
+  reviewCount       Int      @default(0)
+  openingHours      String   @default("{}") // JSON: { "1": ["07:00","20:00"], ... } 0=Domingo
+  slotStepMin       Int      @default(15)
+  cancellationHours Int      @default(24)
+  depositPercent    Int      @default(30)
+  requireDeposit    Boolean  @default(true)
+  reminderHours     Int      @default(24)
+  notifyWhatsapp    Boolean  @default(true)
+  notifyEmail       Boolean  @default(true)
+  plan              String   @default("PRO") // BASICO | PRO | PREMIUM
+  active            Boolean  @default(true)
+  ownerId           String
+  owner             User     @relation("owner", fields: [ownerId], references: [id])
+  // Datos fiscales (emisor)
+  legalName         String?
+  docType           String   @default("31") // 31 = NIT, 13 = CC
+  nit               String?
+  dv                String?
+  taxRegime         String   @default("48") // 48 responsable IVA | 49 no responsable
+  taxResponsibilities String @default("R-99-PN") // O-13, O-15, O-23, O-47, R-99-PN
+  ciiu              String?
+  department        String?  @default("Bogotá D.C.")
+  departmentCode    String?  @default("11")
+  municipality      String?  @default("Bogotá D.C.")
+  municipalityCode  String?  @default("11001")
+  fiscalEmail       String?
+  createdAt         DateTime @default(now())
+
+  staff        Staff[]
+  services     Service[]
+  customers    Customer[]
+  appointments Appointment[]
+  blocked      BlockedTime[]
+  reviews      Review[]
+  products     Product[]
+  movements    StockMovement[]
+  suppliers    Supplier[]
+  sales        Sale[]
+  payments     Payment[]
+  cashSessions CashSession[]
+  resolutions  NumberingResolution[]
+  documents    ElectronicDocument[]
+  dianConfig   DianConfig?
+  campaigns    Campaign[]
+  coupons      Coupon[]
+}
+
+model Staff {
+  id            String   @id @default(cuid())
+  businessId    String
+  business      Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  userId        String?  @unique
+  user          User?    @relation(fields: [userId], references: [id])
+  name          String
+  title         String
+  photo         String?
+  color         String   @default("#0d2538")
+  commissionPct Int      @default(40)
+  permissions   String   @default("[\"agenda\"]") // JSON: agenda, clientes, caja, inventario, reportes, configuracion
+  workHours     String   @default("{}") // JSON igual a openingHours
+  daysOff       String   @default("[]") // JSON: ["2025-12-24"]
+  rating        Float    @default(5)
+  active        Boolean  @default(true)
+  services      ServiceStaff[]
+  appointments  Appointment[]
+  blocked       BlockedTime[]
+  saleItems     SaleItem[]
+  reviews       Review[]
+}
+
+model Service {
+  id          String   @id @default(cuid())
+  businessId  String
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  category    String
+  tag         String?
+  image       String?
+  durationMin Int
+  price       Int      // COP, IVA incluido
+  taxRate     Int      @default(19) // % IVA: 19, 5, 0
+  popular     Boolean  @default(false)
+  active      Boolean  @default(true)
+  staff       ServiceStaff[]
+  supplies    ServiceSupply[]
+  appointmentServices AppointmentService[]
+  saleItems   SaleItem[]
+}
+
+model ServiceStaff {
+  serviceId String
+  staffId   String
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  staff     Staff   @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  @@id([serviceId, staffId])
+}
+
+// Consumo de insumos por servicio (descarga de inventario al completar la cita)
+model ServiceSupply {
+  id        String  @id @default(cuid())
+  serviceId String
+  productId String
+  quantity  Float
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+// ───────────── Clientes y citas ─────────────
+model Customer {
+  id          String   @id @default(cuid())
+  businessId  String
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
+  name        String
+  phone       String?
+  email       String?
+  docType     String   @default("13") // 13 CC, 31 NIT, 22 CE, 41 Pasaporte, 222222222222 consumidor final
+  docNumber   String?
+  birthday    DateTime?
+  notes       String?
+  preferences String?
+  tags        String   @default("[]")
+  totalSpent  Int      @default(0)
+  visits      Int      @default(0)
+  lastVisit   DateTime?
+  createdAt   DateTime @default(now())
+  appointments Appointment[]
+  sales       Sale[]
+  @@index([businessId, phone])
+}
+
+model Appointment {
+  id            String   @id @default(cuid())
+  code          String   @unique
+  businessId    String
+  business      Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  customerId    String
+  customer      Customer @relation(fields: [customerId], references: [id])
+  staffId       String
+  staff         Staff    @relation(fields: [staffId], references: [id])
+  start         DateTime
+  end           DateTime
+  status        String   @default("PENDIENTE") // PENDIENTE | CONFIRMADA | EN_SERVICIO | COMPLETADA | NO_ASISTIO | CANCELADA
+  total         Int
+  depositAmount Int      @default(0)
+  depositStatus String   @default("NO_APLICA") // NO_APLICA | PENDIENTE | PAGADO | REEMBOLSADO
+  paymentMethod String?
+  notes         String?
+  source        String   @default("ONLINE")
+  reminderSent  Boolean  @default(false)
+  saleId        String?  @unique
+  sale          Sale?    @relation(fields: [saleId], references: [id])
+  createdAt     DateTime @default(now())
+  services      AppointmentService[]
+  payments      Payment[]
+  review        Review?
+  @@index([businessId, start])
+}
+
+model AppointmentService {
+  id            String      @id @default(cuid())
+  appointmentId String
+  serviceId     String
+  price         Int
+  durationMin   Int
+  appointment   Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  service       Service     @relation(fields: [serviceId], references: [id])
+}
+
+model BlockedTime {
+  id         String   @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  staffId    String?
+  staff      Staff?   @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  start      DateTime
+  end        DateTime
+  reason     String?
+}
+
+model Review {
+  id            String       @id @default(cuid())
+  businessId    String
+  business      Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  appointmentId String?      @unique
+  appointment   Appointment? @relation(fields: [appointmentId], references: [id])
+  userId        String?
+  user          User?        @relation(fields: [userId], references: [id])
+  staffId       String?
+  staff         Staff?       @relation(fields: [staffId], references: [id])
+  authorName    String
+  rating        Int
+  comment       String
+  serviceName   String?
+  createdAt     DateTime     @default(now())
+}
+
+// ───────────── Inventario ─────────────
+model Product {
+  id         String   @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  sku        String
+  barcode    String?
+  name       String
+  brand      String?
+  category   String
+  kind       String   @default("VENTA") // VENTA | INSUMO | AMBOS
+  unit       String   @default("UND")   // UND, ML, GR (código UNECE en factura: 94 / MLT / GRM)
+  cost       Int      @default(0)       // costo promedio ponderado
+  price      Int      @default(0)       // precio venta IVA incluido
+  taxRate    Int      @default(19)
+  stock      Float    @default(0)
+  minStock   Float    @default(0)
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  movements  StockMovement[]
+  supplies   ServiceSupply[]
+  saleItems  SaleItem[]
+  @@unique([businessId, sku])
+}
+
+model Supplier {
+  id         String   @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name       String
+  nit        String?
+  phone      String?
+  email      String?
+  movements  StockMovement[]
+}
+
+model StockMovement {
+  id         String    @id @default(cuid())
+  businessId String
+  business   Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  productId  String
+  product    Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  type       String    // ENTRADA | SALIDA | AJUSTE | VENTA | CONSUMO | DEVOLUCION
+  quantity   Float     // positivo entra, negativo sale
+  unitCost   Int       @default(0)
+  balance    Float     // saldo después del movimiento (kárdex)
+  supplierId String?
+  supplier   Supplier? @relation(fields: [supplierId], references: [id])
+  reference  String?   // n.º factura proveedor, venta, cita
+  note       String?
+  userName   String?
+  createdAt  DateTime  @default(now())
+  @@index([productId, createdAt])
+}
+
+// ───────────── Caja / POS ─────────────
+model CashSession {
+  id             String    @id @default(cuid())
+  businessId     String
+  business       Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  terminal       String    @default("CAJA-01") // identificación de la caja (obligatoria en documento POS)
+  cashierName    String
+  openedAt       DateTime  @default(now())
+  closedAt       DateTime?
+  openingAmount  Int
+  expectedCash   Int?
+  countedCash    Int?
+  difference     Int?
+  notes          String?
+  sales          Sale[]
+}
+
+model Sale {
+  id            String    @id @default(cuid())
+  businessId    String
+  business      Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  number        Int
+  customerId    String?
+  customer      Customer? @relation(fields: [customerId], references: [id])
+  cashSessionId String?
+  cashSession   CashSession? @relation(fields: [cashSessionId], references: [id])
+  cashierName   String?
+  subtotal      Int       // base gravable (sin IVA)
+  discount      Int       @default(0)
+  taxTotal      Int       @default(0)
+  tip           Int       @default(0) // propina voluntaria: no hace parte de la base del IVA
+  total         Int
+  couponCode    String?
+  status        String    @default("PAGADA") // PAGADA | ANULADA
+  createdAt     DateTime  @default(now())
+  items         SaleItem[]
+  payments      Payment[]
+  documents     ElectronicDocument[]
+  appointment   Appointment?
+  @@unique([businessId, number])
+}
+
+model SaleItem {
+  id          String   @id @default(cuid())
+  saleId      String
+  sale        Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  kind        String   // SERVICIO | PRODUCTO
+  serviceId   String?
+  service     Service? @relation(fields: [serviceId], references: [id])
+  productId   String?
+  product     Product? @relation(fields: [productId], references: [id])
+  staffId     String?
+  staff       Staff?   @relation(fields: [staffId], references: [id])
+  description String
+  code        String
+  unit        String   @default("94")
+  quantity    Float
+  unitPrice   Int      // precio unitario IVA incluido
+  discount    Int      @default(0)
+  taxRate     Int
+  base        Int      // base gravable de la línea
+  taxAmount   Int
+  total       Int
+  commission  Int      @default(0)
+}
+
+model Payment {
+  id            String       @id @default(cuid())
+  businessId    String
+  business      Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  saleId        String?
+  sale          Sale?        @relation(fields: [saleId], references: [id])
+  appointmentId String?
+  appointment   Appointment? @relation(fields: [appointmentId], references: [id])
+  method        String       // EFECTIVO | TARJETA | NEQUI | PSE | DAVIPLATA | TRANSFERENCIA
+  provider      String       @default("MANUAL") // MANUAL | WOMPI | MERCADOPAGO | SIMULADO
+  providerRef   String?
+  amount        Int
+  received      Int?         // efectivo recibido
+  change        Int?
+  status        String       @default("APROBADO") // PENDIENTE | APROBADO | RECHAZADO | REEMBOLSADO
+  createdAt     DateTime     @default(now())
+}
+
+// ───────────── Facturación electrónica DIAN ─────────────
+model NumberingResolution {
+  id               String   @id @default(cuid())
+  businessId       String
+  business         Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  docType          String   // FE (factura electrónica) | POS (documento equivalente POS) | NC (nota crédito)
+  resolutionNumber String
+  resolutionDate   DateTime
+  prefix           String
+  rangeFrom        Int
+  rangeTo          Int
+  current          Int      // último número usado
+  validFrom        DateTime
+  validTo          DateTime
+  technicalKey     String?  // Clave técnica (FE), la entrega la DIAN con la resolución
+  active           Boolean  @default(true)
+}
+
+model DianConfig {
+  id              String   @id @default(cuid())
+  businessId      String   @unique
+  business        Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  environment     String   @default("2") // 1 = producción, 2 = habilitación/pruebas
+  provider        String   @default("SIMULADO") // SIMULADO | HTTP_GENERICO
+  apiUrl          String?
+  apiToken        String?
+  softwareId      String?
+  softwarePin     String?
+  testSetId       String?
+  uvtValue        Int      @default(52374) // UVT 2026 (Res. DIAN 000238 de 2025)
+  posMaxUvt       Int      @default(5)     // tope del documento equivalente POS
+  autoSend        Boolean  @default(true)
+}
+
+model ElectronicDocument {
+  id             String    @id @default(cuid())
+  businessId     String
+  business       Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  saleId         String?
+  sale           Sale?     @relation(fields: [saleId], references: [id])
+  docType        String    // FE | POS | NC
+  dianTypeCode   String    // 01 factura, 20 documento equivalente POS, 91 nota crédito, 94 nota de ajuste DE
+  prefix         String
+  number         Int
+  fullNumber     String
+  issuedAt       DateTime  @default(now())
+  cufe           String    // CUFE (FE) / CUDE (POS y notas)
+  qrData         String
+  xml            String
+  buyer          String    // JSON con datos del adquiriente
+  subtotal       Int
+  taxTotal       Int
+  total          Int
+  status         String    @default("GENERADO") // GENERADO | ENVIADO | ACEPTADO | RECHAZADO | CONTINGENCIA
+  environment    String
+  providerTrackId String?
+  dianMessage    String?
+  referenceId    String?   // documento afectado (para notas crédito)
+  reason         String?
+  createdAt      DateTime  @default(now())
+  @@unique([businessId, prefix, number])
+}
+
+// ───────────── Marketing ─────────────
+model Campaign {
+  id          String   @id @default(cuid())
+  businessId  String
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name        String
+  channel     String   @default("WHATSAPP")
+  audience    String   @default("TODOS") // TODOS | INACTIVOS | CUMPLEANOS | NUEVOS
+  message     String
+  couponCode  String?
+  status      String   @default("BORRADOR") // BORRADOR | PROGRAMADA | ENVIADA
+  scheduledAt DateTime?
+  sentCount   Int      @default(0)
+  createdAt   DateTime @default(now())
+}
+
+model Coupon {
+  id         String   @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  code       String
+  type       String   @default("PORCENTAJE") // PORCENTAJE | VALOR
+  value      Int
+  validUntil DateTime?
+  maxUses    Int?
+  uses       Int      @default(0)
+  active     Boolean  @default(true)
+  @@unique([businessId, code])
+}

@@ -1,0 +1,46 @@
+@import '../design/vars.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { --font-playfair: 'Playfair Display'; --font-manrope: 'Manrope'; color-scheme: light; }
+.dark { color-scheme: dark; }
+html, body { background: rgb(var(--c-surface)); }
+body { overscroll-behavior: none; font-feature-settings: 'tnum' 0; }
+.tnum, .font-currency-display { font-variant-numeric: tabular-nums; }
+.material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; line-height: 1; user-select: none; }
+.icon-fill { font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }
+.pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
+.pt-safe { padding-top: env(safe-area-inset-top, 0px); }
+
+@layer components {
+  .card { @apply bg-surface-container-lowest rounded-xl shadow-card border border-parchment/60; }
+  .card-raised { @apply bg-surface-container-lowest rounded-xl shadow-raised border border-gold/40; }
+  .btn { @apply inline-flex items-center justify-center gap-2 h-12 px-5 rounded-2xl font-label-lg text-label-lg font-semibold transition active:scale-[0.985] disabled:opacity-50 disabled:pointer-events-none; }
+  .btn-sm { @apply h-9 px-3 rounded-lg text-label-md font-label-md; }
+  .btn-primary { @apply btn bg-primary-container text-on-primary dark:text-on-primary-container shadow-md hover:opacity-95; }
+  .btn-gold { @apply btn bg-secondary text-on-secondary hover:bg-secondary/90; }
+  .btn-outline { @apply btn border-[1.5px] border-gold text-primary-container dark:text-primary bg-transparent hover:bg-gold/10; }
+  .btn-ghost { @apply btn bg-surface-container-low text-on-surface hover:bg-surface-container; }
+  .btn-danger { @apply btn bg-[#FFF1F2] text-danger hover:bg-[#ffe4e6] dark:bg-error-container dark:text-on-error-container; }
+  .input { @apply w-full h-12 px-4 rounded-lg bg-surface-container-lowest border border-parchment text-on-surface placeholder:text-[#94A3B8] font-body-md text-body-md outline-none focus:border-primary-container focus:ring-2 focus:ring-primary-container/10 transition; }
+  textarea.input { @apply h-auto py-3; }
+  .label { @apply block font-label-md text-label-md text-on-surface-variant mb-1.5; }
+  .chip { @apply inline-flex items-center gap-1 h-9 px-3 rounded-lg border border-parchment bg-surface-container-lowest text-[#526071] dark:text-on-surface-variant font-label-md text-label-md whitespace-nowrap transition hover:bg-surface-container-low; }
+  .chip-on { @apply bg-primary-container text-on-primary border-primary-container dark:text-on-primary-container; }
+  .eyebrow { @apply text-secondary font-label-sm text-label-sm uppercase tracking-wider font-semibold; }
+  .h-section { @apply font-headline-sm text-headline-sm text-primary-container dark:text-primary font-semibold; }
+  .table { @apply w-full text-left font-body-md text-body-md; }
+  .table th { @apply font-label-md text-label-md text-on-surface-variant uppercase tracking-wide py-3 px-3 border-b border-parchment font-semibold; }
+  .table td { @apply py-3 px-3 border-b border-parchment/70 align-middle; }
+  .skeleton { @apply animate-pulse bg-surface-container rounded-lg; }
+}
+
+@media print {
+  @page { margin: 6mm; }
+  body * { visibility: hidden; }
+  #ticket, #ticket * { visibility: visible; }
+  #ticket { position: absolute; left: 0; top: 0; }
+}
