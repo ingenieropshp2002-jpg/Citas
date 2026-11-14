@@ -32,7 +32,7 @@ export default async function Agenda({ searchParams }: { searchParams: Promise<{
       <PageHeader eyebrow="Operación" title="Agenda" />
       <AgendaBoard view={view} date={date} range={range} openNew={!!sp.nueva} staffFilter={sp.prof || ''}
         staff={staff.map(s => ({ id: s.id, name: s.name, color: s.color, photo: s.photo }))}
-        appts={appts.map(a => ({ id: a.id, code: a.code, staffId: a.staffId, start: a.start.toISOString(), end: a.end.toISOString(), status: a.status, total: a.total, customer: { id: a.customer.id, name: a.customer.name, phone: a.customer.phone }, services: a.services.map(s => s.service.name).join(', '), notes: a.notes, depositAmount: a.depositAmount, depositStatus: a.depositStatus, saleId: a.saleId }))}
+        appts={appts.map(a => ({ id: a.id, code: a.code, staffId: a.staffId, start: a.start.toISOString(), end: a.end.toISOString(), status: a.status, confirmed: !!a.clientConfirmedAt, total: a.total, customer: { id: a.customer.id, name: a.customer.name, phone: a.customer.phone }, services: a.services.map(s => s.service.name).join(', '), notes: a.notes, depositAmount: a.depositAmount, depositStatus: a.depositStatus, saleId: a.saleId }))}
         blocks={blocks.map(x => ({ id: x.id, staffId: x.staffId, start: x.start.toISOString(), end: x.end.toISOString(), reason: x.reason }))}
         services={services.map(s => ({ id: s.id, name: s.name, durationMin: s.durationMin, price: s.price, staffIds: s.staff.map(x => x.staffId) }))}
         customers={customers} />

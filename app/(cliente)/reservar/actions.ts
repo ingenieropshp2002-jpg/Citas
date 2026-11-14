@@ -68,6 +68,7 @@ export async function settlePayment(reference: string, approved: boolean, provid
   const pay = await db.payment.findUnique({ where: { id: payId }, include: { appointment: { include: { customer: true, business: true } } } });
   if (!pay || pay.status === 'APROBADO') return pay;
   await db.payment.update({ where: { id: pay.id }, data: { status: approved ? 'APROBADO' : 'RECHAZADO', providerRef } });
+  if (approved && reference.startsWith('SUB-')) { const { applySubscriptionPayment } = await import('@/app/panel/_actions/subscription'); await applySubscriptionPayment(pay.businessId, reference.slice(4).split('_')[0]); }
   if (pay.appointment) {
     await db.appointment.update({ where: { id: pay.appointment.id }, data: approved ? { depositStatus: 'PAGADO', status: 'CONFIRMADA' } : { depositStatus: 'PENDIENTE' } });
     if (approved && pay.appointment.customer.phone) await sendWhatsapp(pay.appointment.customer.phone, `✅ Tu cita ${pay.appointment.code} en ${pay.appointment.business.name} está confirmada. Te recordaremos antes de tu cita.`);

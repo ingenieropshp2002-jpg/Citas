@@ -1,4 +1,5 @@
 'use server';
+import { earnPoints, revertPoints } from '@/lib/loyalty';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db';
 import { requireBusiness } from '@/lib/auth';
@@ -95,7 +96,10 @@ export async function checkout(input: CheckoutInput) {
         await tx.appointment.update({ where: { id: a.id }, data: { status: 'COMPLETADA', saleId: sale.id } });
       }
     }
-    if (input.customerId) await tx.customer.update({ where: { id: input.customerId }, data: { totalSpent: { increment: total }, visits: { increment: 1 }, lastVisit: new Date() } });
+    if (input.customerId) {
+      await tx.customer.update({ where: { id: input.customerId }, data: { totalSpent: { increment: total }, visits: { increment: 1 }, lastVisit: new Date() } });
+      await earnPoints(tx, business, input.customerId, total - tip, sale.id, sale.number);
+    }
     return sale;
   });
 
@@ -129,6 +133,7 @@ export async function voidSale(saleId: string, reason: string) {
     await tx.sale.update({ where: { id: sale.id }, data: { status: 'ANULADA' } });
     await tx.payment.updateMany({ where: { saleId: sale.id }, data: { status: 'REEMBOLSADO' } });
     if (sale.customerId) await tx.customer.update({ where: { id: sale.customerId }, data: { totalSpent: { decrement: sale.total } } });
+    await revertPoints(tx, business.id, sale.id);
   });
   revalidatePath(`/panel/caja/ventas/${saleId}`); revalidatePath('/panel/facturacion');
   return { ok: true };

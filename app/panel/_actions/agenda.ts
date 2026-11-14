@@ -6,6 +6,7 @@ import { isFree } from '@/lib/availability';
 import { fromBogota } from '@/lib/format';
 import { consumeSupplies } from '@/lib/inventory';
 import { sendWhatsapp } from '@/lib/notify';
+import { sendReminders } from '@/lib/automations';
 import { newCode } from '@/app/(cliente)/reservar/actions';
 
 export async function createAppointmentPanel(_: unknown, fd: FormData) {
@@ -70,17 +71,8 @@ export async function deleteBlock(id: string) {
   revalidatePath('/panel/agenda');
 }
 
-/** Envía recordatorios por WhatsApp de las citas dentro de la ventana configurada. Puede llamarse desde un cron (/api/cron/recordatorios). */
-export async function sendRemindersFor(businessId: string) {
-  const b = await db.business.findUniqueOrThrow({ where: { id: businessId } });
-  const until = new Date(Date.now() + b.reminderHours * 3600000);
-  const list = await db.appointment.findMany({ where: { businessId, reminderSent: false, status: { in: ['CONFIRMADA', 'PENDIENTE'] }, start: { gt: new Date(), lte: until } }, include: { customer: true, staff: true } });
-  for (const a of list) {
-    if (a.customer.phone && b.notifyWhatsapp) await sendWhatsapp(a.customer.phone, `⏰ Recordatorio: tienes cita en ${b.name} el ${a.start.toLocaleString('es-CO', { timeZone: 'America/Bogota', dateStyle: 'full', timeStyle: 'short' })} con ${a.staff.name}. Responde si necesitas reprogramar.`);
-    await db.appointment.update({ where: { id: a.id }, data: { reminderSent: true } });
-  }
-  return list.length;
-}
+/** Envía recordatorios por WhatsApp de las citas dentro de la ventana configurada. */
+export async function sendRemindersFor(businessId: string) { return sendReminders(businessId); }
 export async function sendRemindersNow() {
   const { business } = await requireBusiness('agenda');
   const n = await sendRemindersFor(business.id);

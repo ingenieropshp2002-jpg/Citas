@@ -10,11 +10,13 @@ export default async function Reportes({ searchParams }: { searchParams: Promise
   const sp = await searchParams;
   const hasta = sp.hasta || ymd(new Date()); const desde = sp.desde || addDays(hasta, -29);
   const range = { gte: fromBogota(desde), lt: fromBogota(addDays(hasta, 1)) };
-  const [sales, appts, staff] = await Promise.all([
+  const [sales, appts, staff, expenses] = await Promise.all([
     db.sale.findMany({ where: { businessId: b.id, status: 'PAGADA', createdAt: range }, include: { items: true, payments: true } }),
     db.appointment.findMany({ where: { businessId: b.id, start: range } }),
-    db.staff.findMany({ where: { businessId: b.id } })
+    db.staff.findMany({ where: { businessId: b.id } }),
+    db.expense.findMany({ where: { businessId: b.id, date: range }, select: { amount: true } })
   ]);
+  const spent = expenses.reduce((a, e) => a + e.amount, 0);
   const items = sales.flatMap(s => s.items);
   const gross = sales.reduce((a, s) => a + s.total - s.tip, 0);
   const tax = sales.reduce((a, s) => a + s.taxTotal, 0);
@@ -34,11 +36,13 @@ export default async function Reportes({ searchParams }: { searchParams: Promise
   return (
     <>
       <PageHeader eyebrow="Análisis" title="Reportes" actions={<form className="flex flex-wrap gap-2 items-end"><label><span className="label">Desde</span><input type="date" name="desde" defaultValue={desde} className="input !h-10" /></label><label><span className="label">Hasta</span><input type="date" name="hasta" defaultValue={hasta} className="input !h-10" /></label><button className="btn-primary btn-sm h-10">Aplicar</button><Link href={csv} className="btn-ghost btn-sm h-10">Exportar CSV</Link></form>} />
-      <div className="grid grid-cols-2 xl:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
         <Stat label="Ventas (sin propinas)" value={cop(gross)} icon="payments" tone="gold" hint={`${sales.length} ventas`} />
         <Stat label="Ticket promedio" value={cop(sales.length ? gross / sales.length : 0)} icon="receipt" />
         <Stat label="IVA generado" value={cop(tax)} icon="account_balance" />
         <Stat label="Propinas" value={cop(tips)} icon="volunteer_activism" />
+        <Stat label="Gastos" value={cop(spent)} icon="trending_down" tone="danger" hint={`${expenses.length} registros`} />
+        <Stat label="Utilidad (ventas − gastos)" value={cop(gross - spent)} icon="savings" tone={gross - spent >= 0 ? 'gold' : 'danger'} hint={gross ? `Margen ${Math.round((gross - spent) / gross * 100)}%` : undefined} />
         <Stat label="Tasa de inasistencia" value={`${done.length ? Math.round(noShow / done.length * 100) : 0}%`} icon="event_busy" tone="danger" hint={`${noShow} no asistieron · ${cancel} canceladas`} />
       </div>
       <div className="grid xl:grid-cols-3 gap-4 mt-4">

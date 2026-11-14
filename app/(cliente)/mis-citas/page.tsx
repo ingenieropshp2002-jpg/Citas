@@ -18,12 +18,14 @@ export default async function MisCitas({ searchParams }: { searchParams: Promise
   const tab = sp.tab === 'pasadas' ? 'pasadas' : 'proximas';
   const now = new Date();
   const all = await db.appointment.findMany({ where: { customer: { userId: user.id }, ...(shop ? { business: { slug: shop.slug } } : {}) }, include: { business: true, staff: true, services: { include: { service: true } }, review: true }, orderBy: { start: tab === 'proximas' ? 'asc' : 'desc' } });
+  const points = shop ? (await db.customer.findMany({ where: { userId: user.id, business: { slug: shop.slug } }, select: { points: true } })).reduce((x, c) => x + c.points, 0) : 0;
   const list = all.filter(a => tab === 'proximas' ? a.end >= now && ['PENDIENTE', 'CONFIRMADA', 'EN_SERVICIO'].includes(a.status) : !(a.end >= now && ['PENDIENTE', 'CONFIRMADA', 'EN_SERVICIO'].includes(a.status)));
   return (
     <>
       {shop ? <ShopHeader shop={shop} title="Mis citas" /> : <ClientHeader title="Mis citas" />}
       <main className="pt-20 pb-10 px-margin max-w-3xl mx-auto">
         <h1 className="font-headline-lg-mobile text-headline-lg-mobile text-primary-container dark:text-primary">Mis citas</h1>
+        {shop && points > 0 && <p className="mt-2 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary-fixed/50 font-label-lg"><Icon name="loyalty" className="text-[18px] text-secondary" />Tienes {points.toLocaleString('es-CO')} puntos en {shop.name}</p>}
         <div className="flex gap-2 mt-4 mb-5">
           <Link href={`/mis-citas${q ? '?' + q : ''}`} className={`chip ${tab === 'proximas' ? 'chip-on' : ''}`}>Próximas</Link>
           <Link href={`/mis-citas?tab=pasadas${q ? '&' + q : ''}`} className={`chip ${tab === 'pasadas' ? 'chip-on' : ''}`}>Pasadas</Link>

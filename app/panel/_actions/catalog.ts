@@ -1,4 +1,6 @@
 'use server';
+import { fromBogota } from '@/lib/format';
+import { TRIAL_DAYS } from '@/lib/subscription';
 import bcrypt from 'bcryptjs';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
@@ -16,7 +18,7 @@ const hoursFrom = (fd: FormData, prefix: string) => {
 export async function saveCustomer(_: unknown, fd: FormData) {
   const { business } = await requireBusiness('clientes');
   const id = String(fd.get('id') || '');
-  const data = { name: String(fd.get('name')).trim(), phone: String(fd.get('phone') || '').replace(/\D/g, '') || null, email: String(fd.get('email') || '') || null, docType: String(fd.get('docType') || '13'), docNumber: String(fd.get('docNumber') || '') || null, notes: String(fd.get('notes') || '') || null, preferences: String(fd.get('preferences') || '') || null, tags: JSON.stringify(String(fd.get('tags') || '').split(',').map(t => t.trim()).filter(Boolean)), birthday: fd.get('birthday') ? new Date(String(fd.get('birthday'))) : null };
+  const data = { name: String(fd.get('name')).trim(), phone: String(fd.get('phone') || '').replace(/\D/g, '') || null, email: String(fd.get('email') || '') || null, docType: String(fd.get('docType') || '13'), docNumber: String(fd.get('docNumber') || '') || null, notes: String(fd.get('notes') || '') || null, preferences: String(fd.get('preferences') || '') || null, tags: JSON.stringify(String(fd.get('tags') || '').split(',').map(t => t.trim()).filter(Boolean)), birthday: fd.get('birthday') ? fromBogota(String(fd.get('birthday')), '12:00') : null };
   if (!data.name) return { error: 'El nombre es obligatorio.' };
   if (id) await db.customer.updateMany({ where: { id, businessId: business.id }, data });
   else { const c = await db.customer.create({ data: { ...data, businessId: business.id } }); redirect(`/panel/clientes/${c.id}`); }
@@ -73,7 +75,7 @@ export async function saveSettings(_: unknown, fd: FormData) {
     city: String(fd.get('city')), zone: String(fd.get('zone') || ''), address: String(fd.get('address')), phone: String(fd.get('phone') || ''), whatsapp: String(fd.get('whatsapp') || ''), instagram: String(fd.get('instagram') || ''),
     lat: fd.get('lat') ? Number(fd.get('lat')) : null, lng: fd.get('lng') ? Number(fd.get('lng')) : null, images: JSON.stringify(images),
     openingHours: hoursFrom(fd, 'h'), slotStepMin: int(fd.get('slotStepMin'), 15), cancellationHours: int(fd.get('cancellationHours'), 24), depositPercent: Math.min(100, int(fd.get('depositPercent'), 30)), requireDeposit: !!fd.get('requireDeposit'),
-    reminderHours: int(fd.get('reminderHours'), 24), notifyWhatsapp: !!fd.get('notifyWhatsapp'), notifyEmail: !!fd.get('notifyEmail'), plan: String(fd.get('plan') || business.plan)
+    reminderHours: int(fd.get('reminderHours'), 24), notifyWhatsapp: !!fd.get('notifyWhatsapp'), notifyEmail: !!fd.get('notifyEmail'), autoConfirmRequest: !!fd.get('autoConfirmRequest'), waPhoneId: String(fd.get('waPhoneId') || '').trim() || null
   } });
   revalidatePath('/panel/configuracion');
   return { ok: true };
@@ -86,7 +88,7 @@ export async function createBusiness(_: unknown, fd: FormData) {
   const base = name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   let slug = base; let i = 1; while (await db.business.findUnique({ where: { slug } })) slug = `${base}-${++i}`;
   const h = JSON.stringify({ '1': ['08:00', '19:00'], '2': ['08:00', '19:00'], '3': ['08:00', '19:00'], '4': ['08:00', '19:00'], '5': ['08:00', '19:00'], '6': ['08:00', '18:00'], '0': null });
-  const b = await db.business.create({ data: { name, slug, category: String(fd.get('category')), city: String(fd.get('city')), address: String(fd.get('address')), phone: String(fd.get('phone') || ''), whatsapp: String(fd.get('phone') || ''), description: `Bienvenido a ${name}.`, ownerId: user.id, openingHours: h } });
+  const b = await db.business.create({ data: { name, slug, category: String(fd.get('category')), city: String(fd.get('city')), address: String(fd.get('address')), phone: String(fd.get('phone') || ''), whatsapp: String(fd.get('phone') || ''), description: `Bienvenido a ${name}.`, ownerId: user.id, openingHours: h, plan: 'PRO', subscriptionStatus: 'PRUEBA', trialEndsAt: new Date(Date.now() + TRIAL_DAYS * 86400000) } });
   await db.staff.create({ data: { businessId: b.id, name: user.name, title: 'Propietario', userId: null } });
   await db.user.update({ where: { id: user.id }, data: { role: 'OWNER' } });
   await db.dianConfig.create({ data: { businessId: b.id } });

@@ -7,6 +7,8 @@ const REGIME: Record<string, string> = { '48': 'Responsable de IVA', '49': 'No r
 type Props = { business: any; sale: any; doc: any | null; resolution: any | null };
 export async function Receipt({ business: b, sale, doc, resolution }: Props) {
   const qr = doc ? await QRCode.toDataURL(doc.qrData, { margin: 1, width: 180 }) : null;
+  const bookUrl = `${process.env.APP_URL || 'http://localhost:3000'}/reservar/${b.slug}?ref=recibo`;
+  const bookQr = await QRCode.toDataURL(bookUrl, { margin: 1, width: 160 });
   const buyer = doc ? parseJson<{ docType: string; docNumber: string; name: string }>(doc.buyer, { docType: '13', docNumber: '222222222222', name: 'Consumidor final' }) : null;
   const taxes = sale.items.reduce((m: Record<number, { base: number; tax: number }>, i: any) => { m[i.taxRate] = { base: (m[i.taxRate]?.base || 0) + i.base, tax: (m[i.taxRate]?.tax || 0) + i.taxAmount }; return m; }, {});
   return (
@@ -52,6 +54,7 @@ export async function Receipt({ business: b, sale, doc, resolution }: Props) {
       )}
       {sale.status === 'ANULADA' && <p className="mt-2 text-center font-bold text-[14px]">*** VENTA ANULADA ***</p>}
       <p className="text-center mt-3">¡Gracias por tu visita!</p>
+      {sale.status !== 'ANULADA' && <div className="mt-3 pt-3 border-t border-dashed border-black/40 text-center"><p className="font-bold">AGENDA TU PRÓXIMA CITA</p><img src={bookQr} alt="QR para agendar tu próxima cita" className="mx-auto my-1 w-28 h-28" /><p className="text-[10px]">Escanea el código y reserva en segundos</p></div>}
     </article>
   );
 }

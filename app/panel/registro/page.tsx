@@ -11,14 +11,15 @@ export default async function Registro() {
     <main className="min-h-screen flex items-center justify-center px-margin py-10">
       <div className="w-full max-w-lg">
         <p className="eyebrow">Registro Citas para negocios</p>
-        <h1 className="font-headline-lg-mobile text-headline-lg-mobile text-primary-container dark:text-primary mb-6">Registra tu negocio</h1>
+        <h1 className="font-headline-lg-mobile text-headline-lg-mobile text-primary-container dark:text-primary">Registra tu negocio</h1>
+        <p className="text-on-surface-variant mb-6">Prueba todo gratis durante 14 días. No necesitas tarjeta.</p>
         <div className="card-raised p-6">
           <ActionForm action={createBusiness}>
             <label className="block"><span className="label">Nombre del negocio</span><input name="name" className="input" required /></label>
             <label className="block"><span className="label">Tipo</span><select name="category" className="input"><option value="PELUQUERIA">Peluquería</option><option value="BARBERIA">Barbería</option><option value="SPA">Spa</option><option value="UNAS">Uñas</option></select></label>
             <div className="grid grid-cols-2 gap-3"><label><span className="label">Ciudad</span><input name="city" className="input" required defaultValue="Bogotá" /></label><label><span className="label">WhatsApp</span><input name="phone" className="input" inputMode="numeric" /></label></div>
             <label className="block"><span className="label">Dirección</span><input name="address" className="input" required /></label>
-            <button className="btn-primary w-full">Crear mi negocio</button>
+            <button className="btn-primary w-full">Empezar prueba gratis de 14 días</button>
           </ActionForm>
         </div>
       </div>

@@ -1,3 +1,4 @@
+import { isPlatformAdmin, subscriptionState } from './subscription';
 import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
@@ -27,10 +28,10 @@ export async function requireUser(next = '/') {
   return u;
 }
 
-export type Perm = 'agenda' | 'clientes' | 'caja' | 'inventario' | 'reportes' | 'configuracion' | 'marketing' | 'servicios' | 'equipo' | 'facturacion';
+export type Perm = 'agenda' | 'clientes' | 'caja' | 'inventario' | 'reportes' | 'configuracion' | 'marketing' | 'servicios' | 'equipo' | 'facturacion' | 'gastos' | 'fidelizacion';
 
 /** Devuelve el negocio que administra el usuario (dueño o profesional con permisos). */
-export async function requireBusiness(perm?: Perm) {
+export async function requireBusiness(perm?: Perm, opts: { allowExpired?: boolean } = {}) {
   const user = await requireUser('/panel');
   let business = await db.business.findFirst({ where: { ownerId: user.id } });
   let perms: string[] | 'ALL' = 'ALL';
@@ -42,5 +43,7 @@ export async function requireBusiness(perm?: Perm) {
     try { perms = JSON.parse(staff.permissions); } catch { perms = []; }
   }
   if (perm && perms !== 'ALL' && !perms.includes(perm)) redirect('/panel?sinpermiso=1');
+  // Prueba gratis o suscripción vencida: solo puede entrar a la página de suscripción
+  if (!opts.allowExpired && subscriptionState(business).state === 'VENCIDA' && !isPlatformAdmin(user.email)) redirect('/panel/suscripcion');
   return { user, business, perms, staffId };
 }

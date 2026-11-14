@@ -14,8 +14,9 @@ export async function saveCampaign(_: unknown, fd: FormData) {
 
 export async function audience(businessId: string, kind: string) {
   const all = await db.customer.findMany({ where: { businessId, phone: { not: null } } });
+  const days = (await db.business.findUnique({ where: { id: businessId }, select: { inactiveDays: true } }))?.inactiveDays || 60;
   const now = new Date(); const m = bogota(now).m;
-  if (kind === 'INACTIVOS') return all.filter(c => !c.lastVisit || now.getTime() - c.lastVisit.getTime() > 60 * 86400000);
+  if (kind === 'INACTIVOS') return all.filter(c => !c.lastVisit || now.getTime() - c.lastVisit.getTime() > days * 86400000);
   if (kind === 'CUMPLEANOS') return all.filter(c => c.birthday && bogota(c.birthday).m === m);
   if (kind === 'NUEVOS') return all.filter(c => c.visits <= 1);
   return all;

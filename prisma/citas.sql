@@ -2,6 +2,9 @@
 CREATE SCHEMA IF NOT EXISTS "citas";
 SET search_path TO citas;
 
+-- CreateSchema
+CREATE SCHEMA IF NOT EXISTS "public";
+
 -- CreateTable
 CREATE TABLE "User" (
     "id" TEXT NOT NULL,
@@ -72,6 +75,17 @@ CREATE TABLE "Business" (
     "municipality" TEXT DEFAULT 'Bogotá D.C.',
     "municipalityCode" TEXT DEFAULT '11001',
     "fiscalEmail" TEXT,
+    "subscriptionStatus" TEXT NOT NULL DEFAULT 'ACTIVA',
+    "trialEndsAt" TIMESTAMP(3),
+    "paidUntil" TIMESTAMP(3),
+    "waPhoneId" TEXT,
+    "autoConfirmRequest" BOOLEAN NOT NULL DEFAULT true,
+    "loyaltyEnabled" BOOLEAN NOT NULL DEFAULT true,
+    "pointsPerThousand" INTEGER NOT NULL DEFAULT 1,
+    "inactiveDays" INTEGER NOT NULL DEFAULT 60,
+    "birthdayEnabled" BOOLEAN NOT NULL DEFAULT true,
+    "birthdayMessage" TEXT NOT NULL DEFAULT '¡Feliz cumpleaños, {nombre}! 🎉 En {negocio} te regalamos un detalle en tu próxima visita. Reserva aquí: {link}',
+    "birthdayCoupon" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "Business_pkey" PRIMARY KEY ("id")
@@ -149,6 +163,9 @@ CREATE TABLE "Customer" (
     "totalSpent" INTEGER NOT NULL DEFAULT 0,
     "visits" INTEGER NOT NULL DEFAULT 0,
     "lastVisit" TIMESTAMP(3),
+    "points" INTEGER NOT NULL DEFAULT 0,
+    "birthdayGreetedYear" INTEGER,
+    "winbackSentAt" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "Customer_pkey" PRIMARY KEY ("id")
@@ -171,6 +188,7 @@ CREATE TABLE "Appointment" (
     "notes" TEXT,
     "source" TEXT NOT NULL DEFAULT 'ONLINE',
     "reminderSent" BOOLEAN NOT NULL DEFAULT false,
+    "clientConfirmedAt" TIMESTAMP(3),
     "saleId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -444,6 +462,58 @@ CREATE TABLE "Coupon" (
     CONSTRAINT "Coupon_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "Expense" (
+    "id" TEXT NOT NULL,
+    "businessId" TEXT NOT NULL,
+    "date" TIMESTAMP(3) NOT NULL,
+    "category" TEXT NOT NULL,
+    "description" TEXT NOT NULL,
+    "amount" INTEGER NOT NULL,
+    "method" TEXT NOT NULL DEFAULT 'EFECTIVO',
+    "supplier" TEXT,
+    "receipt" TEXT,
+    "userName" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "Expense_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Reward" (
+    "id" TEXT NOT NULL,
+    "businessId" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "points" INTEGER NOT NULL,
+    "active" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "Reward_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "PointMovement" (
+    "id" TEXT NOT NULL,
+    "businessId" TEXT NOT NULL,
+    "customerId" TEXT NOT NULL,
+    "points" INTEGER NOT NULL,
+    "reason" TEXT NOT NULL,
+    "saleId" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "PointMovement_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "LessonProgress" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "lessonId" TEXT NOT NULL,
+    "completedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "LessonProgress_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
@@ -494,6 +564,15 @@ CREATE UNIQUE INDEX "ElectronicDocument_businessId_prefix_number_key" ON "Electr
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Coupon_businessId_code_key" ON "Coupon"("businessId", "code");
+
+-- CreateIndex
+CREATE INDEX "Expense_businessId_date_idx" ON "Expense"("businessId", "date");
+
+-- CreateIndex
+CREATE INDEX "PointMovement_customerId_idx" ON "PointMovement"("customerId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "LessonProgress_userId_lessonId_key" ON "LessonProgress"("userId", "lessonId");
 
 -- AddForeignKey
 ALTER TABLE "Business" ADD CONSTRAINT "Business_ownerId_fkey" FOREIGN KEY ("ownerId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -626,4 +705,16 @@ ALTER TABLE "Campaign" ADD CONSTRAINT "Campaign_businessId_fkey" FOREIGN KEY ("b
 
 -- AddForeignKey
 ALTER TABLE "Coupon" ADD CONSTRAINT "Coupon_businessId_fkey" FOREIGN KEY ("businessId") REFERENCES "Business"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Expense" ADD CONSTRAINT "Expense_businessId_fkey" FOREIGN KEY ("businessId") REFERENCES "Business"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Reward" ADD CONSTRAINT "Reward_businessId_fkey" FOREIGN KEY ("businessId") REFERENCES "Business"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "PointMovement" ADD CONSTRAINT "PointMovement_businessId_fkey" FOREIGN KEY ("businessId") REFERENCES "Business"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "PointMovement" ADD CONSTRAINT "PointMovement_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "Customer"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 

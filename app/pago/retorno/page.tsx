@@ -12,5 +12,6 @@ export default async function Retorno({ searchParams }: { searchParams: Promise<
     const p = await fetch(`https://api.mercadopago.com/v1/payments/${sp.payment_id}`, { headers: { Authorization: `Bearer ${process.env.MERCADOPAGO_ACCESS_TOKEN}` } }).then(r => r.json());
     if (p.external_reference === ref && p.status !== 'pending' && p.status !== 'in_process') await settlePayment(ref, p.status === 'approved', String(p.id));
   }
+  if (ref.startsWith('SUB-')) redirect('/panel/suscripcion?pago=retorno');
   redirect(`/cita/${ref.split('_')[0]}`);
 }

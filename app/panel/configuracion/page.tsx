@@ -7,10 +7,10 @@ import { Icon } from '@/components/ui/Icon';
 import { saveSettings } from '../_actions/catalog';
 import { parseJson } from '@/lib/format';
 import { CopyLink } from './CopyLink';
-import { waLink } from '@/lib/notify';
+import { waConfigured, waLink } from '@/lib/notify';
+import Link from 'next/link';
 
 export const metadata = { title: 'Configuración' };
-const PLANS = [['BASICO', 'Básico', '$49.900/mes', '1 profesional, agenda y reservas online'], ['PRO', 'Pro', '$99.900/mes', 'Hasta 8 profesionales, caja POS, inventario, marketing'], ['PREMIUM', 'Premium', '$189.900/mes', 'Sedes y profesionales ilimitados, facturación electrónica, reportes avanzados']];
 export default async function Configuracion({ searchParams }: { searchParams: Promise<{ nuevo?: string }> }) {
   const { business: b } = await requireBusiness('configuracion');
   const nuevo = (await searchParams).nuevo;
@@ -25,7 +25,8 @@ export default async function Configuracion({ searchParams }: { searchParams: Pr
         <div>
           <h2 className="font-title-lg text-title-lg">Link de reservas para Instagram y WhatsApp</h2>
           <p className="text-on-surface-variant">Pégalo en la biografía de Instagram, en tu perfil de WhatsApp Business o imprime el QR en recepción.</p>
-          <div className="flex flex-wrap items-center gap-2 mt-3"><code className="px-3 py-2 rounded-lg bg-surface-container-low font-mono text-[13px] break-all">{url}</code><CopyLink url={url} /><a className="btn-sm btn bg-[#25D366] text-white" href={waLink('', `Reserva tu cita en ${b.name}: ${url}`)} target="_blank" rel="noreferrer"><Icon name="share" className="text-[16px]" />WhatsApp</a></div>
+          <div className="flex flex-wrap items-center gap-2 mt-3"><code className="px-3 py-2 rounded-lg bg-surface-container-low font-mono text-[13px] break-all">{url}</code><CopyLink url={url} /><a className="btn-sm btn bg-[#25D366] text-white" href={waLink('', `Reserva tu cita en ${b.name}: ${url}`)} target="_blank" rel="noreferrer"><Icon name="share" className="text-[16px]" />WhatsApp</a><Link href="/panel/qr" className="btn-outline btn-sm"><Icon name="qr_code_2" className="text-[16px]" />Afiche QR para recepción</Link></div>
+          {b.whatsapp && <p className="mt-3 font-body-sm text-on-surface-variant">Reserva por WhatsApp: <a className="text-secondary font-bold break-all" href={waLink(b.whatsapp, `Hola ${b.name}, quiero reservar una cita.`)} target="_blank" rel="noreferrer">{waLink(b.whatsapp, `Hola ${b.name}, quiero reservar una cita.`)}</a>. Con WhatsApp Business conectado, el sistema responde solo con tu enlace de reservas.</p>}
         </div>
         <img src={qr} alt="QR del link de reservas" className="w-36 h-36 rounded-xl border border-parchment" />
       </section>
@@ -57,9 +58,13 @@ export default async function Configuracion({ searchParams }: { searchParams: Pr
             <label className="flex items-center gap-2"><input type="checkbox" name="notifyWhatsapp" defaultChecked={b.notifyWhatsapp} className="accent-primary-container" />Confirmaciones y recordatorios por WhatsApp</label>
             <label className="flex items-center gap-2"><input type="checkbox" name="notifyEmail" defaultChecked={b.notifyEmail} className="accent-primary-container" />Enviar factura y confirmaciones por correo</label>
             <label className="block"><span className="label">Recordatorio (horas antes)</span><input name="reminderHours" type="number" min={1} defaultValue={b.reminderHours} className="input" /></label>
+            <label className="flex items-center gap-2"><input type="checkbox" name="autoConfirmRequest" defaultChecked={b.autoConfirmRequest} className="accent-primary-container" />Pedir al cliente que confirme respondiendo 1 (o 2 para reprogramar)</label>
+            <label className="block"><span className="label">ID del número de WhatsApp del negocio (opcional)</span><input name="waPhoneId" defaultValue={b.waPhoneId || ''} className="input" placeholder="Phone number ID de Meta" /></label>
+            <p className="font-body-sm text-on-surface-variant">{waConfigured() ? '✓ WhatsApp Business conectado.' : 'WhatsApp está en modo simulado: los mensajes no salen hasta configurar WHATSAPP_TOKEN y WHATSAPP_PHONE_ID en Cloudflare (ver README).'}</p>
           </Sec>
           <Sec title="Plan de suscripción" icon="workspace_premium">
-            <div className="grid gap-2">{PLANS.map(([v, n, p, d]) => <label key={v} className="flex items-start gap-3 p-3 rounded-xl border border-parchment has-[:checked]:border-gold has-[:checked]:bg-secondary-fixed/20 cursor-pointer"><input type="radio" name="plan" value={v} defaultChecked={b.plan === v} className="mt-1 accent-primary-container" /><div><p className="font-title-md">{n} <span className="font-label-md text-secondary">{p}</span></p><p className="font-body-sm text-on-surface-variant">{d}</p></div></label>)}</div>
+            <p className="text-on-surface-variant">Plan actual: <b>{b.plan}</b>. Cambia de plan o paga tu suscripción desde la página de suscripción.</p>
+            <Link href="/panel/suscripcion" className="btn-outline btn-sm mt-3 inline-flex">Ver suscripción</Link>
           </Sec>
         </div>
         <div className="xl:col-span-2 sticky bottom-4"><button className="btn-primary w-full md:w-auto shadow-raised">Guardar configuración</button></div>

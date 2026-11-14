@@ -24,7 +24,7 @@ export default async function Cliente({ params }: { params: Promise<{ id: string
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
         <Stat label="Gasto total" value={cop(c.totalSpent)} icon="payments" tone="gold" />
         <Stat label="Visitas" value={String(c.visits)} icon="event_repeat" />
-        <Stat label="Ticket promedio" value={cop(c.visits ? c.totalSpent / c.visits : 0)} icon="receipt" />
+        <Stat label="Puntos" value={c.points.toLocaleString('es-CO')} icon="loyalty" hint="Programa de fidelización" />
         <Stat label="Inasistencias" value={String(noShows)} icon="event_busy" tone={noShows ? 'danger' : 'default'} />
       </div>
       <div className="grid xl:grid-cols-3 gap-4 mt-4">

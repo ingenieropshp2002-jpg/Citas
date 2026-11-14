@@ -9,7 +9,7 @@ import { saveStaff } from '../_actions/catalog';
 import { cop, fromBogota, parseJson, ymd } from '@/lib/format';
 
 export const metadata = { title: 'Equipo' };
-const PERMS = [['agenda', 'Agenda'], ['clientes', 'Clientes'], ['caja', 'Caja / POS'], ['inventario', 'Inventario'], ['servicios', 'Servicios'], ['equipo', 'Equipo'], ['facturacion', 'Facturación'], ['marketing', 'Marketing'], ['reportes', 'Reportes'], ['configuracion', 'Configuración (ve toda la agenda)']];
+const PERMS = [['agenda', 'Agenda'], ['clientes', 'Clientes'], ['caja', 'Caja / POS'], ['inventario', 'Inventario'], ['servicios', 'Servicios'], ['equipo', 'Equipo'], ['facturacion', 'Facturación'], ['marketing', 'Marketing'], ['gastos', 'Gastos'], ['fidelizacion', 'Fidelización'], ['reportes', 'Reportes'], ['configuracion', 'Configuración (ve toda la agenda)']];
 type S = Awaited<ReturnType<typeof db.staff.findMany>>[number] & { user?: { email: string | null } | null };
 
 function Fields({ s, businessHours }: { s?: S; businessHours: string }) {

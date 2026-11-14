@@ -68,11 +68,25 @@ En `.env` elija `PAYMENT_PROVIDER`:
 
 El estado del pago siempre se verifica con la pasarela (webhook firmado o consulta), no con los parámetros de retorno.
 
-## WhatsApp y recordatorios
+## WhatsApp, recordatorios y reservas por WhatsApp
 
-Con `WHATSAPP_TOKEN` y `WHATSAPP_PHONE_ID` (WhatsApp Cloud API de Meta) se envían códigos, confirmaciones, recordatorios y campañas. Sin ellos, los mensajes se escriben en la consola. Para campañas masivas Meta exige plantillas aprobadas, y solo debe escribir a clientes que autorizaron (Ley 1581 de 2012).
+Sin claves, todo funciona en modo simulado (los mensajes se registran en los logs). Para enviarlos de verdad:
 
-Recordatorios automáticos: programe una llamada cada 15 minutos a `GET /api/cron/recordatorios` con el encabezado `Authorization: Bearer <CRON_SECRET>` (Vercel Cron o cron-job.org).
+1. Cree una app en [Meta for Developers](https://developers.facebook.com) con el producto WhatsApp y un número de WhatsApp Business.
+2. Agregue en Cloudflare los secretos `WHATSAPP_TOKEN` (token permanente de usuario del sistema) y `WHATSAPP_PHONE_ID`.
+3. En Meta > WhatsApp > Configuración, ponga el webhook `https://SU-DOMINIO/api/whatsapp/webhook`, el token de verificación `WHATSAPP_VERIFY_TOKEN` y suscriba `messages`. Agregue `WHATSAPP_APP_SECRET` para validar la firma.
+4. Programe `GET /api/cron/recordatorios` cada 15 minutos con `Authorization: Bearer <CRON_SECRET>`.
+
+Qué hace: confirmación al reservar, recordatorio con "responde 1 para confirmar o 2 para reprogramar", respuesta automática con el enlace de reserva cuando un cliente escribe para pedir cita, saludo de cumpleaños y mensajes para clientes inactivos. Fuera de la ventana de 24 h Meta exige plantillas aprobadas: créelas y ponga sus nombres en `WHATSAPP_TPL_*`.
+
+## Fidelización, gastos, academia y suscripciones
+
+- **Fidelización** (`/panel/fidelizacion`): puntos por cada $1.000 cobrados en caja, premios y canjes, cumpleaños del mes y clientes inactivos.
+- **Gastos** (`/panel/gastos`): registro de gastos por categoría y utilidad del mes (ingresos − gastos). También aparece en Reportes.
+- **QR para la próxima cita**: el recibo de caja trae un QR de reserva y `/panel/qr` imprime un afiche para recepción.
+- **Academia** (`/panel/academia`): cursos cortos para dueños y profesionales, con progreso por usuario.
+- **Prueba gratis**: cada negocio nuevo tiene 14 días del plan Pro sin tarjeta. Al vencer, el panel solo muestra `/panel/suscripcion` (la página pública de reservas sigue funcionando). Los correos en `ADMIN_EMAILS` no tienen bloqueo y ven `/panel/admin` para activar o extender negocios.
+- **Base de datos**: si ya tenía el esquema, aplique `prisma/migraciones/2026-11-14_fidelizacion_gastos_suscripcion.sql` (con `SET search_path TO citas;`).
 
 ## Desplegar en producción (Supabase + Cloudflare Workers)
 

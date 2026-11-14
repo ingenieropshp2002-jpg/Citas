@@ -7,7 +7,7 @@ import { AGENDA_COLORS, StatusBadge } from '@/components/ui/Status';
 import { addDays, cop, DIAS_CORTOS, fromBogota, hm, MESES, minutesOf, time12, timeOf, ymd } from '@/lib/format';
 import { blockTime, createAppointmentPanel, deleteBlock, moveAppointment, setAppointmentStatus } from '@/app/panel/_actions/agenda';
 
-type Appt = { id: string; code: string; staffId: string; start: string; end: string; status: string; total: number; customer: { id: string; name: string; phone: string | null }; services: string; notes: string | null; depositAmount: number; depositStatus: string; saleId: string | null };
+type Appt = { id: string; code: string; staffId: string; start: string; end: string; status: string; confirmed?: boolean; total: number; customer: { id: string; name: string; phone: string | null }; services: string; notes: string | null; depositAmount: number; depositStatus: string; saleId: string | null };
 type Staff = { id: string; name: string; color: string; photo: string | null };
 type Block = { id: string; staffId: string | null; start: string; end: string; reason: string | null };
 const HOUR = 64; // px por hora
@@ -53,7 +53,7 @@ export function AgendaBoard({ view, date, staff, appts, blocks, range, services,
       {list.map(a => (
         <button key={a.id} draggable onDragStart={e => { e.dataTransfer.setData('text/appt', a.id); e.dataTransfer.setData('text/offset', String(e.clientY - (e.currentTarget.getBoundingClientRect().top))); }} onClick={() => setSel(a)}
           className={`absolute inset-x-1 rounded-md border-l-4 px-2 py-1 text-left overflow-hidden shadow-sm hover:shadow-raised hover:z-10 cursor-grab active:cursor-grabbing ${AGENDA_COLORS[a.status]}`} style={{ top: top(a.start), height: h(a.start, a.end) }}>
-          <p className="font-label-md text-label-md truncate">{time12(hm(new Date(a.start)))} · {a.customer.name}</p>
+          <p className="font-label-md text-label-md truncate">{a.confirmed && <span title="Confirmó por WhatsApp" className="text-[#059669]">✓ </span>}{time12(hm(new Date(a.start)))} · {a.customer.name}</p>
           <p className="font-body-sm text-[11px] leading-tight opacity-80 truncate">{a.services}</p>
         </button>
       ))}
@@ -134,7 +134,7 @@ function Detail({ a, staff, onClose, onDone }: { a: Appt; staff: Staff[]; onClos
   const st = staff.find(s => s.id === a.staffId);
   return (
     <Sheet title="Detalle de la cita" onClose={onClose}>
-      <div className="flex items-center justify-between"><span className="font-label-md tracking-widest text-on-surface-variant">{a.code}</span><StatusBadge status={a.status} /></div>
+      <div className="flex items-center justify-between"><span className="font-label-md tracking-widest text-on-surface-variant">{a.code}</span><span className="flex items-center gap-2">{a.confirmed && <span className="font-label-sm text-[#059669] flex items-center gap-1"><Icon name="mark_chat_read" className="text-[16px]" />Confirmó</span>}<StatusBadge status={a.status} /></span></div>
       <Link href={`/panel/clientes/${a.customer.id}`} className="block mt-3 font-headline-sm text-headline-sm hover:text-secondary">{a.customer.name}</Link>
       {a.customer.phone && <a href={`https://wa.me/57${a.customer.phone}`} target="_blank" rel="noreferrer" className="font-label-md text-[#059669] flex items-center gap-1"><Icon name="chat" className="text-[16px]" />+57 {a.customer.phone}</a>}
       <dl className="mt-4 space-y-2">
