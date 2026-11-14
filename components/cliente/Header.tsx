@@ -29,7 +29,7 @@ export async function ClientHeader({ title, back = false }: { title?: string; ba
               {user.avatar ? <img src={user.avatar} alt="" className="w-full h-full rounded-full object-cover" /> : <span className="font-label-lg text-on-secondary-fixed">{user.name.charAt(0)}</span>}
             </Link>
           ) : (
-            <Link href="/login" className="btn-primary btn-sm"><Icon name="login" className="text-[18px]" />Ingresar</Link>
+            <Link href="/login" aria-label="Ingresar" className="btn-primary btn-sm"><Icon name="login" className="text-[18px]" /><span className="hidden sm:inline">Ingresar</span></Link>
           )}
         </div>
       </div>
@@ -71,7 +71,7 @@ export async function ShopHeader({ shop, title, back = false }: { shop: { slug: 
               {user.avatar ? <img src={user.avatar} alt="" className="w-full h-full rounded-full object-cover" /> : <span className="font-label-lg text-on-secondary-fixed">{user.name.charAt(0)}</span>}
             </Link>
           ) : (
-            <Link href={`/login?next=${encodeURIComponent(home)}`} className="btn-primary btn-sm"><Icon name="login" className="text-[18px]" />Ingresar</Link>
+            <Link href={`/login?next=${encodeURIComponent(home)}`} aria-label="Ingresar" className="btn-primary btn-sm"><Icon name="login" className="text-[18px]" /><span className="hidden sm:inline">Ingresar</span></Link>
           )}
         </div>
       </div>

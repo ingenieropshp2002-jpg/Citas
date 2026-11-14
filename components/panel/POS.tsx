@@ -97,7 +97,7 @@ export function POS({ services, products, staff, customers, posLimit, preset }: 
         )}
         <div className="grid grid-cols-2 gap-2 mt-3">
           <input value={coupon} onChange={e => setCoupon(e.target.value.toUpperCase())} className="input !h-9" placeholder="Cupón" />
-          <div className="flex gap-1">{[0, 10].map(p => <button key={p} onClick={() => setTip(Math.round(sum.total * p / 100 / 100) * 100)} className={`chip !h-9 flex-1 ${tip === Math.round(sum.total * p / 100 / 100) * 100 ? 'chip-on' : ''}`}>{p ? '10%' : 'Sin'} propina</button>)}</div>
+          <div className="flex gap-1">{[0, 10].map(p => <button key={p} onClick={() => setTip(Math.round(sum.total * p / 100 / 100) * 100)} className={`chip !h-9 flex-1 min-w-0 !px-2 whitespace-nowrap ${tip === Math.round(sum.total * p / 100 / 100) * 100 ? 'chip-on' : ''}`}>{p ? '+10%' : 'Sin propina'}</button>)}</div>
         </div>
         <dl className="mt-3 space-y-1 tnum font-body-md">
           <div className="flex justify-between text-on-surface-variant"><dt>Subtotal (base)</dt><dd>{cop(sum.subtotal)}</dd></div>

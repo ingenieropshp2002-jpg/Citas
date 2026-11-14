@@ -6,7 +6,7 @@ import { Icon } from '@/components/ui/Icon';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 
 export const NAV = [
-  ['/panel', 'space_dashboard', 'Dashboard', null], ['/panel/agenda', 'calendar_month', 'Agenda', 'agenda'], ['/panel/recordatorios', 'notifications_active', 'Recordatorios', 'agenda'], ['/panel/clientes', 'groups', 'Clientes', 'clientes'],
+  ['/panel', 'space_dashboard', 'Inicio', null], ['/panel/agenda', 'calendar_month', 'Agenda', 'agenda'], ['/panel/recordatorios', 'notifications_active', 'Recordatorios', 'agenda'], ['/panel/clientes', 'groups', 'Clientes', 'clientes'],
   ['/panel/servicios', 'content_cut', 'Servicios', 'servicios'], ['/panel/equipo', 'badge', 'Equipo', 'equipo'], ['/panel/caja', 'point_of_sale', 'Caja / POS', 'caja'],
   ['/panel/inventario', 'inventory_2', 'Inventario', 'inventario'], ['/panel/facturacion', 'receipt_long', 'Facturación DIAN', 'facturacion'], ['/panel/gastos', 'request_quote', 'Gastos', 'gastos'],
   ['/panel/fidelizacion', 'loyalty', 'Fidelización', 'fidelizacion'], ['/panel/marketing', 'campaign', 'Marketing', 'marketing'],

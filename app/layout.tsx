@@ -1,7 +1,16 @@
 import './globals.css';
 import type { Metadata, Viewport } from 'next';
+import { PwaRegister } from '@/components/ui/PwaRegister';
 
-export const metadata: Metadata = { title: { default: 'Registro Citas', template: '%s · Registro Citas' }, description: 'Agenda citas en peluquerías, barberías y spas de Colombia.' };
+export const metadata: Metadata = {
+  title: { default: 'Registro Citas', template: '%s · Registro Citas' },
+  description: 'Agenda citas en peluquerías, barberías y spas de Colombia.',
+  applicationName: 'Registro Citas',
+  manifest: '/manifest.webmanifest',
+  icons: { icon: [{ url: '/icons/favicon-32.png', sizes: '32x32', type: 'image/png' }, { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' }], apple: '/icons/apple-touch-icon.png' },
+  appleWebApp: { capable: true, title: 'Registro Citas', statusBarStyle: 'default' },
+  formatDetection: { telephone: false }
+};
 export const viewport: Viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover', themeColor: '#0d2538' };
 
 const themeScript = `try{var t=localStorage.getItem('rc-theme');if(t==='dark'||(!t&&matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark')}catch(e){}`;
@@ -18,7 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block" rel="stylesheet" />
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body className="bg-surface font-sans text-body-md text-on-surface min-h-screen antialiased">{children}</body>
+      <body className="bg-surface font-sans text-body-md text-on-surface min-h-screen antialiased">{children}<PwaRegister /></body>
     </html>
   );
 }

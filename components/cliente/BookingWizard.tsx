@@ -43,7 +43,7 @@ export function BookingWizard({ business, services, staff, initialService, initi
     if ('error' in r && r.error) { setError(r.error); return; }
     if ('redirect' in r && r.redirect) { if (r.redirect.startsWith('http')) window.location.href = r.redirect; else router.push(r.redirect); }
   });
-  const ctaLabel = step < 4 ? 'Continuar' : deposit ? `Confirmar y Pagar ${cop(deposit, true)} con ${method === 'NEQUI' ? 'Nequi' : method === 'PSE' ? 'PSE' : 'Tarjeta'}` : 'Confirmar reserva';
+  const ctaLabel = step < 4 ? 'Continuar' : deposit ? `Confirmar y pagar ${cop(deposit, true)} con ${method === 'NEQUI' ? 'Nequi' : method === 'PSE' ? 'PSE' : 'Tarjeta'}` : 'Confirmar reserva';
 
   return (
     <div className="flex flex-col w-full pb-44 max-w-3xl mx-auto">
@@ -126,7 +126,7 @@ export function BookingWizard({ business, services, staff, initialService, initi
       {step === 3 && (
         <section className="px-margin mt-space-md">
           <span className="eyebrow">Paso 3 de 4</span>
-          <h3 className="font-headline-sm text-headline-sm font-semibold">Elige Fecha y Hora</h3>
+          <h3 className="font-headline-sm text-headline-sm font-semibold">Elige fecha y hora</h3>
           <DateSlotPicker businessId={business.id} duration={duration} staffId={staffId} serviceIds={sel} date={date} time={time} onChange={(d, t) => { setDate(d); setTime(t); }} />
         </section>
       )}
@@ -147,7 +147,7 @@ export function BookingWizard({ business, services, staff, initialService, initi
               {[
                 ['NEQUI', 'Nequi', 'Notificación push al celular', <span key="n" className="w-8 h-8 rounded-lg bg-nequi flex items-center justify-center text-white font-bold text-xs">N</span>, 'Instantáneo'],
                 ['PSE', 'PSE (Débito Bancario)', 'Bancolombia, Davivienda, etc.', <span key="p" className="w-8 h-8 rounded-lg bg-pse flex items-center justify-center font-bold text-[10px] text-white">PSE</span>],
-                ['TARJETA', 'Tarjeta Débito / Crédito', 'Visa, Mastercard, Amex', <span key="t" className="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-on-surface-variant"><Icon name="credit_card" className="text-[18px]" /></span>],
+                ['TARJETA', 'Tarjeta débito / Crédito', 'Visa, Mastercard, Amex', <span key="t" className="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-on-surface-variant"><Icon name="credit_card" className="text-[18px]" /></span>],
                 ['EN_LOCAL', 'Pagar en el Salón', 'Efectivo, Datáfono o Transferencia', <span key="l" className="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-on-surface-variant"><Icon name="storefront" className="text-[18px]" /></span>]
               ].map(([v, l, d, icon, badge]) => (
                 <div key={v as string} className={`rounded-xl bg-surface-container-lowest p-space-sm shadow-sm border transition ${method === v ? 'border-gold/50' : 'border-transparent'}`}>
@@ -200,7 +200,7 @@ export function BookingWizard({ business, services, staff, initialService, initi
             className="w-full py-3.5 px-4 rounded-lg bg-primary-container text-white dark:text-on-primary-container font-label-lg text-label-lg font-bold flex items-center justify-center gap-2 active:scale-[0.985] transition-transform shadow-md disabled:opacity-50">
             {step === 4 && <Icon name="lock" className="text-[18px] text-secondary-fixed" />}<span>{pending ? 'Procesando…' : ctaLabel}</span>
           </button>
-          <div className="flex items-center justify-center gap-1 mt-2 text-on-surface-variant text-[11px] font-label-sm"><Icon name="verified" className="text-[13px] text-secondary" /><span>Transacción 100% segura y encriptada · Pasarela Vigilada</span></div>
+          <div className="flex items-center justify-center gap-1 mt-2 text-on-surface-variant text-[11px] font-label-sm"><Icon name="verified" className="text-[13px] text-secondary" /><span>Transacción 100% segura y encriptada · pasarela vigilada</span></div>
         </div>
       </div>
     </div>

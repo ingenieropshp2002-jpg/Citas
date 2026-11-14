@@ -30,7 +30,7 @@ export default async function Marketing() {
           <label className="block"><span className="label">Audiencia</span><select name="audience" className="input">{Object.entries(AUD).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
           <label className="block"><span className="label">Cupón (opcional)</span><select name="couponCode" className="input"><option value="">—</option>{coupons.filter(c => c.active).map(c => <option key={c.id}>{c.code}</option>)}</select></label>
           <label className="block"><span className="label">Mensaje</span><textarea name="message" rows={5} className="input" required defaultValue="Hola {nombre} 👋, te esperamos en {negocio}. Reserva aquí: {link}" /></label>
-          <p className="font-body-sm text-on-surface-variant">Variables: {'{nombre}'}, {'{negocio}'}, {'{link}'}, {'{cupon}'}. Envíe solo a clientes que autorizaron comunicaciones (Ley 1581 de 2012). Para envíos masivos, WhatsApp exige plantillas aprobadas por Meta.</p>
+          <p className="font-body-sm text-on-surface-variant">Variables: {'{nombre}'}, {'{negocio}'}, {'{link}'}, {'{cupon}'}. Envía solo a clientes que autorizaron comunicaciones (Ley 1581 de 2012). Para envíos masivos, WhatsApp exige plantillas aprobadas por Meta.</p>
           <button className="btn-primary w-full">Guardar</button>
         </ActionForm></Drawer>} />
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-4">

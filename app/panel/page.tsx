@@ -49,8 +49,8 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
           <div className="flex items-center justify-between"><h2 className="h-section">Ventas de la semana</h2><span className="font-title-md text-title-md tnum">{cop(perDay.reduce((a, x) => a + x, 0))}</span></div>
           <div className="mt-6 h-56 flex items-end gap-2 md:gap-4" role="img" aria-label="Gráfica de ventas de los últimos 7 días">
             {days.map((d, i) => (
-              <div key={d} className="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
-                <span className="font-label-sm text-label-sm text-on-surface-variant opacity-0 group-hover:opacity-100 tnum">{cop(perDay[i])}</span>
+              <div key={d} className="flex-1 min-w-0 flex flex-col items-center gap-2 h-full justify-end group">
+                <span className="hidden md:block font-label-sm text-label-sm text-on-surface-variant opacity-0 group-hover:opacity-100 tnum whitespace-nowrap">{cop(perDay[i])}</span>
                 <div className={`w-full max-w-[56px] rounded-t-lg transition-all ${d === today ? 'bg-gold' : 'bg-primary-container/85 dark:bg-primary/70'}`} style={{ height: `${Math.max(4, perDay[i] / max * 100)}%` }} />
                 <span className={`font-label-sm text-label-sm ${d === today ? 'text-secondary' : 'text-on-surface-variant'}`}>{DIAS_CORTOS[fromBogota(d, '12:00').getUTCDay()]}</span>
               </div>

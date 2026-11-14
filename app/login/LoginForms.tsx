@@ -2,19 +2,20 @@
 import Link from 'next/link';
 import { useActionState, useState, useTransition } from 'react';
 import { Icon } from '@/components/ui/Icon';
+import { PasswordInput } from '@/components/ui/PasswordInput';
 import { loginEmail, sendOtp, verifyOtp } from './actions';
 
-export function LoginForms({ next, google }: { next: string; google: boolean }) {
-  const [tab, setTab] = useState<'phone' | 'email'>('phone');
+export function LoginForms({ next, google, phone: phoneOn }: { next: string; google: boolean; phone: boolean }) {
+  const [tab, setTab] = useState<'phone' | 'email'>('email');
   const [phone, setPhone] = useState(''); const [sent, setSent] = useState(false); const [code, setCode] = useState(''); const [name, setName] = useState(''); const [needName, setNeedName] = useState(false);
   const [msg, setMsg] = useState(''); const [dev, setDev] = useState(''); const [p, start] = useTransition();
   const [st, emailAction, ep] = useActionState(loginEmail, null);
   return (
     <div className="card-raised p-6">
-      <div className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-surface-container-low mb-5">
-        {(['phone', 'email'] as const).map(t => <button key={t} onClick={() => setTab(t)} className={`h-10 rounded-lg font-label-lg text-label-lg ${tab === t ? 'bg-surface-container-lowest shadow-sm text-primary-container dark:text-primary' : 'text-on-surface-variant'}`}>{t === 'phone' ? 'Celular' : 'Correo'}</button>)}
-      </div>
-      {tab === 'phone' ? (
+      {phoneOn && <div role="tablist" className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-surface-container-low mb-5">
+        {(['email', 'phone'] as const).map(t => <button key={t} type="button" role="tab" aria-selected={tab === t} onClick={() => setTab(t)} className={`h-10 rounded-lg font-label-lg text-label-lg transition-colors ${tab === t ? 'bg-surface-container-lowest shadow-sm text-primary-container dark:text-primary' : 'text-on-surface-variant hover:text-on-surface'}`}>{t === 'phone' ? 'Celular' : 'Correo'}</button>)}
+      </div>}
+      {phoneOn && tab === 'phone' ? (
         <form className="space-y-3" onSubmit={e => { e.preventDefault(); setMsg(''); start(async () => {
           if (!sent) { const r = await sendOtp(phone); if ('error' in r && r.error) setMsg(r.error); else { setSent(true); setDev(r.devCode || ''); } return; }
           const r = await verifyOtp(phone, code, name, next); if (r?.error) setMsg(r.error); if (r?.needName) setNeedName(true);
@@ -29,16 +30,16 @@ export function LoginForms({ next, google }: { next: string; google: boolean }) 
           {sent && <button type="button" className="w-full font-label-md text-secondary" onClick={() => { setSent(false); setCode(''); }}>Cambiar número</button>}
         </form>
       ) : (
-        <form action={emailAction} className="space-y-3">
+        <form action={emailAction} className="space-y-3" key={st?.email || 'login'}>
           <input type="hidden" name="next" value={next} />
-          <label className="block"><span className="label">Correo</span><input name="email" type="email" className="input" required autoComplete="email" /></label>
-          <label className="block"><span className="label">Contraseña</span><input name="password" type="password" className="input" required autoComplete="current-password" /></label>
-          {st?.error && <p className="text-danger font-label-md">{st.error}</p>}
+          <label className="block"><span className="label">Correo</span><input name="email" type="email" className="input" required autoComplete="email" inputMode="email" defaultValue={st?.email} /></label>
+          <label className="block"><span className="flex items-center justify-between"><span className="label">Contraseña</span><Link href={`/recuperar?next=${encodeURIComponent(next)}`} className="font-label-md text-label-md text-secondary hover:underline mb-1">¿Olvidaste tu contraseña?</Link></span><PasswordInput name="password" autoComplete="current-password" autoFocus={!!st?.email} /></label>
+          {st?.error && <p role="alert" className="text-danger font-label-md">{st.error}</p>}
           <button disabled={ep} className="btn-primary w-full">{ep ? 'Ingresando…' : 'Ingresar'}</button>
           <p className="text-center font-body-sm text-on-surface-variant">¿No tienes cuenta? <Link className="text-secondary font-bold" href={`/registro?next=${encodeURIComponent(next)}`}>Regístrate</Link></p>
         </form>
       )}
-      <div className="flex items-center gap-3 my-5 text-on-surface-variant font-label-md"><span className="flex-1 h-px bg-parchment" />o<span className="flex-1 h-px bg-parchment" /></div>
+      {google && <div className="flex items-center gap-3 my-5 text-on-surface-variant font-label-md"><span className="flex-1 h-px bg-parchment" />o<span className="flex-1 h-px bg-parchment" /></div>}
       {google ? <a href={`/api/auth/google?next=${encodeURIComponent(next)}`} className="btn-ghost w-full border border-parchment"><img alt="" src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" />Continuar con Google</a>
         : null}
     </div>

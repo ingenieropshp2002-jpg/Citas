@@ -10,6 +10,7 @@ import { saveCustomer } from '../../_actions/catalog';
 import { CustomerFields } from '../fields';
 import { cop, fechaCorta, hm, parseJson, time12 } from '@/lib/format';
 import { waLink } from '@/lib/notify';
+import { AccessButton } from './AccessButton';
 
 export default async function Cliente({ params }: { params: Promise<{ id: string }> }) {
   const { business: b } = await requireBusiness('clientes');
@@ -20,7 +21,7 @@ export default async function Cliente({ params }: { params: Promise<{ id: string
   return (
     <>
       <PageHeader eyebrow="Ficha del cliente" title={c.name} subtitle={parseJson<string[]>(c.tags, []).join(' · ')}
-        actions={<>{c.phone && <a href={waLink(c.phone, `Hola ${c.name.split(' ')[0]}, `)} target="_blank" rel="noreferrer" className="btn-ghost btn-sm"><Icon name="chat" className="text-[18px] text-[#059669]" />WhatsApp</a>}<Link href="/panel/agenda?nueva=1" className="btn-primary btn-sm"><Icon name="add" className="text-[18px]" />Agendar</Link></>} />
+        actions={<>{c.phone && <a href={waLink(c.phone, `Hola ${c.name.split(' ')[0]}, `)} target="_blank" rel="noreferrer" className="btn-ghost btn-sm"><Icon name="chat" className="text-[18px] text-[#059669]" />WhatsApp</a>}<AccessButton id={c.id} /><Link href="/panel/agenda?nueva=1" className="btn-primary btn-sm"><Icon name="add" className="text-[18px]" />Agendar</Link></>} />
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
         <Stat label="Gasto total" value={cop(c.totalSpent)} icon="payments" tone="gold" />
         <Stat label="Visitas" value={String(c.visits)} icon="event_repeat" />

@@ -44,3 +44,16 @@ body { overscroll-behavior: none; font-feature-settings: 'tnum' 0; }
   #ticket, #ticket * { visibility: visible; }
   #ticket { position: absolute; left: 0; top: 0; }
 }
+
+@layer components {
+  .step { @apply shrink-0 w-6 h-6 rounded-full bg-primary-container text-secondary-fixed flex items-center justify-center font-label-md text-label-md; }
+}
+
+/* La hoja de íconos de Google define display:inline-block y llega después; estas reglas mantienen funcionando hidden/dark:hidden. */
+.material-symbols-outlined.hidden { display: none; }
+.dark .material-symbols-outlined.dark\:hidden { display: none; }
+.dark .material-symbols-outlined.dark\:inline { display: inline-block; }
+
+/* Evita que tarjetas y tablas ensanchen la pantalla en el celular */
+.grid > *, .card { min-width: 0; }
+.card:has(.table) { overflow-x: auto; }

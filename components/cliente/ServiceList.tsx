@@ -16,7 +16,7 @@ export function ServiceList({ services, slug }: { services: S[]; slug: string })
       </div>
       <div className="grid md:grid-cols-2 gap-space-sm mt-space-sm">
         {list.map(s => (
-          <div key={s.id} className="p-space-md rounded-xl bg-surface-container-lowest shadow-md flex items-center justify-between gap-space-md border border-transparent hover:border-gold/40 transition">
+          <div key={s.id} className="p-space-md rounded-xl bg-surface-container-lowest shadow-md flex items-center justify-between gap-space-md border border-transparent hover:border-gold/40 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-space-xs mb-1">
                 {s.tag && <span className="px-1.5 py-0.5 rounded bg-surface-container text-on-surface-variant font-label-sm text-label-sm font-semibold">{s.tag}</span>}

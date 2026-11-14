@@ -63,9 +63,9 @@ async function Documents({ businessId, tipo, estado }: { businessId: string; tip
         <Stat label="IVA generado (mes)" value={cop(m.filter(d => d.docType !== 'NC').reduce((a, d) => a + d.taxTotal, 0) - m.filter(d => d.docType === 'NC').reduce((a, d) => a + d.taxTotal, 0))} icon="account_balance" tone="gold" />
         <Stat label="Pendientes de envío" value={String(docs.filter(d => ['GENERADO', 'CONTINGENCIA', 'RECHAZADO'].includes(d.status)).length)} icon="cloud_off" tone="danger" />
       </div>
-      <form className="flex gap-2 mb-3"><input type="hidden" name="tab" value="documentos" />
-        <select name="tipo" defaultValue={tipo || ''} className="input !w-auto"><option value="">Todos los tipos</option><option value="FE">Facturas</option><option value="POS">POS</option><option value="NC">Notas crédito</option></select>
-        <select name="estado" defaultValue={estado || ''} className="input !w-auto"><option value="">Todos los estados</option><option value="GENERADO">Generado</option><option value="ENVIADO">Enviado</option><option value="ACEPTADO">Aceptado</option><option value="RECHAZADO">Rechazado</option><option value="CONTINGENCIA">Contingencia</option></select>
+      <form className="flex flex-wrap gap-2 mb-3"><input type="hidden" name="tab" value="documentos" />
+        <select name="tipo" defaultValue={tipo || ''} className="input !w-auto flex-1 min-w-[140px]"><option value="">Todos los tipos</option><option value="FE">Facturas</option><option value="POS">POS</option><option value="NC">Notas crédito</option></select>
+        <select name="estado" defaultValue={estado || ''} className="input !w-auto flex-1 min-w-[140px]"><option value="">Todos los estados</option><option value="GENERADO">Generado</option><option value="ENVIADO">Enviado</option><option value="ACEPTADO">Aceptado</option><option value="RECHAZADO">Rechazado</option><option value="CONTINGENCIA">Contingencia</option></select>
         <button className="btn-ghost">Filtrar</button></form>
       <div className="card overflow-x-auto">
         <table className="table">
@@ -140,16 +140,16 @@ async function Config({ b }: { b: Awaited<ReturnType<typeof requireBusiness>>['b
 
 function Guide() {
   const steps = [
-    ['Inscríbase en el RUT con la responsabilidad correcta', 'Verifique en su RUT la responsabilidad 52 (facturador electrónico) y su régimen de IVA. Las peluquerías, barberías y spas que prestan servicios gravados son, por regla general, responsables de IVA si superan los topes de la ley.'],
-    ['Elija cómo va a facturar', 'Contrate un proveedor tecnológico autorizado por la DIAN (lista en dian.gov.co) o use la solución gratuita de la DIAN. Registro Citas genera el XML UBL 2.1, el CUFE/CUDE y el QR; la firma digital y la transmisión las hace el proveedor por API.'],
-    ['Habilítese como facturador en el portal DIAN', 'En el servicio “Factura electrónica > Habilitación”, registre el modo de operación (software de un proveedor tecnológico), y supere el set de pruebas con el TestSetId que le asignan. Haga lo mismo para el documento equivalente electrónico POS.'],
-    ['Solicite la numeración', 'Tramite la autorización de numeración (formulario 1876) para factura electrónica y para documento equivalente POS. Registre aquí el número de resolución, prefijo, rango, vigencia y la clave técnica.'],
-    ['Configure el conector', 'En “Proveedor tecnológico” ingrese la URL y el token de su proveedor, el ID y PIN del software, y cambie el ambiente a Producción solo cuando la DIAN lo haya habilitado.'],
-    ['Opere y conserve', 'Entregue la representación gráfica (tiquete o PDF) al cliente; por encima de 5 UVT se emite factura electrónica. Anule solo con nota crédito/nota de ajuste, nunca borrando. Conserve los XML. Cuando no haya internet, el sistema deja los documentos en contingencia para retransmitirlos.']
+    ['Inscríbete en el RUT con la responsabilidad correcta', 'Verifica en tu RUT la responsabilidad 52 (facturador electrónico) y tu régimen de IVA. Las peluquerías, barberías y spas que prestan servicios gravados son, por regla general, responsables de IVA si superan los topes de la ley.'],
+    ['Elige cómo vas a facturar', 'Contrata un proveedor tecnológico autorizado por la DIAN (lista en dian.gov.co) o usa la solución gratuita de la DIAN. Registro Citas genera el XML UBL 2.1, el CUFE/CUDE y el QR; la firma digital y la transmisión las hace el proveedor por API.'],
+    ['Habilítate como facturador en el portal de la DIAN', 'En el servicio “Factura electrónica > Habilitación”, registra el modo de operación (software de un proveedor tecnológico) y supera el set de pruebas con el TestSetId que te asignan. Haz lo mismo para el documento equivalente electrónico POS.'],
+    ['Solicita la numeración', 'Tramita la autorización de numeración (formulario 1876) para factura electrónica y para documento equivalente POS. Registra aquí el número de resolución, el prefijo, el rango, la vigencia y la clave técnica.'],
+    ['Configura el conector', 'En “Proveedor tecnológico” escribe la URL y el token de tu proveedor, el ID y el PIN del software, y cambia el ambiente a Producción solo cuando la DIAN lo haya habilitado.'],
+    ['Opera y conserva', 'Entrega la representación gráfica (tiquete o PDF) al cliente; por encima de 5 UVT se emite factura electrónica. Anula solo con nota crédito o nota de ajuste, nunca borrando. Conserva los XML. Cuando no hay internet, el sistema deja los documentos en contingencia para retransmitirlos.']
   ];
   return (
     <div className="max-w-3xl">
-      <div className="p-4 rounded-xl bg-[#EFF6FF] text-[#1E40AF] dark:bg-[#1e3a8a]/40 dark:text-[#bfdbfe] mb-4 flex gap-2"><Icon name="info" />Este software deja lista la generación de los documentos según la Resolución DIAN 000165 de 2023 y sus anexos técnicos, pero el cumplimiento ante la DIAN solo se obtiene al terminar la habilitación con un proveedor tecnológico autorizado. Verifique siempre los requisitos vigentes en dian.gov.co y con su contador.</div>
+      <div className="p-4 rounded-xl bg-[#EFF6FF] text-[#1E40AF] dark:bg-[#1e3a8a]/40 dark:text-[#bfdbfe] mb-4 flex gap-2"><Icon name="info" />Este software deja lista la generación de los documentos según la Resolución DIAN 000165 de 2023 y sus anexos técnicos, pero el cumplimiento ante la DIAN solo se obtiene al terminar la habilitación con un proveedor tecnológico autorizado. Verifica siempre los requisitos vigentes en dian.gov.co y con tu contador.</div>
       <ol className="space-y-3">{steps.map(([t, d], i) => <li key={t} className="card p-4 flex gap-4"><span className="w-9 h-9 shrink-0 rounded-full bg-primary-container text-secondary-fixed flex items-center justify-center font-title-md">{i + 1}</span><div><p className="font-title-md text-title-md">{t}</p><p className="text-on-surface-variant mt-1">{d}</p></div></li>)}</ol>
     </div>
   );

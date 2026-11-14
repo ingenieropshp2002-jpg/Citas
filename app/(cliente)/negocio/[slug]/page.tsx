@@ -3,13 +3,26 @@ import { notFound } from 'next/navigation';
 import { db } from '@/lib/db';
 import { ShopHeader } from '@/components/cliente/Header';
 import { ServiceList } from '@/components/cliente/ServiceList';
+import { ShopTabs } from '@/components/cliente/ShopTabs';
+import { InstallApp } from '@/components/ui/InstallApp';
 import { Icon } from '@/components/ui/Icon';
 import { bogota, cop, DIAS, parseJson, time12 } from '@/lib/format';
 import { waLink } from '@/lib/notify';
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
-  const b = await db.business.findUnique({ where: { slug: (await params).slug } });
-  return { title: b?.name || 'Negocio' };
+  const slug = (await params).slug;
+  const b = await db.business.findUnique({ where: { slug }, select: { name: true, tagline: true, description: true } });
+  if (!b) return { title: 'Negocio no encontrado' };
+  const base = `/negocio/${slug}`;
+  return {
+    title: { absolute: b.name },
+    description: b.tagline ? `${b.tagline}. Reserva tu cita en línea.` : b.description.slice(0, 155),
+    manifest: `${base}/app.webmanifest`,
+    applicationName: b.name,
+    icons: { icon: `${base}/icono/192`, apple: `${base}/icono/180` },
+    appleWebApp: { capable: true, title: b.name, statusBarStyle: 'default' as const },
+    openGraph: { title: b.name, description: b.tagline || undefined, type: 'website' as const }
+  };
 }
 
 export default async function Negocio({ params }: { params: Promise<{ slug: string }> }) {
@@ -24,7 +37,7 @@ export default async function Negocio({ params }: { params: Promise<{ slug: stri
   const today = hours[String(now.dow)];
   const nowMin = now.h * 60 + now.min;
   const open = today && nowMin >= Number(today[0].slice(0, 2)) * 60 + Number(today[0].slice(3)) && nowMin < Number(today[1].slice(0, 2)) * 60 + Number(today[1].slice(3));
-  const groups: [string, string[]][] = [['Lunes a Viernes', ['1', '2', '3', '4', '5']], ['Sábados', ['6']], ['Domingos y Festivos', ['0']]];
+  const groups: [string, string[]][] = [['Lunes a viernes', ['1', '2', '3', '4', '5']], ['Sábados', ['6']], ['Domingos y festivos', ['0']]];
   const mapQ = b.lat && b.lng ? `${b.lat},${b.lng}` : encodeURIComponent(b.address);
   return (
     <>
@@ -69,26 +82,38 @@ export default async function Negocio({ params }: { params: Promise<{ slug: stri
           </div>
           <div className="flex items-center gap-space-xs mt-space-sm text-on-surface-variant"><Icon name="location_on" className="text-[18px] text-secondary" /><p className="font-body-md text-body-md truncate">{b.address}</p></div>
           <p className="mt-3 text-on-surface-variant max-w-3xl">{b.description}</p>
-          <div className="grid grid-cols-3 gap-space-sm mt-space-md max-w-xl">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-space-sm mt-space-md max-w-2xl">
             {b.phone && <a className="flex flex-col items-center justify-center p-space-sm bg-surface-container-low hover:bg-surface-container active:scale-95 rounded-xl transition-all shadow-sm" href={`tel:+57${b.phone}`}><Icon name="call" className="text-[22px] text-primary mb-1" /><span className="font-label-md text-label-md text-primary font-bold">Llamar</span></a>}
             <a className="flex flex-col items-center justify-center p-space-sm bg-surface-container-low hover:bg-surface-container active:scale-95 rounded-xl transition-all shadow-sm" target="_blank" rel="noopener noreferrer" href={`https://www.google.com/maps/dir/?api=1&destination=${mapQ}`}><Icon name="near_me" className="text-[22px] text-secondary mb-1" /><span className="font-label-md text-label-md text-primary font-bold">Cómo llegar</span></a>
             {b.whatsapp && <a className="flex flex-col items-center justify-center p-space-sm bg-surface-container-low hover:bg-surface-container active:scale-95 rounded-xl transition-all shadow-sm" href={waLink(b.whatsapp, `Hola ${b.name}, quiero reservar una cita.`)} target="_blank" rel="noopener noreferrer"><Icon name="chat" className="text-[22px] text-[#059669] mb-1" /><span className="font-label-md text-label-md text-[#065f46] dark:text-[#6ee7b7] font-bold">WhatsApp</span></a>}
+            <InstallApp variant="tile" name={b.name} />
           </div>
         </section>
 
-        {/* Pestañas */}
-        <nav className="mt-space-lg px-margin sticky top-16 z-30 bg-surface/95 backdrop-blur-md py-space-xs">
-          <div className="flex items-center gap-space-xs overflow-x-auto no-scrollbar">
-            {[['#servicios', 'Servicios'], ...(products.length ? [['#productos', `Productos (${products.length})`]] : []), ['#equipo', 'Especialistas'], ['#resenas', `Reseñas (${b.reviewCount})`], ['#sede', 'Horarios & Sede']].map(([h, l], i) => (
-              <a key={h} href={h} className={`px-space-md py-2 rounded-full font-label-md text-label-md whitespace-nowrap transition-all ${i === 0 ? 'bg-primary-container text-on-primary dark:text-on-primary-container' : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'}`}>{l}</a>
-            ))}
-          </div>
-        </nav>
+        <ShopTabs tabs={[{ id: 'servicios', label: 'Servicios' }, ...(b.staff.length ? [{ id: 'equipo', label: 'Profesionales' }] : []), ...(products.length ? [{ id: 'productos', label: `Productos (${products.length})` }] : []), ...(b.reviews.length ? [{ id: 'resenas', label: `Reseñas (${b.reviewCount})` }] : []), { id: 'sede', label: 'Horarios y sede' }]} />
 
         <section id="servicios" className="px-margin mt-space-md scroll-mt-32">
-          <div className="flex items-center justify-between mb-space-sm"><h2 className="h-section">Servicios Populares</h2><span className="font-label-md text-label-md text-secondary font-bold">Carta ({b.services.length})</span></div>
+          <div className="flex items-center justify-between mb-space-sm"><h2 className="h-section">Servicios</h2><span className="font-label-md text-label-md text-secondary font-bold">Carta ({b.services.length})</span></div>
           <ServiceList slug={b.slug} services={b.services} />
         </section>
+
+        {b.staff.length > 0 && <section id="equipo" className="mt-space-lg px-margin scroll-mt-32">
+          <h2 className="h-section">Equipo de profesionales</h2>
+          <p className="font-body-sm text-body-sm text-on-surface-variant mb-space-sm">Elige con quién quieres tu cita</p>
+          <div className="flex gap-space-md overflow-x-auto no-scrollbar pb-2">
+            {b.staff.map(s => (
+              <Link key={s.id} href={`/reservar/${b.slug}?profesional=${s.id}`} className="group shrink-0 w-[150px] card p-space-md flex flex-col items-center text-center transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-gold/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold">
+                <div className="relative">
+                  <div className="w-20 h-20 rounded-full p-[2px] bg-gradient-to-tr from-gold to-secondary-fixed">{s.photo ? <img src={s.photo} alt={s.name} className="w-full h-full rounded-full object-cover border-2 border-surface-container-lowest" /> : <div className="w-full h-full rounded-full bg-primary-container text-white flex items-center justify-center font-title-lg">{s.name[0]}</div>}</div>
+                  <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-primary-container text-white font-label-sm text-label-sm"><Icon name="star" fill className="text-[12px] text-secondary-fixed" />{s.rating.toFixed(1)}</span>
+                </div>
+                <h3 className="mt-3 font-title-md text-title-md text-on-surface">{s.name.split(' ')[0]} {s.name.split(' ')[1]?.[0]}.</h3>
+                <p className="font-body-sm text-body-sm text-on-surface-variant">{s.title}</p>
+                <span className="mt-2 px-2 py-0.5 rounded bg-surface-container font-label-sm text-label-sm text-primary-container dark:text-primary transition-colors group-hover:bg-primary-container group-hover:text-on-primary dark:group-hover:text-on-primary-container">Reservar</span>
+              </Link>
+            ))}
+          </div>
+        </section>}
 
         {products.length > 0 && <section id="productos" className="mt-space-lg px-margin scroll-mt-32">
           <div className="flex items-center justify-between mb-space-sm"><h2 className="h-section">Productos a la venta</h2><span className="font-label-md text-label-md text-secondary font-bold">{products.length} productos</span></div>
@@ -98,15 +123,15 @@ export default async function Negocio({ params }: { params: Promise<{ slug: stri
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">{products.filter(p => p.category === cat).map(p => {
                 const out = p.stock <= 0; const qty = p.unit === 'UND' ? Math.floor(p.stock) : null;
                 return (
-                  <article key={p.id} className={`card overflow-hidden flex flex-col ${out ? 'opacity-70' : ''}`}>
-                    <div className="aspect-square bg-surface-container flex items-center justify-center">{p.image ? <img src={p.image} alt={p.name} loading="lazy" className="w-full h-full object-cover" /> : <Icon name="shopping_bag" className="text-[40px] text-on-surface-variant/50" />}</div>
+                  <article key={p.id} className={`group card overflow-hidden flex flex-col transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${out ? 'opacity-70' : ''}`}>
+                    <div className="aspect-square bg-surface-container flex items-center justify-center overflow-hidden">{p.image ? <img src={p.image} alt={p.name} loading="lazy" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" /> : <Icon name="shopping_bag" className="text-[40px] text-on-surface-variant/50" />}</div>
                     <div className="p-3 flex flex-col flex-1">
                       {p.brand && <p className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wide">{p.brand}</p>}
                       <h3 className="font-label-lg text-label-lg leading-snug">{p.name}</h3>
                       {p.description && <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5 line-clamp-2">{p.description}</p>}
                       <p className="font-title-md text-title-md mt-auto pt-2 tnum">{cop(p.price)}</p>
                       <p className={`font-label-sm text-label-sm ${out ? 'text-danger' : qty !== null && qty <= 3 ? 'text-secondary' : 'text-success'}`}>{out ? 'Agotado' : qty !== null ? `${qty} ${qty === 1 ? 'disponible' : 'disponibles'}` : 'Disponible'}</p>
-                      {!out && b.whatsapp && <a href={waLink(b.whatsapp, `Hola ${b.name}, quiero el producto "${p.name}" (${cop(p.price)}). ¿Me lo apartan?`)} target="_blank" rel="noopener noreferrer" className="btn btn-sm bg-[#25D366] text-white mt-2 justify-center"><Icon name="chat" className="text-[16px]" />Pedir</a>}
+                      {!out && b.whatsapp && <a href={waLink(b.whatsapp, `Hola ${b.name}, quiero el producto "${p.name}" (${cop(p.price)}). ¿Me lo apartan?`)} target="_blank" rel="noopener noreferrer" className="btn btn-sm bg-[#25D366] hover:bg-[#1ebe5b] text-white mt-2 justify-center transition-colors"><Icon name="chat" className="text-[16px]" />Pedir</a>}
                     </div>
                   </article>
                 );
@@ -115,29 +140,11 @@ export default async function Negocio({ params }: { params: Promise<{ slug: stri
           ))}
         </section>}
 
-        <section id="equipo" className="mt-space-lg px-margin scroll-mt-32">
-          <h2 className="h-section">Equipo de Profesionales</h2>
-          <p className="font-body-sm text-body-sm text-on-surface-variant mb-space-sm">Maestros del estilo certificados</p>
-          <div className="flex gap-space-md overflow-x-auto no-scrollbar pb-2">
-            {b.staff.map(s => (
-              <Link key={s.id} href={`/reservar/${b.slug}?profesional=${s.id}`} className="shrink-0 w-[150px] card p-space-md flex flex-col items-center text-center hover:border-gold/40">
-                <div className="relative">
-                  <div className="w-20 h-20 rounded-full p-[2px] bg-gradient-to-tr from-gold to-secondary-fixed">{s.photo ? <img src={s.photo} alt={s.name} className="w-full h-full rounded-full object-cover border-2 border-surface-container-lowest" /> : <div className="w-full h-full rounded-full bg-primary-container text-white flex items-center justify-center font-title-lg">{s.name[0]}</div>}</div>
-                  <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-primary-container text-white font-label-sm text-label-sm"><Icon name="star" fill className="text-[12px] text-secondary-fixed" />{s.rating.toFixed(1)}</span>
-                </div>
-                <h3 className="mt-3 font-title-md text-title-md text-on-surface">{s.name.split(' ')[0]} {s.name.split(' ')[1]?.[0]}.</h3>
-                <p className="font-body-sm text-body-sm text-on-surface-variant">{s.title}</p>
-                <span className="mt-2 px-2 py-0.5 rounded bg-surface-container font-label-sm text-label-sm text-primary-container dark:text-primary">Reservar</span>
-              </Link>
-            ))}
-          </div>
-        </section>
-
-        <section id="resenas" className="mt-space-lg px-margin scroll-mt-32">
-          <div className="flex items-center justify-between mb-space-sm"><h2 className="h-section">Experiencias de Clientes</h2><span className="font-label-md text-label-md text-secondary font-bold">{b.reviewCount} opiniones</span></div>
+        {b.reviews.length > 0 && <section id="resenas" className="mt-space-lg px-margin scroll-mt-32">
+          <div className="flex items-center justify-between mb-space-sm"><h2 className="h-section">Opiniones de clientes</h2><span className="font-label-md text-label-md text-secondary font-bold">{b.reviewCount} opiniones</span></div>
           <div className="grid md:grid-cols-2 gap-space-sm">
             {b.reviews.map(r => (
-              <article key={r.id} className="card p-space-md">
+              <article key={r.id} className="card p-space-md transition-shadow duration-300 hover:shadow-lg">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3"><span className="w-10 h-10 rounded-full bg-primary-container text-secondary-fixed flex items-center justify-center font-label-lg">{r.authorName.split(' ').map(x => x[0]).slice(0, 2).join('')}</span>
                     <div><p className="font-title-md text-title-md">{r.authorName}</p><p className="font-body-sm text-body-sm text-on-surface-variant">Cliente verificado</p></div></div>
@@ -148,12 +155,12 @@ export default async function Negocio({ params }: { params: Promise<{ slug: stri
               </article>
             ))}
           </div>
-        </section>
+        </section>}
 
         <section id="sede" className="mt-space-lg px-margin scroll-mt-32">
-          <div className="flex items-center justify-between mb-space-sm"><h2 className="h-section">Sede & Acceso</h2></div>
+          <div className="flex items-center justify-between mb-space-sm"><h2 className="h-section">Sede y acceso</h2></div>
           <div className="rounded-xl overflow-hidden shadow-md relative">
-            <iframe title="Mapa" className="w-full h-56 md:h-72 border-0" loading="lazy" src={`https://maps.google.com/maps?q=${mapQ}&z=15&output=embed`} />
+            <iframe title={`Mapa de ${b.name}`} className="w-full h-56 md:h-72 border-0" loading="lazy" src={`https://maps.google.com/maps?q=${mapQ}&z=15&output=embed`} />
           </div>
           <div className="card mt-space-sm p-space-md space-y-2">
             {groups.map(([l, ds]) => { const h = hours[ds[0]]; return <div key={l} className="flex justify-between"><span className="text-on-surface-variant">{l}</span><span className="font-label-lg text-label-lg tnum">{h ? `${time12(h[0])} – ${time12(h[1])}` : 'Cerrado'}</span></div>; })}
@@ -163,7 +170,7 @@ export default async function Negocio({ params }: { params: Promise<{ slug: stri
       <div className="fixed bottom-0 inset-x-0 z-40 bg-surface/95 backdrop-blur-xl border-t border-primary-container/5 shadow-[0_-8px_30px_rgba(13,37,56,0.08)] pb-safe">
         <div className="max-w-[1100px] mx-auto px-margin py-3 flex items-center justify-between gap-4">
           <div><p className="font-label-sm text-label-sm text-on-surface-variant uppercase">Citas online</p><p className="font-title-md text-title-md flex items-center gap-1.5">Cupos hoy <span className="w-2 h-2 rounded-full bg-gold" /></p></div>
-          <Link href={`/reservar/${b.slug}`} className="btn-gold"><Icon name="calendar_month" className="text-[18px]" />Reservar Cita Ahora</Link>
+          <Link href={`/reservar/${b.slug}`} className="btn-gold"><Icon name="calendar_month" className="text-[18px]" />Reservar cita</Link>
         </div>
       </div>
     </>

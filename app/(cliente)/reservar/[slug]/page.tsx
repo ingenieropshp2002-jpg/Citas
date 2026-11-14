@@ -5,7 +5,7 @@ import { ShopHeader } from '@/components/cliente/Header';
 import { BookingWizard } from '@/components/cliente/BookingWizard';
 import { parseJson } from '@/lib/format';
 
-export const metadata = { title: 'Agendar Cita' };
+export const metadata = { title: 'Agendar cita' };
 export default async function Reservar({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ servicio?: string; profesional?: string; servicios?: string }> }) {
   const { slug } = await params; const sp = await searchParams;
   const q = new URLSearchParams(sp as Record<string, string>).toString();

@@ -37,7 +37,7 @@ export default async function Suscripcion({ searchParams }: { searchParams: Prom
             <Submit className="btn-primary w-full mt-2">Pagar 1 mes</Submit></>}
         </form>
       ))}</div>
-      {provider() === 'SIMULADO' && <p className="mt-3 font-body-sm text-on-surface-variant">La pasarela está en modo de prueba: configure Wompi o Mercado Pago para cobrar de verdad.</p>}
+      {provider() === 'SIMULADO' && <p className="mt-3 font-body-sm text-on-surface-variant">La pasarela está en modo de prueba: configura Wompi o Mercado Pago para cobrar de verdad.</p>}
       {payments.length > 0 && <section className="card p-5 mt-4"><h2 className="h-section mb-3">Pagos de suscripción</h2><ul className="space-y-1">{payments.map(p => <li key={p.id} className="flex justify-between"><span>{fechaLarga(p.createdAt)} · {METHOD_LABEL[p.method] || p.method}</span><span className="tnum">{cop(p.amount)} · {p.status.toLowerCase()}</span></li>)}</ul></section>}
     </>
   );
