@@ -1,11 +1,13 @@
 'use client';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { Icon } from '@/components/ui/Icon';
 const ITEMS = [['/', 'home', 'Inicio'], ['/buscar', 'search', 'Explorar'], ['/mis-citas', 'calendar_month', 'Mis citas'], ['/perfil', 'person', 'Perfil']] as const;
 export function BottomNav() {
   const p = usePathname();
-  if (p.startsWith('/reservar') || p.startsWith('/negocio')) return null; // estas vistas tienen su propia barra de acción
+  const sp = useSearchParams();
+  // El enlace propio de cada negocio no muestra la navegación general (otros negocios, explorar)
+  if (p.startsWith('/reservar') || p.startsWith('/negocio') || p.startsWith('/cita') || p.includes('/reprogramar') || sp.get('negocio')) return null;
   return (
     <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-surface/95 backdrop-blur-xl border-t border-primary-container/5 pb-safe">
       <div className="grid grid-cols-4 h-16">

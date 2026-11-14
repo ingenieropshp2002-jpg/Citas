@@ -40,7 +40,7 @@ export function LoginForms({ next, google }: { next: string; google: boolean }) 
       )}
       <div className="flex items-center gap-3 my-5 text-on-surface-variant font-label-md"><span className="flex-1 h-px bg-parchment" />o<span className="flex-1 h-px bg-parchment" /></div>
       {google ? <a href={`/api/auth/google?next=${encodeURIComponent(next)}`} className="btn-ghost w-full border border-parchment"><img alt="" src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" />Continuar con Google</a>
-        : <p className="text-center font-body-sm text-body-sm text-on-surface-variant flex items-center justify-center gap-1"><Icon name="info" className="text-[16px]" />Google se activa configurando GOOGLE_CLIENT_ID.</p>}
+        : null}
     </div>
   );
 }

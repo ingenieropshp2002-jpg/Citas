@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { db } from '@/lib/db';
-import { ClientHeader } from '@/components/cliente/Header';
+import { ShopHeader } from '@/components/cliente/Header';
 import { ServiceList } from '@/components/cliente/ServiceList';
 import { Icon } from '@/components/ui/Icon';
 import { bogota, DIAS, parseJson, time12 } from '@/lib/format';
@@ -26,7 +26,7 @@ export default async function Negocio({ params }: { params: Promise<{ slug: stri
   const mapQ = b.lat && b.lng ? `${b.lat},${b.lng}` : encodeURIComponent(b.address);
   return (
     <>
-      <ClientHeader title={b.name} back />
+      <ShopHeader shop={{ slug: b.slug, name: b.name, logo: b.logo || imgs[0] || null }} />
       <main className="pt-16 pb-28 max-w-[1100px] mx-auto">
         {/* Galería */}
         <section className="relative w-full px-margin pt-space-md">

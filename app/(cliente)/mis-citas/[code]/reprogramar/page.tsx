@@ -1,7 +1,8 @@
 import { notFound } from 'next/navigation';
 import { db } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
-import { ClientHeader } from '@/components/cliente/Header';
+import { ShopHeader } from '@/components/cliente/Header';
+import { parseJson } from '@/lib/format';
 import { Reschedule } from '@/components/cliente/Reschedule';
 import { fechaLarga, hm, time12 } from '@/lib/format';
 export default async function Reprogramar({ params }: { params: Promise<{ code: string }> }) {
@@ -11,7 +12,7 @@ export default async function Reprogramar({ params }: { params: Promise<{ code: 
   if (!a || a.customer.userId !== user.id) notFound();
   return (
     <>
-      <ClientHeader title="Reprogramar" back />
+      <ShopHeader shop={{ slug: a.business.slug, name: a.business.name, logo: a.business.logo || parseJson<string[]>(a.business.images, [])[0] || null }} title="Reprogramar" back />
       <main className="pt-20 pb-10 px-margin max-w-3xl mx-auto">
         <p className="eyebrow">{a.business.name}</p>
         <h1 className="font-headline-sm text-headline-sm">Elige un nuevo horario</h1>

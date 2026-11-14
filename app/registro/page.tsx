@@ -17,7 +17,7 @@ function Form() {
       <label className="flex items-start gap-2 font-body-sm text-body-sm text-on-surface-variant"><input type="checkbox" required className="mt-1 accent-primary-container" />Autorizo el tratamiento de mis datos personales según la Ley 1581 de 2012 y la política de privacidad.</label>
       {st?.error && <p className="text-danger font-label-md">{st.error}</p>}
       <button disabled={p} className="btn-primary w-full">{p ? 'Creando…' : 'Crear cuenta'}</button>
-      <p className="text-center font-body-sm text-on-surface-variant">¿Ya tienes cuenta? <Link href="/login" className="text-secondary font-bold">Ingresa</Link></p>
+      <p className="text-center font-body-sm text-on-surface-variant">¿Ya tienes cuenta? <Link href={`/login?next=${encodeURIComponent(next)}`} className="text-secondary font-bold">Ingresa</Link></p>
     </form>
   );
 }

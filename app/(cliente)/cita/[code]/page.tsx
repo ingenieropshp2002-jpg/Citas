@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { db } from '@/lib/db';
-import { ClientHeader } from '@/components/cliente/Header';
+import { ShopHeader } from '@/components/cliente/Header';
+import { parseJson } from '@/lib/format';
 import { Icon } from '@/components/ui/Icon';
 import { StatusBadge } from '@/components/ui/Status';
 import { cop, fechaLarga, hm, METHOD_LABEL, time12 } from '@/lib/format';
@@ -18,7 +19,7 @@ export default async function Cita({ params }: { params: Promise<{ code: string 
   const ok = a.status === 'CONFIRMADA';
   return (
     <>
-      <ClientHeader title="Tu cita" back />
+      <ShopHeader shop={{ slug: a.business.slug, name: a.business.name, logo: a.business.logo || parseJson<string[]>(a.business.images, [])[0] || null }} title="Tu cita" />
       <main className="pt-20 pb-10 px-margin max-w-xl mx-auto">
         <div className="text-center">
           <div className={`mx-auto w-20 h-20 rounded-full flex items-center justify-center shadow-raised ${ok ? 'bg-primary-container' : 'bg-secondary-fixed'}`}><Icon name={ok ? 'check' : 'hourglass_top'} className={`text-[40px] ${ok ? 'text-secondary-fixed' : 'text-on-secondary-fixed'}`} /></div>
@@ -46,7 +47,8 @@ export default async function Cita({ params }: { params: Promise<{ code: string 
           <a href={gcal} target="_blank" rel="noopener noreferrer" className="btn-outline"><Icon name="calendar_add_on" className="text-[18px]" />Google Calendar</a>
           <a href={`/api/cita/${a.code}/ics`} className="btn-outline"><Icon name="download" className="text-[18px]" />Añadir (.ics)</a>
           <a href={waLink('', msg)} target="_blank" rel="noopener noreferrer" className="btn col-span-2 bg-[#25D366] text-white"><Icon name="share" className="text-[18px]" />Compartir por WhatsApp</a>
-          <Link href="/mis-citas" className="btn-primary col-span-2">Ver mis citas</Link>
+          <Link href={`/negocio/${a.business.slug}`} className="btn-outline col-span-2">Volver a {a.business.name}</Link>
+          <Link href={`/mis-citas?negocio=${a.business.slug}`} className="btn-primary col-span-2">Ver mis citas</Link>
         </div>
       </main>
     </>

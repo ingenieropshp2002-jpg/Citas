@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { db } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
-import { ClientHeader } from '@/components/cliente/Header';
+import { ShopHeader } from '@/components/cliente/Header';
 import { BookingWizard } from '@/components/cliente/BookingWizard';
 import { parseJson } from '@/lib/format';
 
@@ -14,7 +14,7 @@ export default async function Reservar({ params, searchParams }: { params: Promi
   if (!b) notFound();
   return (
     <>
-      <ClientHeader title="Agendar Cita" back />
+      <ShopHeader shop={{ slug: b.slug, name: b.name, logo: b.logo || parseJson<string[]>(b.images, [])[0] || null }} title="Agendar cita" back />
       <main className="pt-16">
         <BookingWizard
           business={{ id: b.id, name: b.name, depositPercent: b.depositPercent, requireDeposit: b.requireDeposit, cancellationHours: b.cancellationHours, image: parseJson<string[]>(b.images, [])[0] }}
