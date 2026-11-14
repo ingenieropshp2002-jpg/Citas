@@ -251,6 +251,9 @@ CREATE TABLE "Product" (
     "stock" DOUBLE PRECISION NOT NULL DEFAULT 0,
     "minStock" DOUBLE PRECISION NOT NULL DEFAULT 0,
     "active" BOOLEAN NOT NULL DEFAULT true,
+    "description" TEXT,
+    "image" TEXT,
+    "showInShop" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "Product_pkey" PRIMARY KEY ("id")

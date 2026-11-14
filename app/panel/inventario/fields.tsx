@@ -1,11 +1,14 @@
-type P = { id: string; sku: string; barcode: string | null; name: string; brand: string | null; category: string; kind: string; unit: string; cost: number; price: number; taxRate: number; minStock: number; active: boolean };
+import { ImageInput } from '@/components/ui/ImageInput';
+type P = { id: string; description?: string | null; image?: string | null; showInShop?: boolean; sku: string; barcode: string | null; name: string; brand: string | null; category: string; kind: string; unit: string; cost: number; price: number; taxRate: number; minStock: number; active: boolean };
 export function ProductFields({ p }: { p?: P }) {
   return (
     <>
       {p && <input type="hidden" name="id" value={p.id} />}
+      <ImageInput name="image" defaultValue={p?.image} label="Foto del producto" />
       <label className="block"><span className="label">Nombre *</span><input name="name" defaultValue={p?.name} className="input" required /></label>
+      <label className="block"><span className="label">Descripción (se ve en tu tienda)</span><textarea name="description" defaultValue={p?.description || ''} className="input" rows={2} placeholder="Tamaño, beneficios, para qué tipo de cabello…" /></label>
       <div className="grid grid-cols-2 gap-3">
-        <label><span className="label">SKU *</span><input name="sku" defaultValue={p?.sku} className="input uppercase" required /></label>
+        <label><span className="label">SKU (código interno)</span><input name="sku" defaultValue={p?.sku} className="input uppercase" placeholder="Automático" /></label>
         <label><span className="label">Código de barras</span><input name="barcode" defaultValue={p?.barcode || ''} className="input" /></label>
         <label><span className="label">Marca</span><input name="brand" defaultValue={p?.brand || ''} className="input" /></label>
         <label><span className="label">Categoría</span><input name="category" defaultValue={p?.category || 'Cuidado capilar'} className="input" /></label>
@@ -16,6 +19,7 @@ export function ProductFields({ p }: { p?: P }) {
         <label><span className="label">Stock mínimo (alerta)</span><input name="minStock" type="number" min={0} step="any" defaultValue={p?.minStock ?? 0} className="input" /></label>
         {!p && <><label><span className="label">Stock inicial</span><input name="initialStock" type="number" min={0} step="any" defaultValue={0} className="input" /></label><label><span className="label">Costo unitario</span><input name="cost" type="number" min={0} defaultValue={0} className="input" /></label></>}
       </div>
+      <label className="flex items-center gap-2"><input type="checkbox" name="showInShop" defaultChecked={p?.showInShop ?? true} className="accent-primary-container" />Mostrar en mi tienda online (precio y cantidad disponible)</label>
       <label className="flex items-center gap-2"><input type="checkbox" name="active" defaultChecked={p?.active ?? true} className="accent-primary-container" />Activo</label>
     </>
   );

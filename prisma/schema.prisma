@@ -300,6 +300,9 @@ model Product {
   stock      Float           @default(0)
   minStock   Float           @default(0)
   active     Boolean         @default(true)
+  description String?
+  image      String? // URL o imagen comprimida (data URL)
+  showInShop Boolean         @default(true) // visible en la página pública del negocio
   createdAt  DateTime        @default(now())
   movements  StockMovement[]
   supplies   ServiceSupply[]

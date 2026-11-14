@@ -4,7 +4,7 @@ import { db } from '@/lib/db';
 import { ShopHeader } from '@/components/cliente/Header';
 import { ServiceList } from '@/components/cliente/ServiceList';
 import { Icon } from '@/components/ui/Icon';
-import { bogota, DIAS, parseJson, time12 } from '@/lib/format';
+import { bogota, cop, DIAS, parseJson, time12 } from '@/lib/format';
 import { waLink } from '@/lib/notify';
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
@@ -17,6 +17,8 @@ export default async function Negocio({ params }: { params: Promise<{ slug: stri
   const b = await db.business.findUnique({ where: { slug }, include: { services: { where: { active: true }, orderBy: [{ popular: 'desc' }, { price: 'desc' }] }, staff: { where: { active: true } }, reviews: { orderBy: { createdAt: 'desc' }, take: 6 } } });
   if (!b) notFound();
   const imgs = parseJson<string[]>(b.images, []);
+  const products = await db.product.findMany({ where: { businessId: b.id, active: true, showInShop: true, kind: { in: ['VENTA', 'AMBOS'] }, price: { gt: 0 } }, orderBy: [{ category: 'asc' }, { name: 'asc' }] });
+  const cats = [...new Set(products.map(p => p.category))];
   const hours = parseJson<Record<string, [string, string] | null>>(b.openingHours, {});
   const now = bogota(new Date());
   const today = hours[String(now.dow)];
@@ -77,7 +79,7 @@ export default async function Negocio({ params }: { params: Promise<{ slug: stri
         {/* Pestañas */}
         <nav className="mt-space-lg px-margin sticky top-16 z-30 bg-surface/95 backdrop-blur-md py-space-xs">
           <div className="flex items-center gap-space-xs overflow-x-auto no-scrollbar">
-            {[['#servicios', 'Servicios'], ['#equipo', 'Especialistas'], ['#resenas', `Reseñas (${b.reviewCount})`], ['#sede', 'Horarios & Sede']].map(([h, l], i) => (
+            {[['#servicios', 'Servicios'], ...(products.length ? [['#productos', `Productos (${products.length})`]] : []), ['#equipo', 'Especialistas'], ['#resenas', `Reseñas (${b.reviewCount})`], ['#sede', 'Horarios & Sede']].map(([h, l], i) => (
               <a key={h} href={h} className={`px-space-md py-2 rounded-full font-label-md text-label-md whitespace-nowrap transition-all ${i === 0 ? 'bg-primary-container text-on-primary dark:text-on-primary-container' : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'}`}>{l}</a>
             ))}
           </div>
@@ -87,6 +89,31 @@ export default async function Negocio({ params }: { params: Promise<{ slug: stri
           <div className="flex items-center justify-between mb-space-sm"><h2 className="h-section">Servicios Populares</h2><span className="font-label-md text-label-md text-secondary font-bold">Carta ({b.services.length})</span></div>
           <ServiceList slug={b.slug} services={b.services} />
         </section>
+
+        {products.length > 0 && <section id="productos" className="mt-space-lg px-margin scroll-mt-32">
+          <div className="flex items-center justify-between mb-space-sm"><h2 className="h-section">Productos a la venta</h2><span className="font-label-md text-label-md text-secondary font-bold">{products.length} productos</span></div>
+          {cats.map(cat => (
+            <div key={cat} className="mb-space-md">
+              {cats.length > 1 && <p className="eyebrow mb-2">{cat}</p>}
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">{products.filter(p => p.category === cat).map(p => {
+                const out = p.stock <= 0; const qty = p.unit === 'UND' ? Math.floor(p.stock) : null;
+                return (
+                  <article key={p.id} className={`card overflow-hidden flex flex-col ${out ? 'opacity-70' : ''}`}>
+                    <div className="aspect-square bg-surface-container flex items-center justify-center">{p.image ? <img src={p.image} alt={p.name} loading="lazy" className="w-full h-full object-cover" /> : <Icon name="shopping_bag" className="text-[40px] text-on-surface-variant/50" />}</div>
+                    <div className="p-3 flex flex-col flex-1">
+                      {p.brand && <p className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wide">{p.brand}</p>}
+                      <h3 className="font-label-lg text-label-lg leading-snug">{p.name}</h3>
+                      {p.description && <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5 line-clamp-2">{p.description}</p>}
+                      <p className="font-title-md text-title-md mt-auto pt-2 tnum">{cop(p.price)}</p>
+                      <p className={`font-label-sm text-label-sm ${out ? 'text-danger' : qty !== null && qty <= 3 ? 'text-secondary' : 'text-success'}`}>{out ? 'Agotado' : qty !== null ? `${qty} ${qty === 1 ? 'disponible' : 'disponibles'}` : 'Disponible'}</p>
+                      {!out && b.whatsapp && <a href={waLink(b.whatsapp, `Hola ${b.name}, quiero el producto "${p.name}" (${cop(p.price)}). ¿Me lo apartan?`)} target="_blank" rel="noopener noreferrer" className="btn btn-sm bg-[#25D366] text-white mt-2 justify-center"><Icon name="chat" className="text-[16px]" />Pedir</a>}
+                    </div>
+                  </article>
+                );
+              })}</div>
+            </div>
+          ))}
+        </section>}
 
         <section id="equipo" className="mt-space-lg px-margin scroll-mt-32">
           <h2 className="h-section">Equipo de Profesionales</h2>
