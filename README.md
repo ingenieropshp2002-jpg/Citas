@@ -81,7 +81,7 @@ La base vive en Supabase (PostgreSQL), en el esquema `citas`, y la app corre en 
 1. **Base de datos:** ejecute `prisma/citas.sql` en el SQL Editor de Supabase (crea el esquema `citas` y sus tablas). Si cambia el modelo, regenere ese archivo con `npm run db:sql`.
 2. **Datos iniciales (opcional):** `DATABASE_URL=... SEED_PASSWORD=una-clave-segura npm run db:seed`. El seed se niega a correr si la base ya tiene datos, salvo que use `SEED_RESET=1` (eso BORRA todo).
 3. **Secretos en Cloudflare:** `npx wrangler secret put DATABASE_URL` (URI del *Transaction pooler* de Supabase, puerto 6543), `AUTH_SECRET` (aleatorio y largo), `APP_URL` (su dominio), y los de pagos, WhatsApp, Google y `CRON_SECRET` que use. `DB_SCHEMA=citas` ya está en `wrangler.jsonc`.
-4. **Publicar:** `npx wrangler login` y luego `npm run deploy`. También puede conectar el repositorio en Cloudflare > Workers & Pages > Create > Import a repository, con comando de build `npx opennextjs-cloudflare build` y de deploy `npx opennextjs-cloudflare deploy`.
+4. **Publicar:** `npx wrangler login` y luego `npm run deploy`. También puede conectar el repositorio en Cloudflare > Workers & Pages > Create > Import a repository, dejando los comandos por defecto (`npm run build` y `npx wrangler deploy`).
 5. **Probar localmente como en Cloudflare:** cree `.dev.vars` con las mismas variables y ejecute `npm run preview`.
 6. **Recordatorios:** programe una llamada cada 15 minutos a `GET /api/cron/recordatorios` con `Authorization: Bearer <CRON_SECRET>` (cron-job.org o pg_cron de Supabase).
 7. **Login con Google:** URL de retorno `https://SU-DOMINIO/api/auth/google/callback`.
