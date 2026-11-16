@@ -35,6 +35,11 @@ async function nextFree(businessId: string, date: string, time: string, dur: num
   return out;
 }
 
+async function taken(businessId: string, input: { date: string; time: string; staffId: string | null; serviceIds: string[] }, dur: number) {
+  const st = input.staffId ? await db.staff.findUnique({ where: { id: input.staffId }, select: { name: true } }) : null;
+  return { error: `Otra persona acaba de reservar este horario${st ? ` con ${st.name.split(' ')[0]}` : ''}.`, taken: true, alternatives: await nextFree(businessId, input.date, input.time, dur, input.staffId, input.serviceIds) };
+}
+
 export async function createBooking(input: { businessId: string; serviceIds: string[]; staffId: string | null; date: string; time: string; method: string; phone?: string; coupon?: string; notes?: string }) {
   const user = await requireUser();
   const b = await db.business.findUniqueOrThrow({ where: { id: input.businessId } });
@@ -45,14 +50,14 @@ export async function createBooking(input: { businessId: string; serviceIds: str
   let candidates: string[] = input.staffId ? [input.staffId] : [];
   if (!input.staffId) {
     const slot = (await getSlots(b.id, input.date, dur, null, input.serviceIds)).find(s => s.time === input.time);
-    if (!slot) return { error: 'Ese horario acaba de ocuparse. Elige otro.', alternatives: await nextFree(b.id, input.date, input.time, dur, input.staffId, input.serviceIds) };
+    if (!slot) return await taken(b.id, input, dur);
     candidates = slot.staffIds;
   }
   const start = fromBogota(input.date, input.time); const end = new Date(start.getTime() + dur * 60000);
   if (start < new Date()) return { error: 'Elige un horario futuro.' };
   const free: string[] = [];
   for (const id of candidates) if (await isFree(b.id, id, start, end)) free.push(id);
-  if (!free.length) return { error: 'Ese horario acaba de ocuparse. Elige otro.', alternatives: await nextFree(b.id, input.date, input.time, dur, input.staffId, input.serviceIds) };
+  if (!free.length) return await taken(b.id, input, dur);
   let discount = 0; let couponCode = '';
   if (input.coupon) { const c = await applyCoupon(b.id, input.coupon, total); if ('error' in c) return { error: c.error }; discount = c.discount!; total -= discount; couponCode = c.code!; }
   const phone = (input.phone || user.phone || '').replace(/\D/g, '');
@@ -75,7 +80,7 @@ export async function createBooking(input: { businessId: string; serviceIds: str
       break;
     } catch (e) { if (!isOverlapError(e)) throw e; }
   }
-  if (!appt) return { error: 'Ese horario acaba de ocuparse. Elige otro.', alternatives: await nextFree(b.id, input.date, input.time, dur, input.staffId, input.serviceIds) };
+  if (!appt) return await taken(b.id, input, dur);
   if (couponCode) await db.coupon.updateMany({ where: { businessId: b.id, code: couponCode }, data: { uses: { increment: 1 } } });
   if (deposit > 0) {
     const pay = await db.payment.create({ data: { businessId: b.id, appointmentId: appt.id, method: input.method, amount: deposit, status: 'PENDIENTE', provider: 'PENDIENTE' } });
