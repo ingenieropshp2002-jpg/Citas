@@ -54,3 +54,10 @@ export async function isFree(businessId: string, staffId: string, start: Date, e
   const block = await db.blockedTime.findFirst({ where: { businessId, OR: [{ staffId }, { staffId: null }], start: { lt: end }, end: { gt: start } } });
   return !block;
 }
+
+/** true si la base de datos rechazó la cita porque se cruza con otra del mismo profesional. */
+export function isOverlapError(e: unknown) {
+  const x = e as { code?: string; message?: string; meta?: unknown; cause?: unknown } | null;
+  const txt = [x?.code, x?.message, JSON.stringify(x?.meta ?? ''), String(x?.cause ?? '')].join(' ');
+  return /23P01|Appointment_sin_cruces|exclusion constraint/i.test(txt);
+}

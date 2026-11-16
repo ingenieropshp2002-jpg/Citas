@@ -3,17 +3,20 @@ import { getUser } from '@/lib/auth';
 import { Icon } from '@/components/ui/Icon';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { BackButton } from './BackButton';
+import { getSettings } from '@/lib/settings';
+import { AppMark } from '@/components/ui/AppMark';
 
 export async function ClientHeader({ title, back = false }: { title?: string; back?: boolean }) {
   const user = await getUser();
+  const s = await getSettings();
   return (
     <header className="fixed top-0 w-full z-50 bg-surface/85 backdrop-blur-xl pt-safe shadow-[0_1px_8px_rgba(0,0,0,0.04)]">
       <div className="h-16 px-margin md:px-margin-tablet lg:px-margin-desktop max-w-[1280px] mx-auto flex items-center justify-between">
         <div className="flex items-center gap-space-sm min-w-0">
           {back && <BackButton />}
           <Link href="/" className="flex items-center gap-2 shrink-0">
-            <span className="w-8 h-8 rounded-lg bg-primary-container text-secondary-fixed flex items-center justify-center font-headline-sm text-[18px] italic">R</span>
-            {!title && <span className="font-headline-sm text-headline-sm text-primary-container dark:text-primary">Registro Citas</span>}
+            <AppMark s={s} />
+            {!title && <span className="font-headline-sm text-headline-sm text-primary-container dark:text-primary">{s.appName}</span>}
           </Link>
           {title && <h1 className="font-title-md text-title-md text-primary-container dark:text-primary truncate max-w-[200px] md:max-w-none">{title}</h1>}
         </div>

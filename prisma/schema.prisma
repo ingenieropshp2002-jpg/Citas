@@ -20,6 +20,8 @@ model User {
   passwordHash String?
   googleId     String?    @unique
   role         String     @default("CLIENT") // CLIENT | OWNER | STAFF | ADMIN
+  superAdmin   Boolean    @default(false) // controla toda la plataforma desde /admin
+  blocked      Boolean    @default(false) // no puede ingresar
   avatar       String?
   createdAt    DateTime   @default(now())
   businesses   Business[] @relation("owner")
@@ -570,4 +572,11 @@ model LessonProgress {
   completedAt DateTime @default(now())
 
   @@unique([userId, lessonId])
+}
+
+// Ajustes de la plataforma editables desde el panel superadmin (nombre, textos, planes…)
+model PlatformSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
 }

@@ -1,11 +1,14 @@
 import type { MetadataRoute } from 'next';
 
-export default function manifest(): MetadataRoute.Manifest {
+import { getSettings } from '@/lib/settings';
+
+export default async function manifest(): Promise<MetadataRoute.Manifest> {
+  const s = await getSettings();
   return {
     id: '/',
-    name: 'Registro Citas',
-    short_name: 'Citas',
-    description: 'Reserva en peluquerías, barberías y spas de Colombia.',
+    name: s.appName,
+    short_name: s.shortName,
+    description: s.tagline,
     start_url: '/?fuente=app',
     scope: '/',
     display: 'standalone',

@@ -2,7 +2,7 @@
 import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db';
 import { requireBusiness } from '@/lib/auth';
-import { isFree } from '@/lib/availability';
+import { isFree, isOverlapError } from '@/lib/availability';
 import { fromBogota } from '@/lib/format';
 import { consumeSupplies } from '@/lib/inventory';
 import { sendWhatsapp } from '@/lib/notify';
@@ -26,7 +26,9 @@ export async function createAppointmentPanel(_: unknown, fd: FormData) {
     const existing = phone ? await db.customer.findFirst({ where: { businessId: business.id, phone } }) : null;
     customerId = existing?.id || (await db.customer.create({ data: { businessId: business.id, name, phone, tags: '["Nuevo"]' } })).id;
   }
-  const a = await db.appointment.create({ data: { code: await newCode(), businessId: business.id, customerId, staffId, start, end, status: 'CONFIRMADA', source: 'PANEL', total: services.reduce((x, s) => x + s.price, 0), notes: String(fd.get('notes') || '') || null, services: { create: services.map(s => ({ serviceId: s.id, price: s.price, durationMin: s.durationMin })) } }, include: { customer: true } });
+  let a;
+  try { a = await db.appointment.create({ data: { code: await newCode(), businessId: business.id, customerId, staffId, start, end, status: 'CONFIRMADA', source: 'PANEL', total: services.reduce((x, s) => x + s.price, 0), notes: String(fd.get('notes') || '') || null, services: { create: services.map(s => ({ serviceId: s.id, price: s.price, durationMin: s.durationMin })) } }, include: { customer: true } }); }
+  catch (e) { if (isOverlapError(e)) return { error: 'Ese horario se acaba de ocupar. Elige otro.' }; throw e; }
   if (a.customer.phone && fd.get('notify')) await sendWhatsapp(a.customer.phone, `Hola ${a.customer.name}, tu cita en ${business.name} quedó agendada (${a.code}).`);
   revalidatePath('/panel/agenda');
   return { ok: true };
@@ -38,7 +40,8 @@ export async function moveAppointment(id: string, staffId: string, startIso: str
   if (!a) return { error: 'Cita no encontrada' };
   const start = new Date(startIso); const end = new Date(start.getTime() + (a.end.getTime() - a.start.getTime()));
   if (!(await isFree(business.id, staffId, start, end, a.id))) return { error: 'Horario ocupado' };
-  await db.appointment.update({ where: { id }, data: { staffId, start, end, reminderSent: false } });
+  try { await db.appointment.update({ where: { id }, data: { staffId, start, end, reminderSent: false } }); }
+  catch (e) { if (isOverlapError(e)) return { error: 'Horario ocupado' }; throw e; }
   revalidatePath('/panel/agenda');
   return { ok: true };
 }
@@ -47,11 +50,11 @@ export async function setAppointmentStatus(id: string, status: string) {
   const { business } = await requireBusiness('agenda');
   const a = await db.appointment.findFirst({ where: { id, businessId: business.id }, include: { services: true } });
   if (!a) return { error: 'Cita no encontrada' };
-  await db.$transaction(async tx => {
+  try { await db.$transaction(async tx => {
     await tx.appointment.update({ where: { id }, data: { status } });
     // Al completar, descuenta los insumos configurados (solo una vez)
     if (status === 'COMPLETADA' && a.status !== 'COMPLETADA') await consumeSupplies(tx, business.id, a.services.map(s => s.serviceId), a.code);
-  });
+  }); } catch (e) { if (isOverlapError(e)) return { error: 'No se puede reactivar: ese horario ya lo tiene otra cita.' }; throw e; }
   revalidatePath('/panel/agenda'); revalidatePath('/panel');
   return { ok: true };
 }

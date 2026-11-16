@@ -1,4 +1,5 @@
 import QRCode from 'qrcode';
+import { getSettings } from '@/lib/settings';
 import { cop, fechaLarga, hm, METHOD_LABEL, parseJson } from '@/lib/format';
 
 const DOC_TITLE: Record<string, string> = { FE: 'FACTURA ELECTRÓNICA DE VENTA', POS: 'DOCUMENTO EQUIVALENTE ELECTRÓNICO\nTIQUETE DE MÁQUINA REGISTRADORA CON SISTEMA P.O.S.', NC: 'NOTA CRÉDITO / NOTA DE AJUSTE' };
@@ -6,6 +7,7 @@ const REGIME: Record<string, string> = { '48': 'Responsable de IVA', '49': 'No r
 
 type Props = { business: any; sale: any; doc: any | null; resolution: any | null };
 export async function Receipt({ business: b, sale, doc, resolution }: Props) {
+  const app = (await getSettings()).appName;
   const qr = doc ? await QRCode.toDataURL(doc.qrData, { margin: 1, width: 180 }) : null;
   const bookUrl = `${process.env.APP_URL || 'http://localhost:3000'}/reservar/${b.slug}?ref=recibo`;
   const bookQr = await QRCode.toDataURL(bookUrl, { margin: 1, width: 160 });
@@ -49,7 +51,7 @@ export async function Receipt({ business: b, sale, doc, resolution }: Props) {
           <hr className="my-2 border-dashed border-black/40" />
           <p className="break-all text-[10px]"><b>{doc.docType === 'FE' ? 'CUFE' : 'CUDE'}:</b> {doc.cufe}</p>
           {qr && <img src={qr} alt="Código QR DIAN" className="mx-auto my-2 w-36 h-36" />}
-          <p className="text-[10px] text-center">Software: Registro Citas POS · Fabricante/Proveedor: Registro Citas{doc.environment === '2' ? ' · AMBIENTE DE PRUEBAS (sin validez fiscal)' : ''}</p>
+          <p className="text-[10px] text-center">Software: {app} POS · Fabricante/Proveedor: {app}{doc.environment === '2' ? ' · AMBIENTE DE PRUEBAS (sin validez fiscal)' : ''}</p>
         </>
       )}
       {sale.status === 'ANULADA' && <p className="mt-2 text-center font-bold text-[14px]">*** VENTA ANULADA ***</p>}

@@ -1,7 +1,7 @@
 'use server';
 import { db } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
-import { getSlots, isFree } from '@/lib/availability';
+import { getSlots, isFree, isOverlapError } from '@/lib/availability';
 import { fromBogota, ymd } from '@/lib/format';
 import { createCheckout } from '@/lib/payments';
 import { sendWhatsapp } from '@/lib/notify';
@@ -29,17 +29,19 @@ export async function createBooking(input: { businessId: string; serviceIds: str
   if (!services.length) return { error: 'Selecciona al menos un servicio.' };
   const dur = services.reduce((a, s) => a + s.durationMin, 0);
   let total = services.reduce((a, s) => a + s.price, 0);
-  let staffId = input.staffId;
-  if (!staffId) {
+  let candidates: string[] = input.staffId ? [input.staffId] : [];
+  if (!input.staffId) {
     const slot = (await getSlots(b.id, input.date, dur, null, input.serviceIds)).find(s => s.time === input.time);
     if (!slot) return { error: 'Ese horario ya no está disponible. Elige otro.' };
-    staffId = slot.staffIds[0];
+    candidates = slot.staffIds;
   }
   const start = fromBogota(input.date, input.time); const end = new Date(start.getTime() + dur * 60000);
   if (start < new Date()) return { error: 'Elige un horario futuro.' };
-  if (!(await isFree(b.id, staffId, start, end))) return { error: 'Ese horario acaba de ocuparse. Elige otro.' };
-  let discount = 0;
-  if (input.coupon) { const c = await applyCoupon(b.id, input.coupon, total); if ('error' in c) return { error: c.error }; discount = c.discount!; total -= discount; await db.coupon.updateMany({ where: { businessId: b.id, code: c.code }, data: { uses: { increment: 1 } } }); }
+  const free: string[] = [];
+  for (const id of candidates) if (await isFree(b.id, id, start, end)) free.push(id);
+  if (!free.length) return { error: 'Ese horario acaba de ocuparse. Elige otro.' };
+  let discount = 0; let couponCode = '';
+  if (input.coupon) { const c = await applyCoupon(b.id, input.coupon, total); if ('error' in c) return { error: c.error }; discount = c.discount!; total -= discount; couponCode = c.code!; }
   const phone = (input.phone || user.phone || '').replace(/\D/g, '');
   let customer = await db.customer.findFirst({ where: { businessId: b.id, OR: [{ userId: user.id }, ...(phone ? [{ phone }] : [])] } });
   if (!customer) customer = await db.customer.create({ data: { businessId: b.id, userId: user.id, name: user.name, phone, email: user.email, tags: '["Nuevo"]' } });
@@ -47,11 +49,21 @@ export async function createBooking(input: { businessId: string; serviceIds: str
   const online = input.method !== 'EN_LOCAL';
   const deposit = online && b.requireDeposit ? Math.round((total * b.depositPercent) / 100 / 100) * 100 : 0;
   const code = await newCode();
-  const appt = await db.appointment.create({ data: {
-    code, businessId: b.id, customerId: customer.id, staffId, start, end, total, depositAmount: deposit,
-    depositStatus: deposit ? 'PENDIENTE' : 'NO_APLICA', paymentMethod: input.method, notes: [input.notes, discount ? `Cupón ${input.coupon} (-${discount})` : ''].filter(Boolean).join(' · ') || null,
-    status: 'PENDIENTE', services: { create: services.map(s => ({ serviceId: s.id, price: s.price, durationMin: s.durationMin })) }
-  } });
+  // La base de datos rechaza citas cruzadas (restricción Appointment_sin_cruces); si dos personas
+  // reservan a la vez, solo una gana y a la otra se le intenta asignar otro profesional libre.
+  let appt = null;
+  for (const staffId of free) {
+    try {
+      appt = await db.appointment.create({ data: {
+        code, businessId: b.id, customerId: customer.id, staffId, start, end, total, depositAmount: deposit,
+        depositStatus: deposit ? 'PENDIENTE' : 'NO_APLICA', paymentMethod: input.method, notes: [input.notes, discount ? `Cupón ${input.coupon} (-${discount})` : ''].filter(Boolean).join(' · ') || null,
+        status: 'PENDIENTE', services: { create: services.map(s => ({ serviceId: s.id, price: s.price, durationMin: s.durationMin })) }
+      } });
+      break;
+    } catch (e) { if (!isOverlapError(e)) throw e; }
+  }
+  if (!appt) return { error: 'Alguien acaba de reservar ese horario. Elige otro.' };
+  if (couponCode) await db.coupon.updateMany({ where: { businessId: b.id, code: couponCode }, data: { uses: { increment: 1 } } });
   if (deposit > 0) {
     const pay = await db.payment.create({ data: { businessId: b.id, appointmentId: appt.id, method: input.method, amount: deposit, status: 'PENDIENTE', provider: 'PENDIENTE' } });
     const co = await createCheckout({ reference: `${code}_${pay.id}`, amount: deposit, description: `Depósito cita ${code} - ${b.name}`, email: user.email, method: input.method, redirectUrl: `${appUrl()}/pago/retorno?ref=${code}_${pay.id}`, notificationUrl: `${appUrl()}/api/pagos/webhook` });
@@ -97,7 +109,8 @@ export async function rescheduleMine(code: string, date: string, time: string) {
   const dur = a.end.getTime() - a.start.getTime();
   const start = fromBogota(date, time); const end = new Date(start.getTime() + dur);
   if (!(await isFree(a.businessId, a.staffId, start, end, a.id))) return { error: 'Ese horario no está disponible.' };
-  await db.appointment.update({ where: { id: a.id }, data: { start, end, reminderSent: false } });
+  try { await db.appointment.update({ where: { id: a.id }, data: { start, end, reminderSent: false } }); }
+  catch (e) { if (isOverlapError(e)) return { error: 'Alguien acaba de tomar ese horario. Elige otro.' }; throw e; }
   revalidatePath('/mis-citas');
   return { redirect: `/cita/${code}` };
 }

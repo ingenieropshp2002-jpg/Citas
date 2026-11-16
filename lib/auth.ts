@@ -18,8 +18,38 @@ export async function getUser() {
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, secret());
-    return await db.user.findUnique({ where: { id: String(payload.uid) } });
+    const u = await db.user.findUnique({ where: { id: String(payload.uid) } });
+    return u && !u.blocked ? u : null;
   } catch { return null; }
+}
+
+/** Superadmin: marcado en la base de datos o incluido en ADMIN_EMAILS. */
+export function isSuperAdmin(u: { superAdmin?: boolean; email?: string | null } | null | undefined) {
+  return !!u && (!!u.superAdmin || isPlatformAdmin(u.email));
+}
+export async function requireSuperAdmin() {
+  const u = await requireUser('/admin');
+  if (!isSuperAdmin(u)) redirect('/');
+  return u;
+}
+
+// "Entrar como": el superadmin abre la cuenta de un dueño y puede volver a la suya.
+const BACK = 'rc_admin_back';
+export async function startImpersonation(adminId: string, targetId: string) {
+  const t = await new SignJWT({ uid: adminId }).setProtectedHeader({ alg: 'HS256' }).setExpirationTime('8h').sign(secret());
+  (await cookies()).set(BACK, t, { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', path: '/', maxAge: 8 * 3600 });
+  await createSession(targetId);
+}
+export async function getImpersonator() {
+  const t = (await cookies()).get(BACK)?.value;
+  if (!t) return null;
+  try { const { payload } = await jwtVerify(t, secret()); const u = await db.user.findUnique({ where: { id: String(payload.uid) } }); return isSuperAdmin(u) ? u : null; } catch { return null; }
+}
+export async function stopImpersonation() {
+  const admin = await getImpersonator();
+  (await cookies()).delete(BACK);
+  if (admin) await createSession(admin.id);
+  return admin;
 }
 
 export async function requireUser(next = '/') {
@@ -44,6 +74,6 @@ export async function requireBusiness(perm?: Perm, opts: { allowExpired?: boolea
   }
   if (perm && perms !== 'ALL' && !perms.includes(perm)) redirect('/panel?sinpermiso=1');
   // Prueba gratis o suscripción vencida: solo puede entrar a la página de suscripción
-  if (!opts.allowExpired && subscriptionState(business).state === 'VENCIDA' && !isPlatformAdmin(user.email)) redirect('/panel/suscripcion');
+  if (!opts.allowExpired && subscriptionState(business).state === 'VENCIDA' && !isSuperAdmin(user)) redirect('/panel/suscripcion');
   return { user, business, perms, staffId };
 }

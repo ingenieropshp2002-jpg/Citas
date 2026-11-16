@@ -6,6 +6,7 @@ import { db } from '@/lib/db';
 import { createSession, destroySession } from '@/lib/auth';
 import { sendWhatsapp } from '@/lib/notify';
 import { emailConfigured, readResetToken, resetLink, sendEmail } from '@/lib/reset';
+import { getSettings } from '@/lib/settings';
 
 const h = (s: string) => createHash('sha256').update(s + (process.env.AUTH_SECRET || '')).digest('hex');
 const cleanPhone = (p: string) => p.replace(/\D/g, '').replace(/^57(?=\d{10}$)/, '');
@@ -18,7 +19,7 @@ export async function sendOtp(phoneRaw: string) {
   if (recent >= 5) return { error: 'Demasiados intentos. Espera unos minutos.' };
   const code = String(randomInt(100000, 999999));
   await db.otpCode.create({ data: { phone, codeHash: h(code), expiresAt: new Date(Date.now() + 10 * 60000) } });
-  const r = await sendWhatsapp(phone, `Tu código de Registro Citas es ${code}. Vence en 10 minutos. No lo compartas.`);
+  const r = await sendWhatsapp(phone, `Tu código de ${(await getSettings()).appName} es ${code}. Vence en 10 minutos. No lo compartas.`);
   return { ok: true, devCode: r.simulated && process.env.NODE_ENV !== 'production' ? code : undefined };
 }
 
@@ -38,6 +39,7 @@ export async function loginEmail(_: unknown, fd: FormData) {
   const email = String(fd.get('email') || '').toLowerCase().trim();
   if (!/^\S+@\S+\.\S+$/.test(email)) return { error: 'Escribe un correo válido.', email };
   const user = await db.user.findUnique({ where: { email } });
+  if (user?.blocked) return { error: 'Esta cuenta está suspendida. Escríbenos si crees que es un error.', email };
   if (user && !user.passwordHash) return { error: 'Esta cuenta se creó con Google o con celular. Ingresa por ese medio o crea una contraseña con “¿Olvidaste tu contraseña?”.', email };
   if (!user?.passwordHash || !(await bcrypt.compare(String(fd.get('password') || ''), user.passwordHash))) return { error: 'El correo o la contraseña no coinciden.', email };
   await createSession(user.id);
@@ -68,7 +70,7 @@ export async function requestReset(_: unknown, fd: FormData) {
   const user = await db.user.findUnique({ where: { email } });
   if (user) {
     const link = await resetLink(user, safeNext(fd.get('next')));
-    const ok = await sendEmail(email, 'Crea tu nueva contraseña', `<div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;color:#0d2538"><h2>Hola, ${user.name.split(' ')[0]}</h2><p>Recibimos una solicitud para cambiar la contraseña de tu cuenta en Registro Citas.</p><p><a href="${link}" style="display:inline-block;background:#0d2538;color:#fff;padding:12px 20px;border-radius:12px;text-decoration:none">Crear nueva contraseña</a></p><p style="color:#555;font-size:13px">El enlace vence en 24 horas. Si no fuiste tú, ignora este mensaje.</p></div>`);
+    const ok = await sendEmail(email, 'Crea tu nueva contraseña', `<div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;color:#0d2538"><h2>Hola, ${user.name.split(' ')[0]}</h2><p>Recibimos una solicitud para cambiar la contraseña de tu cuenta en ${(await getSettings()).appName}.</p><p><a href="${link}" style="display:inline-block;background:#0d2538;color:#fff;padding:12px 20px;border-radius:12px;text-decoration:none">Crear nueva contraseña</a></p><p style="color:#555;font-size:13px">El enlace vence en 24 horas. Si no fuiste tú, ignora este mensaje.</p></div>`);
     if (!ok) return { error: 'No pudimos enviar el correo en este momento. Inténtalo de nuevo en unos minutos.' };
   }
   return { ok: true };

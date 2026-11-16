@@ -141,7 +141,7 @@ async function Config({ b }: { b: Awaited<ReturnType<typeof requireBusiness>>['b
 function Guide() {
   const steps = [
     ['Inscríbete en el RUT con la responsabilidad correcta', 'Verifica en tu RUT la responsabilidad 52 (facturador electrónico) y tu régimen de IVA. Las peluquerías, barberías y spas que prestan servicios gravados son, por regla general, responsables de IVA si superan los topes de la ley.'],
-    ['Elige cómo vas a facturar', 'Contrata un proveedor tecnológico autorizado por la DIAN (lista en dian.gov.co) o usa la solución gratuita de la DIAN. Registro Citas genera el XML UBL 2.1, el CUFE/CUDE y el QR; la firma digital y la transmisión las hace el proveedor por API.'],
+    ['Elige cómo vas a facturar', 'Contrata un proveedor tecnológico autorizado por la DIAN (lista en dian.gov.co) o usa la solución gratuita de la DIAN. Esta plataforma genera el XML UBL 2.1, el CUFE/CUDE y el QR; la firma digital y la transmisión las hace el proveedor por API.'],
     ['Habilítate como facturador en el portal de la DIAN', 'En el servicio “Factura electrónica > Habilitación”, registra el modo de operación (software de un proveedor tecnológico) y supera el set de pruebas con el TestSetId que te asignan. Haz lo mismo para el documento equivalente electrónico POS.'],
     ['Solicita la numeración', 'Tramita la autorización de numeración (formulario 1876) para factura electrónica y para documento equivalente POS. Registra aquí el número de resolución, el prefijo, el rango, la vigencia y la clave técnica.'],
     ['Configura el conector', 'En “Proveedor tecnológico” escribe la URL y el token de tu proveedor, el ID y el PIN del software, y cambia el ambiente a Producción solo cuando la DIAN lo haya habilitado.'],

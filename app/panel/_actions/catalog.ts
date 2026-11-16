@@ -1,6 +1,6 @@
 'use server';
 import { fromBogota } from '@/lib/format';
-import { TRIAL_DAYS } from '@/lib/subscription';
+import { getSettings } from '@/lib/settings';
 import bcrypt from 'bcryptjs';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
@@ -83,12 +83,14 @@ export async function saveSettings(_: unknown, fd: FormData) {
 
 export async function createBusiness(_: unknown, fd: FormData) {
   const user = await requireUser('/panel/registro');
+  const cfg = await getSettings();
+  if (!cfg.registrationsOpen && !user.superAdmin) return { error: 'Por ahora no estamos recibiendo negocios nuevos. Escríbenos para darte acceso.' };
   const name = String(fd.get('name') || '').trim();
   if (!name) return { error: 'Escribe el nombre del negocio.' };
   const base = name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   let slug = base; let i = 1; while (await db.business.findUnique({ where: { slug } })) slug = `${base}-${++i}`;
   const h = JSON.stringify({ '1': ['08:00', '19:00'], '2': ['08:00', '19:00'], '3': ['08:00', '19:00'], '4': ['08:00', '19:00'], '5': ['08:00', '19:00'], '6': ['08:00', '18:00'], '0': null });
-  const b = await db.business.create({ data: { name, slug, category: String(fd.get('category')), city: String(fd.get('city')), address: String(fd.get('address')), phone: String(fd.get('phone') || ''), whatsapp: String(fd.get('phone') || ''), description: `Bienvenido a ${name}.`, ownerId: user.id, openingHours: h, plan: 'PRO', subscriptionStatus: 'PRUEBA', trialEndsAt: new Date(Date.now() + TRIAL_DAYS * 86400000) } });
+  const b = await db.business.create({ data: { name, slug, category: String(fd.get('category')), city: String(fd.get('city')), address: String(fd.get('address')), phone: String(fd.get('phone') || ''), whatsapp: String(fd.get('phone') || ''), description: `Te damos la bienvenida a ${name}.`, ownerId: user.id, openingHours: h, plan: 'PRO', subscriptionStatus: 'PRUEBA', trialEndsAt: new Date(Date.now() + cfg.trialDays * 86400000) } });
   await db.staff.create({ data: { businessId: b.id, name: user.name, title: 'Propietario', userId: null } });
   await db.user.update({ where: { id: user.id }, data: { role: 'OWNER' } });
   await db.dianConfig.create({ data: { businessId: b.id } });

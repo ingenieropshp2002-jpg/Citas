@@ -4,14 +4,15 @@ import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db';
 import { requireBusiness, requireUser } from '@/lib/auth';
 import { createCheckout } from '@/lib/payments';
-import { isPlatformAdmin, PLANS, TRIAL_DAYS } from '@/lib/subscription';
+import { isSuperAdmin } from '@/lib/auth';
+import { getSettings } from '@/lib/settings';
 
 const appUrl = () => process.env.APP_URL || 'http://localhost:3000';
 
 export async function paySubscription(fd: FormData) {
   const { business, user, perms } = await requireBusiness(undefined, { allowExpired: true });
   if (perms !== 'ALL') redirect('/panel/suscripcion?error=permiso');
-  const plan = PLANS.find(p => p.id === String(fd.get('plan')));
+  const plan = (await getSettings()).plans.find(p => p.id === String(fd.get('plan')));
   if (!plan) redirect('/panel/suscripcion');
   const method = String(fd.get('method') || 'TARJETA');
   const pay = await db.payment.create({ data: { businessId: business.id, method, amount: plan.price, status: 'PENDIENTE', provider: 'PENDIENTE' } });
@@ -30,8 +31,8 @@ export async function applySubscriptionPayment(businessId: string, plan: string)
 
 // ───── Administración de la plataforma (ADMIN_EMAILS) ─────
 async function requireAdmin() {
-  const user = await requireUser('/panel/admin');
-  if (!isPlatformAdmin(user.email)) redirect('/panel');
+  const user = await requireUser('/admin');
+  if (!isSuperAdmin(user)) redirect('/');
   return user;
 }
 export async function adminSetSubscription(fd: FormData) {
@@ -42,7 +43,7 @@ export async function adminSetSubscription(fd: FormData) {
   const day = 86400000; const now = Date.now();
   if (action === 'ACTIVAR_30') await db.business.update({ where: { id }, data: { subscriptionStatus: 'ACTIVA', paidUntil: new Date(Math.max(now, b.paidUntil?.getTime() || 0) + 30 * day) } });
   if (action === 'ACTIVAR_SIEMPRE') await db.business.update({ where: { id }, data: { subscriptionStatus: 'ACTIVA', paidUntil: null, trialEndsAt: null } });
-  if (action === 'EXTENDER_PRUEBA') await db.business.update({ where: { id }, data: { subscriptionStatus: 'PRUEBA', trialEndsAt: new Date(Math.max(now, b.trialEndsAt?.getTime() || 0) + TRIAL_DAYS * day) } });
+  if (action === 'EXTENDER_PRUEBA') await db.business.update({ where: { id }, data: { subscriptionStatus: 'PRUEBA', trialEndsAt: new Date(Math.max(now, b.trialEndsAt?.getTime() || 0) + (await getSettings()).trialDays * day) } });
   if (action === 'SUSPENDER') await db.business.update({ where: { id }, data: { subscriptionStatus: 'VENCIDA', paidUntil: null, trialEndsAt: new Date(now - day) } });
-  revalidatePath('/panel/admin');
+  revalidatePath('/admin', 'layout');
 }

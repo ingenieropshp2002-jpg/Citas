@@ -4,11 +4,13 @@ import { BusinessCard } from '@/components/cliente/BusinessCard';
 import { Icon } from '@/components/ui/Icon';
 import { searchBusinesses } from '@/lib/search';
 import { IMG } from '@/lib/images';
+import { getSettings } from '@/lib/settings';
 
 export const dynamic = 'force-dynamic';
 const CATS = [['PELUQUERIA', 'Peluquería', 'content_cut'], ['BARBERIA', 'Barbería', 'face'], ['SPA', 'Spa', 'spa'], ['UNAS', 'Uñas', 'back_hand']] as const;
 
 export default async function Home() {
+  const cfg = await getSettings();
   const top = (await searchBusinesses({})).slice(0, 6);
   return (
     <>
@@ -18,9 +20,9 @@ export default async function Home() {
           <img src={IMG.salon} alt="" className="absolute inset-0 w-full h-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-b from-primary-container/80 via-primary-container/70 to-surface" />
           <div className="relative max-w-[1280px] mx-auto px-margin md:px-margin-tablet lg:px-margin-desktop pt-12 pb-16 md:pt-20 md:pb-24">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-secondary-fixed/90 text-on-secondary-fixed font-label-sm text-label-sm uppercase tracking-wider"><Icon name="verified" fill className="text-[14px]" />Bogotá · Medellín · Cali</span>
-            <h1 className="mt-4 font-headline-lg-mobile text-headline-lg-mobile md:font-display md:text-display text-white max-w-2xl">Tu próxima cita de <i className="text-secondary-fixed">belleza</i>, a un toque.</h1>
-            <p className="mt-3 text-white/80 font-body-lg text-body-lg max-w-xl">Reserva en peluquerías, barberías y spas. Paga con Nequi, PSE o tarjeta y recibe recordatorios por WhatsApp.</p>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-secondary-fixed/90 text-on-secondary-fixed font-label-sm text-label-sm uppercase tracking-wider"><Icon name="verified" fill className="text-[14px]" />{cfg.heroBadge}</span>
+            <h1 className="mt-4 font-headline-lg-mobile text-headline-lg-mobile md:font-display md:text-display text-white max-w-2xl">{cfg.heroTitle}</h1>
+            <p className="mt-3 text-white/80 font-body-lg text-body-lg max-w-xl">{cfg.heroSubtitle}</p>
             <form action="/buscar" className="mt-6 max-w-2xl relative">
               <Icon name="search" className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant" />
               <input name="q" className="input h-14 pl-12 pr-32 rounded-2xl shadow-raised" placeholder="Corte, barba, masaje, uñas…" />
@@ -47,8 +49,8 @@ export default async function Home() {
           <section className="my-space-xl card-raised p-6 md:p-10 flex flex-col md:flex-row items-start md:items-center gap-6 justify-between bg-primary-container dark:bg-surface-container text-white">
             <div>
               <p className="eyebrow !text-secondary-fixed">Para negocios</p>
-              <h2 className="font-headline-md text-headline-md text-white dark:text-on-surface mt-1">Agenda, caja, inventario y facturación electrónica en un solo lugar.</h2>
-              <p className="text-white/70 dark:text-on-surface-variant mt-2">Comparte tu link de reservas por Instagram y WhatsApp.</p>
+              <h2 className="font-headline-md text-headline-md text-white dark:text-on-surface mt-1">{cfg.businessTitle}</h2>
+              <p className="text-white/70 dark:text-on-surface-variant mt-2">{cfg.businessSubtitle}</p>
             </div>
             <Link href="/panel" className="btn-gold shrink-0">Registrar mi negocio</Link>
           </section>

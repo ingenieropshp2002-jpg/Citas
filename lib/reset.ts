@@ -28,7 +28,7 @@ export async function sendEmail(to: string, subject: string, html: string) {
   const r = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'content-type': 'application/json' },
-    body: JSON.stringify({ from: process.env.MAIL_FROM || 'Registro Citas <onboarding@resend.dev>', to, subject, html })
+    body: JSON.stringify({ from: process.env.MAIL_FROM || 'Reservas <onboarding@resend.dev>', to, subject, html })
   }).catch(() => null);
   return !!r?.ok;
 }
