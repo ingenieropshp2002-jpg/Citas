@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import { isPlatformAdmin, subscriptionState } from './subscription';
 import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
@@ -13,7 +14,8 @@ export async function createSession(userId: string) {
 }
 export async function destroySession() { (await cookies()).delete(COOKIE); }
 
-export async function getUser() {
+/** Usuario de la sesión (una sola consulta por petición). */
+export const getUser = cache(async function getUser() {
   const token = (await cookies()).get(COOKIE)?.value;
   if (!token) return null;
   try {
@@ -21,7 +23,7 @@ export async function getUser() {
     const u = await db.user.findUnique({ where: { id: String(payload.uid) } });
     return u && !u.blocked ? u : null;
   } catch { return null; }
-}
+});
 
 /** Superadmin: marcado en la base de datos o incluido en ADMIN_EMAILS. */
 export function isSuperAdmin(u: { superAdmin?: boolean; email?: string | null } | null | undefined) {

@@ -33,16 +33,21 @@ export const DEFAULT_SETTINGS: Settings = {
   ]
 };
 
+// Copia en memoria del isolate por 30 s: casi todas las páginas leen los ajustes y así no van a la base cada vez.
+let memo: { at: number; value: Settings } | null = null;
 export const getSettings = cache(async (): Promise<Settings> => {
+  if (memo && Date.now() - memo.at < 30_000) return memo.value;
   try {
     const rows = await db.platformSetting.findMany();
     const s: Record<string, unknown> = { ...DEFAULT_SETTINGS };
     for (const r of rows) { if (r.key in s) { try { s[r.key] = JSON.parse(r.value); } catch { /* valor dañado: se ignora */ } } }
-    return s as Settings;
+    memo = { at: Date.now(), value: s as Settings };
+    return memo.value;
   } catch { return DEFAULT_SETTINGS; }
 });
 
 export async function saveSettings(patch: Partial<Settings>) {
+  memo = null;
   for (const [key, v] of Object.entries(patch)) {
     if (!(key in DEFAULT_SETTINGS) || v === undefined) continue;
     const value = JSON.stringify(v);
