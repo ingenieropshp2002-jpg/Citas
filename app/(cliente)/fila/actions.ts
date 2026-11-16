@@ -2,15 +2,13 @@
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db';
-import { activePeak, createWalkIn, notifyUpcoming, openNow } from '@/lib/fila';
+import { createWalkIn, notifyUpcoming, queueStatus } from '@/lib/fila';
 
 export async function joinQueue(_: unknown, fd: FormData) {
   const b = await db.business.findUnique({ where: { slug: String(fd.get('slug') || '') } });
   if (!b || !b.active) return { error: 'Negocio no encontrado.' };
-  if (!b.queueEnabled) return { error: 'Este negocio no tiene la fila virtual activa.' };
-  if (!openNow(b)) return { error: 'El local está cerrado en este momento.' };
-  const peak = activePeak(b);
-  if (peak) return { error: 'En este horario solo atendemos con cita.' };
+  const st = queueStatus(b);
+  if (!st.open) return { error: st.reason };
   const name = String(fd.get('name') || '').trim().slice(0, 60);
   const phone = String(fd.get('phone') || '').replace(/\D/g, '');
   if (!name) return { error: 'Escribe tu nombre.' };

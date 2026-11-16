@@ -5,6 +5,7 @@ import { requireBusiness } from '@/lib/auth';
 import { isOverlapError } from '@/lib/availability';
 import { sendWhatsapp, waConfigured } from '@/lib/notify';
 import { activePeak, createWalkIn, notifyUpcoming, peakRules, QUEUE_DEFAULT_MIN, turnMessage, type PeakRule } from '@/lib/fila';
+import { ymd } from '@/lib/format';
 import { newCode } from '@/app/(cliente)/reservar/actions';
 
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? '').trim();
@@ -16,6 +17,7 @@ export async function addWalkInPanel(_: unknown, fd: FormData) {
   if (!name) return { error: 'Escribe el nombre.' };
   const peak = activePeak(b);
   if (peak) return { error: `Ahora es hora pico (${peak.label || 'solo con cita'}): en este horario solo se atiende con reserva.` };
+  if (b.queueOpenDate !== ymd(new Date())) return { error: 'Primero abre la fila de hoy con el botón "Abrir fila".' };
   await createWalkIn(b, { name, phone: phone || null, serviceId: str(fd, 'serviceId') || null });
   await notifyUpcoming(b); done();
   return { ok: true };
@@ -88,4 +90,11 @@ export async function deletePeakRule(id: string) {
   const { business: b } = await requireBusiness('configuracion');
   await db.business.update({ where: { id: b.id }, data: { peakRules: JSON.stringify(peakRules(b).filter(r => r.id !== id)) } });
   done();
+}
+
+/** El dueño abre o cierra la fila del día (se cierra sola al día siguiente). */
+export async function setQueueOpen(open: boolean) {
+  const { business: b } = await requireBusiness('agenda');
+  await db.business.update({ where: { id: b.id }, data: { queueOpenDate: open ? ymd(new Date()) : null } });
+  done(); revalidatePath(`/negocio/${b.slug}`);
 }

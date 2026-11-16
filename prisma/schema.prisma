@@ -103,6 +103,7 @@ model Business {
   // Fila virtual (clientes sin cita) y horas pico solo con cita
   queueEnabled        Boolean   @default(true)
   queueNotifyAhead    Int       @default(2) // avisar por WhatsApp cuando falten N turnos
+  queueOpenDate       String? // YYYY-MM-DD: el dueño abrió la fila ese día
   peakRules           String    @default("[]") // JSON: { id, label, days: number[], from, to, startDate?, endDate? }[]
   // Confirmación, tolerancia y anticipos
   reminderHourBefore  Boolean   @default(true) // segundo recordatorio 1 hora antes

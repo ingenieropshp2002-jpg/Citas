@@ -1,7 +1,7 @@
 'use client';
 import { useActionState, useState, useTransition } from 'react';
 import { Icon } from '@/components/ui/Icon';
-import { attendWalkIn, callWalkIn, closeWalkIn, deletePeakRule, markNotified } from '../_actions/fila';
+import { attendWalkIn, callWalkIn, closeWalkIn, deletePeakRule, markNotified, setQueueOpen } from '../_actions/fila';
 
 type W = { id: string; number: number; name: string; phone: string | null; status: string; service: string | null; waitMin: number; position: number; since: string; notified: boolean };
 export function QueueRow({ w, near, wa, staff }: { w: W; near: boolean; wa: string | null; staff: { id: string; name: string; freeFor: number; fits: boolean }[] }) {
@@ -42,4 +42,20 @@ export function QueueRow({ w, near, wa, staff }: { w: W; near: boolean; wa: stri
 export function DeletePeak({ id }: { id: string }) {
   const [pending, start] = useTransition();
   return <button disabled={pending} onClick={() => start(() => deletePeakRule(id))} aria-label="Quitar franja" className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-surface-container text-on-surface-variant"><Icon name="delete" className="text-[18px]" /></button>;
+}
+
+export function OpenQueue({ open }: { open: boolean }) {
+  const [pending, start] = useTransition();
+  return (
+    <div className={`mb-4 p-4 rounded-2xl border flex flex-wrap items-center gap-3 ${open ? 'border-[#059669]/40 bg-[#ECFDF5] dark:bg-[#05291d]' : 'border-parchment bg-surface-container-low'}`}>
+      <Icon name={open ? 'storefront' : 'door_front'} className={`text-[26px] ${open ? 'text-[#047857]' : 'text-on-surface-variant'}`} />
+      <div className="flex-1 min-w-[200px]">
+        <p className="font-label-lg">{open ? 'Fila abierta hoy' : 'Fila cerrada'}</p>
+        <p className="font-body-sm text-on-surface-variant">{open ? 'Tus clientes ven "¿Ya estás en el local? Únete a la fila" en tu página. Se cierra sola al terminar el día.' : 'Ábrela cuando abras el local. Mientras esté cerrada, en tu página solo aparece "Reservar cita".'}</p>
+      </div>
+      <button disabled={pending} onClick={() => start(() => setQueueOpen(!open))} className={open ? 'btn-ghost' : 'btn-primary'}>
+        <Icon name={open ? 'lock' : 'lock_open'} className="text-[18px]" />{pending ? 'Guardando…' : open ? 'Cerrar fila' : 'Abrir fila'}
+      </button>
+    </div>
+  );
 }

@@ -7,11 +7,11 @@ import { Icon } from '@/components/ui/Icon';
 import { ActionForm } from '@/components/ui/ActionForm';
 import { Submit } from '@/components/ui/Submit';
 import { AutoRefresh } from '@/components/ui/AutoRefresh';
-import { hm, time12, timeOf } from '@/lib/format';
+import { hm, time12, timeOf, ymd } from '@/lib/format';
 import { waLink } from '@/lib/notify';
 import { activePeak, describePeak, gapsToday, nearTurnMessage, peakRules, queueToday, todayStart, turnLink, DIAS_LETRA } from '@/lib/fila';
 import { addPeakRule, addWalkInPanel, saveQueueSettings } from '../_actions/fila';
-import { QueueRow, DeletePeak } from './Rows';
+import { QueueRow, DeletePeak, OpenQueue } from './Rows';
 
 export const metadata = { title: 'Fila y huecos' };
 const dur = (m: number) => (m >= 60 ? `${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60} min` : ''}` : `${m} min`);
@@ -33,7 +33,8 @@ export default async function Fila() {
       <PageHeader eyebrow="Agenda" title="Fila y huecos libres" subtitle="Las citas tienen prioridad. Quien llega sin cita se anota con el QR y entra en los huecos libres de la agenda."
         actions={<><Link href="/panel/fila/qr" className="btn-ghost btn-sm"><Icon name="qr_code_2" className="text-[18px]" />QR de la fila</Link><Link href={link} target="_blank" className="btn-ghost btn-sm"><Icon name="open_in_new" className="text-[18px]" />Ver página</Link></>} />
       {peak && <div className="mb-4 p-4 rounded-2xl bg-secondary-fixed/40 border border-gold/50 flex items-center gap-3"><Icon name="lock_clock" className="text-secondary text-[24px]" /><div><p className="font-label-lg">Hora pico: solo con cita hasta las {time12(peak.to)}</p><p className="font-body-sm text-on-surface-variant">{peak.label}. Mientras tanto la fila no recibe turnos nuevos.</p></div></div>}
-      {!b.queueEnabled && <div className="mb-4 p-4 rounded-2xl bg-surface-container-low flex items-center gap-3"><Icon name="pause_circle" className="text-[24px]" /><p className="font-label-lg">La fila virtual está apagada. Actívala abajo en Ajustes de la fila.</p></div>}
+      {!b.queueEnabled ? <div className="mb-4 p-4 rounded-2xl bg-surface-container-low flex items-center gap-3"><Icon name="pause_circle" className="text-[24px]" /><p className="font-label-lg">La fila virtual está apagada. Actívala abajo en Ajustes de la fila.</p></div>
+        : <OpenQueue open={b.queueOpenDate === ymd(new Date())} />}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
         <Stat label="En la fila" value={String(q.length)} icon="groups" />
         <Stat label="Espera del último" value={q.length ? dur(q[q.length - 1].waitMin) : '—'} icon="hourglass_top" tone="gold" />

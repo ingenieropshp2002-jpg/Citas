@@ -114,3 +114,13 @@ export async function createWalkIn(b: { id: string }, data: { name: string; phon
   const n = await db.walkIn.count({ where: { businessId: b.id, createdAt: { gte: todayStart() } } });
   return db.walkIn.create({ data: { businessId: b.id, number: n + 1, ...data } });
 }
+
+/** La fila recibe turnos solo si el dueño la abrió hoy, el local está abierto y no es hora pico. */
+export function queueStatus(b: { queueEnabled: boolean; queueOpenDate: string | null; openingHours: string; peakRules: string }, at = new Date()) {
+  if (!b.queueEnabled) return { open: false, reason: 'Este negocio no usa la fila virtual.' } as const;
+  if (b.queueOpenDate !== ymd(at)) return { open: false, reason: 'La fila no está abierta en este momento.' } as const;
+  if (!openNow(b, at)) return { open: false, reason: 'El local está cerrado en este momento.' } as const;
+  const peak = activePeak(b, at);
+  if (peak) return { open: false, peak, reason: 'En este horario solo atendemos con cita.' } as const;
+  return { open: true, reason: '' } as const;
+}
