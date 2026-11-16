@@ -5,7 +5,7 @@ import { Icon } from '@/components/ui/Icon';
 import { fechaCorta } from '@/lib/format';
 import { subscriptionState } from '@/lib/subscription';
 import { adminSetSubscription } from '@/app/panel/_actions/subscription';
-import { impersonateAction } from '../actions';
+import { impersonateAction } from '@/app/admin/actions';
 import { StateChip } from '../StateChip';
 
 export const metadata = { title: 'Negocios' };

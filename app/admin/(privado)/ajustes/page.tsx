@@ -3,7 +3,7 @@ import { PageHeader } from '@/components/panel/PageHeader';
 import { ActionForm } from '@/components/ui/ActionForm';
 import { Submit } from '@/components/ui/Submit';
 import { ImageInput } from '@/components/ui/ImageInput';
-import { saveSettingsAction } from '../actions';
+import { saveSettingsAction } from '@/app/admin/actions';
 
 export const metadata = { title: 'Ajustes de la app' };
 export default async function Ajustes() {

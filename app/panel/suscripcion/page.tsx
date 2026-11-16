@@ -6,7 +6,6 @@ import { Icon } from '@/components/ui/Icon';
 import { Submit } from '@/components/ui/Submit';
 import { cop, fechaLarga, METHOD_LABEL } from '@/lib/format';
 import { subscriptionState } from '@/lib/subscription';
-import { isSuperAdmin } from '@/lib/auth';
 import { getSettings } from '@/lib/settings';
 import { provider } from '@/lib/payments';
 import { paySubscription } from '../_actions/subscription';
@@ -21,7 +20,7 @@ export default async function Suscripcion({ searchParams }: { searchParams: Prom
   const owner = perms === 'ALL';
   return (
     <>
-      <PageHeader eyebrow="Tu cuenta" title="Suscripción" actions={isSuperAdmin(user) ? <Link href="/admin" className="btn-ghost btn-sm"><Icon name="admin_panel_settings" className="text-[18px]" />Administrar negocios</Link> : undefined} />
+      <PageHeader eyebrow="Tu cuenta" title="Suscripción" />
       {sp.pago === 'ok' && <p className="mb-4 p-3 rounded-xl bg-[#ECFDF5] text-[#065F46] font-label-lg">✓ Pago aprobado. Tu suscripción quedó activa.</p>}
       {sp.pago === 'rechazado' && <p className="mb-4 p-3 rounded-xl bg-[#FFF1F2] text-danger font-label-lg">El pago fue rechazado. Intenta con otro medio de pago.</p>}
       <section className={`card-raised p-5 mb-4 ${s.state === 'VENCIDA' ? 'border border-danger/40' : ''}`}>

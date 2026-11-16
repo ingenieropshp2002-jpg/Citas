@@ -6,7 +6,7 @@ import { Submit } from '@/components/ui/Submit';
 import { Icon } from '@/components/ui/Icon';
 import { fechaCorta } from '@/lib/format';
 import { requireSuperAdmin } from '@/lib/auth';
-import { impersonateAction, saveUserAction } from '../actions';
+import { impersonateAction, saveUserAction } from '@/app/admin/actions';
 import { ResetLinkButton } from './ResetLink';
 
 export const metadata = { title: 'Usuarios' };

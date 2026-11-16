@@ -1,6 +1,6 @@
 'use client';
 import { useState, useTransition } from 'react';
-import { userResetLinkAction } from '../actions';
+import { userResetLinkAction } from '@/app/admin/actions';
 export function ResetLinkButton({ id, phone, name }: { id: string; phone: string | null; name: string }) {
   const [link, setLink] = useState(''); const [p, start] = useTransition(); const [copied, setCopied] = useState(false);
   if (!link) return <button type="button" disabled={p} className="btn-ghost btn-sm" onClick={() => start(async () => { const r = await userResetLinkAction(id); if ('link' in r && r.link) setLink(r.link); })}>{p ? 'Generando…' : 'Generar enlace (vence en 24 h)'}</button>;

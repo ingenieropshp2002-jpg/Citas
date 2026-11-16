@@ -28,9 +28,9 @@ export function isSuperAdmin(u: { superAdmin?: boolean; email?: string | null } 
   return !!u && (!!u.superAdmin || isPlatformAdmin(u.email));
 }
 export async function requireSuperAdmin() {
-  const u = await requireUser('/admin');
-  if (!isSuperAdmin(u)) redirect('/');
-  return u;
+  const u = await getUser();
+  if (!isSuperAdmin(u)) redirect('/admin/ingresar');
+  return u!;
 }
 
 // "Entrar como": el superadmin abre la cuenta de un dueño y puede volver a la suya.

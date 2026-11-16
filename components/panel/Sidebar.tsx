@@ -13,7 +13,7 @@ export const NAV = [
   ['/panel/reportes', 'monitoring', 'Reportes', 'reportes'], ['/panel/academia', 'school', 'Academia', null], ['/panel/suscripcion', 'workspace_premium', 'Suscripción', 'configuracion'], ['/panel/configuracion', 'settings', 'Configuración', 'configuracion']
 ] as const;
 
-export function Sidebar({ business, user, perms, lowStock }: { business: { name: string; slug: string; plan: string }; user: { name: string; avatar: string | null; admin?: boolean }; perms: string[] | 'ALL'; lowStock: number }) {
+export function Sidebar({ business, user, perms, lowStock }: { business: { name: string; slug: string; plan: string }; user: { name: string; avatar: string | null }; perms: string[] | 'ALL'; lowStock: number }) {
   const p = usePathname(); const [open, setOpen] = useState(false);
   const items = NAV.filter(n => !n[3] || perms === 'ALL' || perms.includes(n[3]));
   const nav = (
@@ -27,7 +27,6 @@ export function Sidebar({ business, user, perms, lowStock }: { business: { name:
           </Link>
         );
       })}
-      {user.admin && <Link href="/admin" className="mt-3 flex items-center gap-3 h-11 px-3 rounded-xl font-label-lg text-label-lg bg-secondary-fixed/15 text-secondary-fixed hover:bg-secondary-fixed/25 transition"><Icon name="admin_panel_settings" className="text-[20px]" />Superadmin</Link>}
     </nav>
   );
   const head = (

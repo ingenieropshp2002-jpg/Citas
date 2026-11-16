@@ -7,7 +7,7 @@ import { Submit } from '@/components/ui/Submit';
 import { Icon } from '@/components/ui/Icon';
 import { ImageInput } from '@/components/ui/ImageInput';
 import { getSettings } from '@/lib/settings';
-import { impersonateAction, saveBusinessAction } from '../../actions';
+import { impersonateAction, saveBusinessAction } from '@/app/admin/actions';
 
 export const metadata = { title: 'Editar negocio' };
 const d = (x: Date | null) => (x ? new Date(x.getTime() - 5 * 3600e3).toISOString().slice(0, 10) : '');
