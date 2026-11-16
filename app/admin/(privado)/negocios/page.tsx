@@ -9,8 +9,8 @@ import { impersonateAction } from '@/app/admin/actions';
 import { StateChip } from '../StateChip';
 
 export const metadata = { title: 'Negocios' };
-export default async function Negocios({ searchParams }: { searchParams: Promise<{ q?: string; estado?: string }> }) {
-  const { q = '', estado = '' } = await searchParams;
+export default async function Negocios({ searchParams }: { searchParams: Promise<{ q?: string; estado?: string; eliminado?: string }> }) {
+  const { q = '', estado = '', eliminado } = await searchParams;
   const list = await db.business.findMany({
     where: q ? { OR: [{ name: { contains: q, mode: 'insensitive' } }, { slug: { contains: q, mode: 'insensitive' } }, { city: { contains: q, mode: 'insensitive' } }, { owner: { email: { contains: q, mode: 'insensitive' } } }] } : {},
     orderBy: { createdAt: 'desc' }, include: { owner: { select: { id: true, name: true, email: true, phone: true } }, _count: { select: { appointments: true, customers: true } } }
@@ -20,6 +20,7 @@ export default async function Negocios({ searchParams }: { searchParams: Promise
   return (
     <>
       <PageHeader eyebrow="Plataforma" title="Negocios" subtitle={`${rows.length} ${rows.length === 1 ? 'negocio' : 'negocios'}`} />
+      {eliminado && <p role="status" className="mb-4 p-3 rounded-lg bg-[#ECFDF5] text-[#065F46] font-label-md">✓ El negocio fue eliminado.</p>}
       <form className="flex flex-wrap gap-2 mb-3">
         <input name="q" defaultValue={q} placeholder="Buscar por nombre, enlace, ciudad o correo del dueño" className="input flex-1 min-w-[220px]" />
         <select name="estado" defaultValue={estado} className="input !w-auto"><option value="">Todos</option><option value="PRUEBA">En prueba</option><option value="ACTIVA">Activos</option><option value="VENCIDA">Vencidos</option></select>

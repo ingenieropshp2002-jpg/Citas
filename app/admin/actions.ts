@@ -87,3 +87,18 @@ export async function stopImpersonationAction() {
   const admin = await stopImpersonation();
   redirect(admin ? '/admin' : '/');
 }
+
+export async function deleteBusinessAction(_: unknown, fd: FormData) {
+  await requireSuperAdmin();
+  const id = str(fd, 'id');
+  const b = await db.business.findUnique({ where: { id }, select: { name: true, slug: true } });
+  if (!b) return { error: 'El negocio ya no existe.' };
+  if (str(fd, 'confirm') !== b.name.trim()) return { error: 'Escribe el nombre exacto del negocio para confirmar.' };
+  await db.$transaction([
+    db.appointmentService.deleteMany({ where: { appointment: { businessId: id } } }),
+    db.appointment.deleteMany({ where: { businessId: id } }),
+    db.business.delete({ where: { id } })
+  ]);
+  revalidatePath('/admin', 'layout'); revalidatePath('/'); revalidatePath(`/negocio/${b.slug}`);
+  redirect('/admin/negocios?eliminado=1');
+}

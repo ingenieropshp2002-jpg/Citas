@@ -7,7 +7,7 @@ import { Submit } from '@/components/ui/Submit';
 import { Icon } from '@/components/ui/Icon';
 import { ImageInput } from '@/components/ui/ImageInput';
 import { getSettings } from '@/lib/settings';
-import { impersonateAction, saveBusinessAction } from '@/app/admin/actions';
+import { deleteBusinessAction, impersonateAction, saveBusinessAction } from '@/app/admin/actions';
 
 export const metadata = { title: 'Editar negocio' };
 const d = (x: Date | null) => (x ? new Date(x.getTime() - 5 * 3600e3).toISOString().slice(0, 10) : '');
@@ -59,6 +59,15 @@ export default async function EditarNegocio({ params }: { params: Promise<{ id: 
         </section>
         <div className="xl:col-span-2 sticky bottom-0 py-3 bg-gradient-to-t from-surface via-surface/95 to-transparent flex justify-between items-center gap-3"><Link href="/admin/negocios" className="btn-ghost">← Volver</Link><Submit className="btn-primary min-w-[200px]">Guardar cambios</Submit></div>
       </ActionForm>
+      <section className="card p-5 mt-6 border border-danger/40 space-y-3">
+        <h2 className="h-section text-danger flex items-center gap-2"><Icon name="warning" className="text-[20px]" />Eliminar negocio</h2>
+        <p className="font-body-sm text-on-surface-variant">Se borran para siempre su página, equipo, servicios, clientes, citas, productos, ventas y facturas. Esta acción no se puede deshacer. La cuenta del dueño se conserva.</p>
+        <ActionForm action={deleteBusinessAction} className="space-y-3">
+          <input type="hidden" name="id" value={b.id} />
+          <label className="block"><span className="label">Para confirmar, escribe el nombre: <b className="text-on-surface">{b.name}</b></span><input name="confirm" required autoComplete="off" className="input" placeholder={b.name} /></label>
+          <Submit className="btn-danger">Eliminar negocio para siempre</Submit>
+        </ActionForm>
+      </section>
     </>
   );
 }
