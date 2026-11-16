@@ -100,6 +100,10 @@ model Business {
   birthdayEnabled     Boolean   @default(true)
   birthdayMessage     String    @default("¡Feliz cumpleaños, {nombre}! 🎉 En {negocio} te regalamos un detalle en tu próxima visita. Reserva aquí: {link}")
   birthdayCoupon      String?
+  // Fila virtual (clientes sin cita) y horas pico solo con cita
+  queueEnabled        Boolean   @default(true)
+  queueNotifyAhead    Int       @default(2) // avisar por WhatsApp cuando falten N turnos
+  peakRules           String    @default("[]") // JSON: { id, label, days: number[], from, to, startDate?, endDate? }[]
   createdAt           DateTime  @default(now())
 
   staff        Staff[]
@@ -122,6 +126,7 @@ model Business {
   expenses     Expense[]
   rewards      Reward[]
   pointMoves   PointMovement[]
+  walkIns      WalkIn[]
 }
 
 model Staff {
@@ -579,4 +584,22 @@ model PlatformSetting {
   key       String   @id
   value     String
   updatedAt DateTime @updatedAt
+}
+
+/// Fila virtual: personas que llegan sin cita y se anotan con el QR del local.
+model WalkIn {
+  id            String    @id @default(cuid())
+  businessId    String
+  business      Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  number        Int // turno del día
+  name          String
+  phone         String?
+  serviceId     String?
+  status        String    @default("ESPERANDO") // ESPERANDO | LLAMADO | ATENDIENDO | ATENDIDO | CANCELADO | NO_VINO
+  appointmentId String? // cita creada en el hueco libre al pasar a atención
+  notifiedAt    DateTime? // aviso de "ya casi es tu turno"
+  calledAt      DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([businessId, createdAt])
 }
