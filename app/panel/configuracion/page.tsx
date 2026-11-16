@@ -54,6 +54,19 @@ export default async function Configuracion({ searchParams }: { searchParams: Pr
             <label className="flex items-center gap-2"><input type="checkbox" name="requireDeposit" defaultChecked={b.requireDeposit} className="accent-primary-container" />Cobrar depósito al reservar online</label>
             <div className="grid grid-cols-2 gap-3"><label><span className="label">Depósito (%)</span><input name="depositPercent" type="number" min={0} max={100} defaultValue={b.depositPercent} className="input" /></label><label><span className="label">Cancelación gratis hasta (horas antes)</span><input name="cancellationHours" type="number" min={0} defaultValue={b.cancellationHours} className="input" /></label></div>
           </Sec>
+          <Sec title="Asistencia: confirmación, tolerancia y anticipos" icon="event_available">
+            <label className="flex items-center gap-2"><input type="checkbox" name="reminderHourBefore" defaultChecked={b.reminderHourBefore} className="accent-primary-container" />Enviar también un recordatorio 1 hora antes</label>
+            <label className="flex items-center gap-2"><input type="checkbox" name="releaseUnconfirmed" defaultChecked={b.releaseUnconfirmed} className="accent-primary-container" />Si el cliente no confirma, liberar el cupo</label>
+            <div className="grid grid-cols-2 gap-3">
+              <label><span className="label">Liberar sin confirmar (min antes)</span><select name="releaseBeforeMin" defaultValue={b.releaseBeforeMin} className="input">{[15, 30, 45, 60, 120].map(n => <option key={n} value={n}>{n} minutos</option>)}</select></label>
+              <label><span className="label">Tolerancia de retraso</span><select name="lateToleranceMin" defaultValue={b.lateToleranceMin} className="input"><option value={0}>Sin tolerancia automática</option><option value={10}>10 minutos</option><option value={15}>15 minutos</option><option value={20}>20 minutos</option></select></label>
+            </div>
+            <p className="font-body-sm text-on-surface-variant">Pasada la tolerancia, la cita se marca "No llegó" y el horario queda libre para otra persona. Si llega, márcala "En servicio" en la agenda antes de ese tiempo.</p>
+            <label className="flex items-center gap-2"><input type="checkbox" name="depositInPeak" defaultChecked={b.depositInPeak} className="accent-primary-container" />Exigir anticipo en horas pico y temporada alta</label>
+            <label className="flex items-center gap-2"><input type="checkbox" name="depositForNoShows" defaultChecked={b.depositForNoShows} className="accent-primary-container" />Exigir anticipo a quien incumple seguido</label>
+            <label className="block"><span className="label">Se considera incumplido desde</span><select name="noShowLimit" defaultValue={b.noShowLimit} className="input">{[1, 2, 3, 4].map(n => <option key={n} value={n}>{n} {n === 1 ? 'falta' : 'faltas'} en 6 meses</option>)}</select></label>
+            <p className="font-body-sm text-on-surface-variant">Cuenta como falta: no llegar o no confirmar. Dos llegadas tarde cuentan como una falta. El anticipo usa el porcentaje de depósito de arriba. Las horas pico se configuran en <Link href="/panel/fila" className="text-secondary font-semibold">Fila y huecos</Link>; el historial está en <Link href="/panel/clientes/incumplidos" className="text-secondary font-semibold">Clientes › Incumplidos</Link>.</p>
+          </Sec>
           <Sec title="Notificaciones" icon="notifications">
             <label className="flex items-center gap-2"><input type="checkbox" name="notifyWhatsapp" defaultChecked={b.notifyWhatsapp} className="accent-primary-container" />Confirmaciones y recordatorios por WhatsApp</label>
             <label className="flex items-center gap-2"><input type="checkbox" name="notifyEmail" defaultChecked={b.notifyEmail} className="accent-primary-container" />Enviar factura y confirmaciones por correo</label>

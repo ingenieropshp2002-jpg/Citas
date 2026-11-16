@@ -1,5 +1,6 @@
 import { db } from '@/lib/db';
 import { requireBusiness } from '@/lib/auth';
+import { sweepAppointments } from '@/lib/asistencia';
 import { PageHeader } from '@/components/panel/PageHeader';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
@@ -9,6 +10,7 @@ import { addDays, fromBogota, minutesOf, parseJson, ymd } from '@/lib/format';
 export const metadata = { title: 'Agenda' };
 export default async function Agenda({ searchParams }: { searchParams: Promise<{ vista?: string; fecha?: string; nueva?: string; prof?: string }> }) {
   const { business: b, staffId: myStaff, perms } = await requireBusiness('agenda');
+  await sweepAppointments(b.id);
   const sp = await searchParams;
   const view = (['dia', 'semana', 'mes'].includes(sp.vista || '') ? sp.vista : 'dia') as 'dia' | 'semana' | 'mes';
   const date = sp.fecha && /^\d{4}-\d{2}-\d{2}$/.test(sp.fecha) ? sp.fecha : ymd(new Date());

@@ -104,6 +104,14 @@ model Business {
   queueEnabled        Boolean   @default(true)
   queueNotifyAhead    Int       @default(2) // avisar por WhatsApp cuando falten N turnos
   peakRules           String    @default("[]") // JSON: { id, label, days: number[], from, to, startDate?, endDate? }[]
+  // Confirmación, tolerancia y anticipos
+  reminderHourBefore  Boolean   @default(true) // segundo recordatorio 1 hora antes
+  releaseUnconfirmed  Boolean   @default(false) // si no confirma, se libera el cupo
+  releaseBeforeMin    Int       @default(30) // minutos antes de la cita en que se libera
+  lateToleranceMin    Int       @default(0) // 0 = apagado; 10 o 15 = se marca "no llegó"
+  depositInPeak       Boolean   @default(false) // anticipo obligatorio en horas pico / temporada alta
+  depositForNoShows   Boolean   @default(true) // anticipo obligatorio a quien incumple seguido
+  noShowLimit         Int       @default(2) // incumplimientos (6 meses) para exigir anticipo
   createdAt           DateTime  @default(now())
 
   staff        Staff[]
@@ -213,6 +221,7 @@ model Customer {
   points              Int             @default(0)
   birthdayGreetedYear Int?
   winbackSentAt       DateTime?
+  requireDeposit      Boolean         @default(false) // el negocio le exige anticipo siempre
   createdAt           DateTime        @default(now())
   appointments        Appointment[]
   sales               Sale[]
@@ -241,6 +250,8 @@ model Appointment {
   source            String               @default("ONLINE")
   reminderSent      Boolean              @default(false)
   clientConfirmedAt DateTime? // el cliente confirmó asistencia respondiendo por WhatsApp
+  reminder1hSent    Boolean              @default(false)
+  arrivedLateMin    Int? // minutos de retraso al llegar
   saleId            String?              @unique
   sale              Sale?                @relation(fields: [saleId], references: [id])
   createdAt         DateTime             @default(now())

@@ -51,7 +51,8 @@ export async function setAppointmentStatus(id: string, status: string) {
   const a = await db.appointment.findFirst({ where: { id, businessId: business.id }, include: { services: true } });
   if (!a) return { error: 'Cita no encontrada' };
   try { await db.$transaction(async tx => {
-    await tx.appointment.update({ where: { id }, data: { status } });
+    const late = status === 'EN_SERVICIO' && ['PENDIENTE', 'CONFIRMADA'].includes(a.status) ? Math.max(0, Math.round((Date.now() - a.start.getTime()) / 60000)) : undefined;
+    await tx.appointment.update({ where: { id }, data: { status, ...(late !== undefined ? { arrivedLateMin: late } : {}) } });
     // Al completar, descuenta los insumos configurados (solo una vez)
     if (status === 'COMPLETADA' && a.status !== 'COMPLETADA') await consumeSupplies(tx, business.id, a.services.map(s => s.serviceId), a.code);
   }); } catch (e) { if (isOverlapError(e)) return { error: 'No se puede reactivar: ese horario ya lo tiene otra cita.' }; throw e; }
@@ -94,4 +95,10 @@ export async function markClientConfirmed(id: string, value: boolean) {
   const { business } = await requireBusiness('agenda');
   await db.appointment.updateMany({ where: { id, businessId: business.id }, data: { clientConfirmedAt: value ? new Date() : null } });
   revalidatePath('/panel/recordatorios'); revalidatePath('/panel/agenda');
+}
+
+export async function markReminder1hSent(id: string) {
+  const { business } = await requireBusiness('agenda');
+  await db.appointment.updateMany({ where: { id, businessId: business.id }, data: { reminder1hSent: true } });
+  revalidatePath('/panel/recordatorios');
 }

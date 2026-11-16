@@ -29,6 +29,7 @@ export function todayStart() { return fromBogota(ymd(new Date())); }
 
 /** Huecos libres de hoy por profesional, desde ahora hasta el cierre. Las citas tienen prioridad. */
 export async function gapsToday(b: { id: string; openingHours: string; peakRules: string }) {
+  await (await import('./asistencia')).sweepAppointments(b.id);
   const now = new Date(); const date = ymd(now); const nowMin = minutesOf(hm(now));
   const dayStart = fromBogota(date); const dayEnd = fromBogota(date, '23:59');
   const [staff, appts, blocks] = await Promise.all([

@@ -2,25 +2,27 @@ import { db } from './db';
 import { bogota, fechaLarga, hm, time12 } from './format';
 import { fillVars, sendWhatsapp, waConfigured } from './notify';
 import { subscriptionState } from './subscription';
+import { confirmLink, reminderText, sweepAppointments } from './asistencia';
 
 const appUrl = () => process.env.APP_URL || 'http://localhost:3000';
 
-/** Recordatorios de citas por WhatsApp, pidiendo confirmación (responder 1 para confirmar, 2 para reprogramar). */
+/** Recordatorios por WhatsApp con enlace "Confirmo / Cancelo": uno el día anterior y otro 1 hora antes. */
 export async function sendReminders(businessId: string) {
   if (!waConfigured()) return 0; // modo manual: se envían desde /panel/recordatorios
   const b = await db.business.findUniqueOrThrow({ where: { id: businessId } });
-  const until = new Date(Date.now() + b.reminderHours * 3600000);
-  const list = await db.appointment.findMany({ where: { businessId, reminderSent: false, status: { in: ['CONFIRMADA', 'PENDIENTE'] }, start: { gt: new Date(), lte: until } }, include: { customer: true, staff: true, services: { include: { service: true } } } });
-  for (const a of list) {
-    if (a.customer.phone && b.notifyWhatsapp) {
+  if (!b.notifyWhatsapp) return 0;
+  const include = { customer: true, staff: true, services: { include: { service: true } } } as const;
+  const base = { businessId, status: { in: ['CONFIRMADA', 'PENDIENTE'] }, start: { gt: new Date() } };
+  const day = await db.appointment.findMany({ where: { ...base, reminderSent: false, start: { gt: new Date(Date.now() + 70 * 60000), lte: new Date(Date.now() + b.reminderHours * 3600000) } }, include });
+  const hour = b.reminderHourBefore ? await db.appointment.findMany({ where: { ...base, reminder1hSent: false, clientConfirmedAt: null, start: { gt: new Date(), lte: new Date(Date.now() + 70 * 60000) } }, include }) : [];
+  for (const [list, kind] of [[day, 'DIA'], [hour, 'HORA']] as const) for (const a of list) {
+    if (a.customer.phone) {
       const when = `${fechaLarga(a.start)} a las ${time12(hm(a.start))}`;
-      const ask = b.autoConfirmRequest ? '\n\nResponde *1* para confirmar o *2* si necesitas reprogramar.' : '';
-      await sendWhatsapp(a.customer.phone, `⏰ Hola ${a.customer.name.split(' ')[0]}, te recordamos tu cita en ${b.name} el ${when} con ${a.staff.name} (${a.services.map(s => s.service.name).join(' + ')}).${ask}`,
-        { phoneId: b.waPhoneId, template: { kind: 'RECORDATORIO', params: [a.customer.name.split(' ')[0], b.name, when, a.staff.name] } });
+      await sendWhatsapp(a.customer.phone, reminderText(a, b, kind), { phoneId: b.waPhoneId, template: { kind: 'RECORDATORIO', params: [a.customer.name.split(' ')[0], b.name, when, a.staff.name, confirmLink(a.code)] } });
     }
-    await db.appointment.update({ where: { id: a.id }, data: { reminderSent: true } });
+    await db.appointment.update({ where: { id: a.id }, data: kind === 'DIA' ? { reminderSent: true } : { reminder1hSent: true } });
   }
-  return list.length;
+  return day.length + hour.length;
 }
 
 /** Saludo de cumpleaños (una vez al año, desde las 9 a. m. hora Colombia). */
@@ -49,6 +51,7 @@ export async function refreshSubscription(businessId: string) {
 
 /** Todo lo automático de un negocio. Lo llama /api/cron/recordatorios cada 15 minutos. */
 export async function runAutomations(businessId: string) {
+  await sweepAppointments(businessId, true);
   const reminders = await sendReminders(businessId);
   const birthdays = await sendBirthdays(businessId);
   const subscription = await refreshSubscription(businessId);

@@ -19,12 +19,13 @@ export function workRange(businessHours: string, staffHours: string, daysOff: st
 
 /** Calcula las franjas disponibles para una fecha y duración. */
 export async function getSlots(businessId: string, date: string, durationMin: number, staffId?: string | null, serviceIds: string[] = []) {
+  await (await import('./asistencia')).sweepAppointments(businessId);
   const business = await db.business.findUniqueOrThrow({ where: { id: businessId } });
   let staff = await db.staff.findMany({ where: { businessId, active: true, ...(staffId ? { id: staffId } : {}) }, include: { services: true } });
   if (serviceIds.length) staff = staff.filter(s => serviceIds.every(id => s.services.some(x => x.serviceId === id)));
   const dayStart = fromBogota(date, '00:00'); const dayEnd = fromBogota(date, '23:59');
   const [appts, blocks] = await Promise.all([
-    db.appointment.findMany({ where: { businessId, start: { lt: dayEnd }, end: { gt: dayStart }, status: { notIn: ['CANCELADA'] } } }),
+    db.appointment.findMany({ where: { businessId, start: { lt: dayEnd }, end: { gt: dayStart }, status: { notIn: ['CANCELADA', 'NO_ASISTIO'] } } }),
     db.blockedTime.findMany({ where: { businessId, start: { lt: dayEnd }, end: { gt: dayStart } } })
   ]);
   const now = new Date();
@@ -49,7 +50,7 @@ export async function getSlots(businessId: string, date: string, durationMin: nu
 
 /** Verifica que un profesional esté libre (para crear/mover citas) */
 export async function isFree(businessId: string, staffId: string, start: Date, end: Date, ignoreAppointmentId?: string) {
-  const clash = await db.appointment.findFirst({ where: { businessId, staffId, status: { notIn: ['CANCELADA'] }, start: { lt: end }, end: { gt: start }, ...(ignoreAppointmentId ? { id: { not: ignoreAppointmentId } } : {}) } });
+  const clash = await db.appointment.findFirst({ where: { businessId, staffId, status: { notIn: ['CANCELADA', 'NO_ASISTIO'] }, start: { lt: end }, end: { gt: start }, ...(ignoreAppointmentId ? { id: { not: ignoreAppointmentId } } : {}) } });
   if (clash) return false;
   const block = await db.blockedTime.findFirst({ where: { businessId, OR: [{ staffId }, { staffId: null }], start: { lt: end }, end: { gt: start } } });
   return !block;

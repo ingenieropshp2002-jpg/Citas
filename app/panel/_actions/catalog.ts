@@ -75,7 +75,9 @@ export async function saveSettings(_: unknown, fd: FormData) {
     city: String(fd.get('city')), zone: String(fd.get('zone') || ''), address: String(fd.get('address')), phone: String(fd.get('phone') || ''), whatsapp: String(fd.get('whatsapp') || ''), instagram: String(fd.get('instagram') || ''),
     lat: fd.get('lat') ? Number(fd.get('lat')) : null, lng: fd.get('lng') ? Number(fd.get('lng')) : null, images: JSON.stringify(images),
     openingHours: hoursFrom(fd, 'h'), slotStepMin: int(fd.get('slotStepMin'), 15), cancellationHours: int(fd.get('cancellationHours'), 24), depositPercent: Math.min(100, int(fd.get('depositPercent'), 30)), requireDeposit: !!fd.get('requireDeposit'),
-    reminderHours: int(fd.get('reminderHours'), 24), notifyWhatsapp: !!fd.get('notifyWhatsapp'), notifyEmail: !!fd.get('notifyEmail'), autoConfirmRequest: !!fd.get('autoConfirmRequest'), waPhoneId: String(fd.get('waPhoneId') || '').trim() || null
+    reminderHours: int(fd.get('reminderHours'), 24), notifyWhatsapp: !!fd.get('notifyWhatsapp'), notifyEmail: !!fd.get('notifyEmail'), autoConfirmRequest: !!fd.get('autoConfirmRequest'),
+    reminderHourBefore: !!fd.get('reminderHourBefore'), releaseUnconfirmed: !!fd.get('releaseUnconfirmed'), releaseBeforeMin: Math.min(240, Math.max(10, int(fd.get('releaseBeforeMin'), 30))),
+    lateToleranceMin: Math.min(60, Math.max(0, int(fd.get('lateToleranceMin'), 0))), depositInPeak: !!fd.get('depositInPeak'), depositForNoShows: !!fd.get('depositForNoShows'), noShowLimit: Math.min(10, Math.max(1, int(fd.get('noShowLimit'), 2))), waPhoneId: String(fd.get('waPhoneId') || '').trim() || null
   } });
   revalidatePath('/panel/configuracion');
   return { ok: true };

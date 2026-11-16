@@ -1,10 +1,10 @@
 'use client';
-import { useMemo, useState, useTransition } from 'react';
+import { useEffect, useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { cop, fechaCorta, fromBogota, time12, ymd } from '@/lib/format';
 import { Icon } from '@/components/ui/Icon';
 import { DateSlotPicker } from './DateSlotPicker';
-import { applyCoupon, createBooking } from '@/app/(cliente)/reservar/actions';
+import { applyCoupon, createBooking, depositCheck } from '@/app/(cliente)/reservar/actions';
 
 type Svc = { id: string; name: string; description: string | null; durationMin: number; price: number; category: string; staffIds: string[] };
 type Stf = { id: string; name: string; title: string; photo: string | null; rating: number };
@@ -32,7 +32,9 @@ export function BookingWizard({ business, services, staff, initialService, initi
   const duration = chosen.reduce((a, s) => a + s.durationMin, 0);
   const subtotal = chosen.reduce((a, s) => a + s.price, 0);
   const total = subtotal - discount;
-  const deposit = method !== 'EN_LOCAL' && business.requireDeposit ? Math.round(total * business.depositPercent / 100 / 100) * 100 : 0;
+  const [rule, setRule] = useState<{ required: boolean; mandatory: boolean; reason: string }>({ required: business.requireDeposit, mandatory: false, reason: '' });
+  useEffect(() => { if (step === 4 && date && time) depositCheck(business.id, date, time, phone).then(r => { setRule(r); if (r.mandatory) setMethod(m => (m === 'EN_LOCAL' ? 'NEQUI' : m)); }); }, [step, date, time, business.id, phone]);
+  const deposit = method !== 'EN_LOCAL' && rule.required ? Math.max(1000, Math.round(total * business.depositPercent / 100 / 100) * 100) : 0;
   const eligibleStaff = useMemo(() => staff.filter(st => chosen.every(s => s.staffIds.includes(st.id))), [staff, chosen]);
   const stf = staff.find(s => s.id === staffId);
   const canNext = step === 1 ? sel.length > 0 : step === 2 ? true : step === 3 ? !!time : true;
@@ -137,11 +139,17 @@ export function BookingWizard({ business, services, staff, initialService, initi
           <section className="px-margin mt-space-md">
             <span className="eyebrow">Paso 4 de 4</span>
             <h3 className="font-headline-sm text-headline-sm font-semibold mb-space-xs">Garantía &amp; Pago</h3>
-            {business.requireDeposit && (
+            {rule.mandatory && rule.reason && (
+              <div className="p-space-sm rounded-xl bg-[#FFF7E6] dark:bg-secondary-fixed/10 border border-gold/50 flex items-start gap-2.5 mb-space-sm">
+                <Icon name="info" className="text-secondary text-[20px] mt-0.5" />
+                <p className="text-body-sm font-body-sm">{rule.reason}</p>
+              </div>
+            )}
+            {rule.required && (
               <div className="p-space-sm rounded-xl bg-secondary-fixed/20 flex items-start gap-2.5 mb-space-sm shadow-sm">
                 <Icon name="verified_user" className="text-secondary text-[20px] mt-0.5" />
                 <div className="text-body-sm font-body-sm"><p className="font-bold">Depósito de reserva anticipada ({business.depositPercent}%)</p>
-                  <p className="text-on-surface-variant mt-0.5">Paga solo <b className="text-on-surface">{cop(Math.round(total * business.depositPercent / 100 / 100) * 100, true)}</b> ahora para asegurar tu cita. Reembolsable si cancelas con {business.cancellationHours}h de anticipación.</p></div>
+                  <p className="text-on-surface-variant mt-0.5">Paga solo <b className="text-on-surface">{cop(Math.max(1000, Math.round(total * business.depositPercent / 100 / 100) * 100), true)}</b> ahora para asegurar tu cita. Reembolsable si cancelas con {business.cancellationHours}h de anticipación.</p></div>
               </div>
             )}
             <div className="space-y-space-xs">
@@ -150,7 +158,7 @@ export function BookingWizard({ business, services, staff, initialService, initi
                 ['PSE', 'PSE (Débito Bancario)', 'Bancolombia, Davivienda, etc.', <span key="p" className="w-8 h-8 rounded-lg bg-pse flex items-center justify-center font-bold text-[10px] text-white">PSE</span>],
                 ['TARJETA', 'Tarjeta débito / Crédito', 'Visa, Mastercard, Amex', <span key="t" className="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-on-surface-variant"><Icon name="credit_card" className="text-[18px]" /></span>],
                 ['EN_LOCAL', 'Pagar en el Salón', 'Efectivo, Datáfono o Transferencia', <span key="l" className="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-on-surface-variant"><Icon name="storefront" className="text-[18px]" /></span>]
-              ].map(([v, l, d, icon, badge]) => (
+              ].filter(([v]) => !(rule.mandatory && v === 'EN_LOCAL')).map(([v, l, d, icon, badge]) => (
                 <div key={v as string} className={`rounded-xl bg-surface-container-lowest p-space-sm shadow-sm border transition ${method === v ? 'border-gold/50' : 'border-transparent'}`}>
                   <label className="flex items-center justify-between cursor-pointer">
                     <div className="flex items-center gap-3">{icon}<div><div className="font-label-lg text-label-lg font-bold flex items-center gap-1.5">{l}{badge && <span className="text-[10px] px-1.5 rounded bg-secondary-fixed text-on-secondary-fixed font-semibold">{badge}</span>}</div><span className="font-body-sm text-body-sm text-on-surface-variant">{d}</span></div></div>

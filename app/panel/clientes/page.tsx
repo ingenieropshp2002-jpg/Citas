@@ -20,7 +20,7 @@ export default async function Clientes({ searchParams }: { searchParams: Promise
   if (tag) list = list.filter(c => parseJson<string[]>(c.tags, []).includes(tag));
   return (
     <>
-      <PageHeader eyebrow="CRM" title="Clientes" subtitle={`${list.length} clientes`} actions={<Drawer title="Nuevo cliente" trigger={<><Icon name="person_add" className="text-[18px]" />Nuevo cliente</>}><ActionForm action={saveCustomer}><CustomerFields /><button className="btn-primary w-full">Crear cliente</button></ActionForm></Drawer>} />
+      <PageHeader eyebrow="CRM" title="Clientes" subtitle={`${list.length} clientes`} actions={<><Link href="/panel/clientes/incumplidos" className="btn-ghost btn-sm"><Icon name="person_alert" className="text-[18px]" />Incumplidos</Link><Drawer title="Nuevo cliente" trigger={<><Icon name="person_add" className="text-[18px]" />Nuevo cliente</>}><ActionForm action={saveCustomer}><CustomerFields /><button className="btn-primary w-full">Crear cliente</button></ActionForm></Drawer></>} />
       <form className="flex flex-wrap gap-2 mb-4">
         <div className="relative flex-1 min-w-[220px]"><Icon name="search" className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" /><input name="q" defaultValue={q} className="input pl-10" placeholder="Nombre, celular, correo o documento" /></div>
         <select name="tag" defaultValue={tag} className="input !w-auto"><option value="">Todas las etiquetas</option>{tags.map(t => <option key={t}>{t}</option>)}</select>

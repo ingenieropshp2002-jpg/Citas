@@ -2,6 +2,8 @@
 import { db } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
 import { getSlots, isFree, isOverlapError } from '@/lib/availability';
+import { depositRule } from '@/lib/asistencia';
+import { getUser } from '@/lib/auth';
 import { addDays, fromBogota, ymd } from '@/lib/format';
 import { createCheckout } from '@/lib/payments';
 import { sendWhatsapp } from '@/lib/notify';
@@ -58,14 +60,18 @@ export async function createBooking(input: { businessId: string; serviceIds: str
   const free: string[] = [];
   for (const id of candidates) if (await isFree(b.id, id, start, end)) free.push(id);
   if (!free.length) return await taken(b.id, input, dur);
+  const phone = (input.phone || user.phone || '').replace(/\D/g, '');
+  const mine = await db.customer.findMany({ where: { businessId: b.id, OR: [{ userId: user.id }, ...(phone ? [{ phone }] : [])] } });
+  const existing = mine.find(c => c.userId === user.id) || mine[0] || null;
+  const rule = await depositRule(b, start, mine);
+  if (rule.required && !rule.optionalLocal && input.method === 'EN_LOCAL') return { error: rule.reason || 'Esta reserva necesita un anticipo. Elige Nequi, PSE o tarjeta.' };
   let discount = 0; let couponCode = '';
   if (input.coupon) { const c = await applyCoupon(b.id, input.coupon, total); if ('error' in c) return { error: c.error }; discount = c.discount!; total -= discount; couponCode = c.code!; }
-  const phone = (input.phone || user.phone || '').replace(/\D/g, '');
-  let customer = await db.customer.findFirst({ where: { businessId: b.id, OR: [{ userId: user.id }, ...(phone ? [{ phone }] : [])] } });
+  let customer = existing;
   if (!customer) customer = await db.customer.create({ data: { businessId: b.id, userId: user.id, name: user.name, phone, email: user.email, tags: '["Nuevo"]' } });
   else if (!customer.userId) await db.customer.update({ where: { id: customer.id }, data: { userId: user.id } });
   const online = input.method !== 'EN_LOCAL';
-  const deposit = online && b.requireDeposit ? Math.round((total * b.depositPercent) / 100 / 100) * 100 : 0;
+  const deposit = online && rule.required ? Math.max(1000, Math.round((total * b.depositPercent) / 100 / 100) * 100) : 0;
   const code = await newCode();
   // La base de datos rechaza citas cruzadas (restricción Appointment_sin_cruces); si dos personas
   // reservan a la vez, solo una gana y a la otra se le intenta asignar otro profesional libre.
@@ -150,3 +156,14 @@ export async function leaveReview(code: string, rating: number, comment: string)
   return { ok: true };
 }
 export async function todayStr() { return ymd(new Date()); }
+
+/** Para el paso de pago: ¿esta reserva exige anticipo y por qué? */
+export async function depositCheck(businessId: string, date: string, time: string, phone?: string) {
+  const b = await db.business.findUnique({ where: { id: businessId } });
+  if (!b) return { required: false, mandatory: false, reason: '' };
+  const user = await getUser();
+  const p = (phone || user?.phone || '').replace(/\D/g, '');
+  const mine = user ? await db.customer.findMany({ where: { businessId, OR: [{ userId: user.id }, ...(p ? [{ phone: p }] : [])] } }) : [];
+  const r = await depositRule(b, date && time ? fromBogota(date, time) : null, mine);
+  return { required: r.required, mandatory: r.required && !r.optionalLocal, reason: r.reason };
+}

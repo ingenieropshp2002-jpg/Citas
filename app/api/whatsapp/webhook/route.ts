@@ -55,7 +55,12 @@ async function handle(from: string, text: string, phoneId?: string) {
     await sendWhatsapp(from, `✅ ¡Gracias! Tu asistencia quedó confirmada para el ${fechaLarga(next.start)} a las ${time12(hm(next.start))} en ${next.business.name}.`, opts);
     return;
   }
-  if (next && /^(2|reprogramar|cambiar|cancelar)\b/.test(t)) {
+  if (next && /^(cancelo|cancelar|no puedo|no voy)\b/.test(t)) {
+    await db.appointment.update({ where: { id: next.id }, data: { status: 'CANCELADA', notes: [next.notes, 'Cancelada por el cliente (WhatsApp)'].filter(Boolean).join(' · ') } });
+    await sendWhatsapp(from, `Listo, cancelamos tu cita del ${fechaLarga(next.start)} a las ${time12(hm(next.start))} en ${next.business.name}. Cuando quieras, reserva de nuevo aquí: ${appUrl()}/reservar/${next.business.slug}`, opts);
+    return;
+  }
+  if (next && /^(2|reprogramar|cambiar)\b/.test(t)) {
     await sendWhatsapp(from, `Puedes elegir otro horario aquí: ${appUrl()}/mis-citas/${next.code}/reprogramar\nSi prefieres, escríbenos y te ayudamos.`, opts);
     return;
   }

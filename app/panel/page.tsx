@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { db } from '@/lib/db';
 import { requireBusiness } from '@/lib/auth';
+import { sweepAppointments } from '@/lib/asistencia';
 import { PageHeader, Stat } from '@/components/panel/PageHeader';
 import { StatusBadge } from '@/components/ui/Status';
 import { Icon } from '@/components/ui/Icon';
@@ -12,6 +13,7 @@ import { workRange } from '@/lib/availability';
 export const metadata = { title: 'Dashboard' };
 export default async function Dashboard({ searchParams }: { searchParams: Promise<{ sinpermiso?: string }> }) {
   const { business: b, user } = await requireBusiness();
+  await sweepAppointments(b.id);
   const sp = await searchParams;
   const today = ymd(new Date());
   const dayStart = fromBogota(today); const dayEnd = fromBogota(addDays(today, 1));
