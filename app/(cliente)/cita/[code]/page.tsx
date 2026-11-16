@@ -5,7 +5,8 @@ import { ShopHeader } from '@/components/cliente/Header';
 import { parseJson } from '@/lib/format';
 import { Icon } from '@/components/ui/Icon';
 import { StatusBadge } from '@/components/ui/Status';
-import { cop, fechaLarga, hm, METHOD_LABEL, time12 } from '@/lib/format';
+import { cop, fechaLarga, hm, METHOD_LABEL, time12, timeOf, ymd } from '@/lib/format';
+import { attentionPlan, aheadOf } from '@/lib/turnos';
 import { waLink } from '@/lib/notify';
 
 export const metadata = { title: 'Cita confirmada' };
@@ -17,6 +18,10 @@ export default async function Cita({ params }: { params: Promise<{ code: string 
   const msg = `Tengo cita en ${a.business.name} el ${fechaLarga(a.start)} a las ${time12(hm(a.start))} (${names}). Código ${a.code}. ${a.business.address}`;
   const gcal = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(names + ' - ' + a.business.name)}&dates=${g(a.start)}/${g(a.end)}&location=${encodeURIComponent(a.business.address)}&details=${encodeURIComponent('Código ' + a.code)}`;
   const ok = a.status === 'CONFIRMADA';
+  // El día de la cita: ¿va a tiempo o hay personas antes? (citas del mismo profesional y fila en sus huecos)
+  const today = ymd(a.start) === ymd(new Date()) && ['PENDIENTE', 'CONFIRMADA', 'EN_SERVICIO'].includes(a.status);
+  const plan = today ? await attentionPlan(a.business) : null;
+  const pos = plan ? aheadOf(plan, a.id, true) : null;
   return (
     <>
       <ShopHeader shop={{ slug: a.business.slug, name: a.business.name, logo: a.business.logo || parseJson<string[]>(a.business.images, [])[0] || null }} title="Tu cita" />
@@ -26,6 +31,15 @@ export default async function Cita({ params }: { params: Promise<{ code: string 
           <h1 className="mt-4 font-headline-lg-mobile text-headline-lg-mobile text-primary-container dark:text-primary">{ok ? '¡Cita confirmada!' : a.status === 'PENDIENTE' ? 'Solicitud recibida' : 'Detalle de la cita'}</h1>
           <p className="text-on-surface-variant mt-1">{ok ? 'Te enviamos la confirmación por WhatsApp.' : a.depositStatus === 'PENDIENTE' ? 'Tu depósito está pendiente de pago.' : 'El negocio confirmará tu cita pronto.'}</p>
         </div>
+        {pos && (a.status === 'EN_SERVICIO'
+          ? <div className="card mt-6 p-4 flex items-center gap-3 border border-[#059669]/40"><Icon name="content_cut" className="text-[#059669] text-[24px]" /><p className="font-label-lg">Ya te están atendiendo. ¡Disfruta tu servicio!</p></div>
+          : <div className={`card mt-6 p-4 flex items-start gap-3 border ${pos.me.delay > 5 ? 'border-gold/60' : 'border-[#059669]/40'}`}>
+              <Icon name={pos.me.delay > 5 ? 'schedule' : 'check_circle'} className={`text-[26px] ${pos.me.delay > 5 ? 'text-secondary' : 'text-[#059669]'}`} />
+              <div>
+                <p className="font-label-lg">{pos.me.delay > 5 ? `${a.staff.name.split(' ')[0]} va con unos ${pos.me.delay} min de retraso` : 'Vas a tiempo'}</p>
+                <p className="font-body-sm text-on-surface-variant">{pos.ahead === 0 ? 'Eres la siguiente persona.' : `Hay ${pos.ahead} ${pos.ahead === 1 ? 'persona' : 'personas'} antes de ti con ${a.staff.name.split(' ')[0]}.`} Hora estimada de atención: <b className="text-on-surface tnum">{time12(timeOf(pos.me.start))}</b>. Tu cita tiene prioridad sobre quienes llegan sin reserva.</p>
+              </div>
+            </div>)}
         <div className="card-raised mt-6 overflow-hidden">
           <div className="bg-primary-container text-white p-5 flex items-center justify-between">
             <div><p className="font-label-sm text-label-sm text-secondary-fixed uppercase tracking-wider">Código</p><p className="font-title-lg text-title-lg tracking-widest">{a.code}</p></div>

@@ -3,7 +3,7 @@ import { useActionState, useState, useTransition } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { attendWalkIn, callWalkIn, closeWalkIn, deletePeakRule, markNotified, setQueueOpen } from '../_actions/fila';
 
-type W = { id: string; number: number; name: string; phone: string | null; status: string; service: string | null; waitMin: number; position: number; since: string; notified: boolean };
+type W = { id: string; number: number; name: string; phone: string | null; status: string; service: string | null; waitMin: number; eta: string; position: number; since: string; notified: boolean };
 export function QueueRow({ w, near, wa, staff }: { w: W; near: boolean; wa: string | null; staff: { id: string; name: string; freeFor: number; fits: boolean }[] }) {
   const [pending, start] = useTransition(); const [open, setOpen] = useState(false);
   const [st, run] = useActionState(attendWalkIn, null);
@@ -14,7 +14,7 @@ export function QueueRow({ w, near, wa, staff }: { w: W; near: boolean; wa: stri
         <div className="flex-1 min-w-[160px]">
           <p className="font-label-lg">{w.name} {w.status === 'LLAMADO' && <span className="ml-1 px-2 py-0.5 rounded-full bg-secondary-fixed text-on-secondary-fixed font-label-sm">Llamado</span>}</p>
           <p className="font-body-sm text-on-surface-variant">{[w.service, w.phone, `llegó ${w.since}`].filter(Boolean).join(' · ')}</p>
-          <p className="font-body-sm text-on-surface-variant">{w.position === 0 ? 'Sigue' : `${w.position} antes`} · espera aprox. {w.waitMin} min</p>
+          <p className="font-body-sm text-on-surface-variant">{w.position === 0 ? 'Primero de la fila' : `${w.position} antes en la fila`} · aprox. {w.eta}{w.waitMin > 0 ? ` (${w.waitMin} min)` : ''}</p>
         </div>
         <div className="flex flex-wrap gap-1.5">
           {wa && w.status === 'ESPERANDO' && <a href={wa} target="_blank" rel="noreferrer" onClick={() => start(() => markNotified(w.id))} className={`btn-sm btn ${near && !w.notified ? 'bg-[#25D366] text-white' : 'btn-ghost'}`}><Icon name="chat" className="text-[16px]" />{w.notified ? 'Avisado' : 'Avisar'}</a>}

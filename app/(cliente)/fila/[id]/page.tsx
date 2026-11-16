@@ -5,7 +5,8 @@ import { ShopHeader } from '@/components/cliente/Header';
 import { Icon } from '@/components/ui/Icon';
 import { AutoRefresh } from '@/components/ui/AutoRefresh';
 import { parseJson } from '@/lib/format';
-import { queueToday } from '@/lib/fila';
+import { attentionPlan, aheadOf } from '@/lib/turnos';
+import { time12, timeOf } from '@/lib/format';
 import { leaveQueue } from '../actions';
 
 export const metadata = { title: 'Mi turno', robots: { index: false } };
@@ -15,9 +16,11 @@ export default async function MiTurno({ params }: { params: Promise<{ id: string
   const w = await db.walkIn.findUnique({ where: { id }, include: { business: true } });
   if (!w) notFound();
   const b = w.business;
-  const q = await queueToday(b.id);
-  const me = q.find(x => x.id === w.id);
-  const ahead = me?.position ?? 0;
+  const plan = await attentionPlan(b);
+  const pos = aheadOf(plan, w.id);
+  const ahead = pos?.ahead ?? 0;
+  const eta = pos && pos.me.start < 1440 ? pos.me.start : null;
+  const waitMin = eta !== null ? Math.max(0, eta - plan.now) : null;
   const leave = leaveQueue.bind(null, w.id);
   const state = w.status === 'LLAMADO' ? 'llamado' : w.status === 'ESPERANDO' ? 'esperando' : w.status === 'ATENDIENDO' || w.status === 'ATENDIDO' ? 'atendido' : 'fuera';
   return (
@@ -32,8 +35,15 @@ export default async function MiTurno({ params }: { params: Promise<{ id: string
         </div>
         {state === 'esperando' && (<>
           <h1 className="mt-6 font-headline-sm text-headline-sm">{ahead === 0 ? '¡Eres el siguiente!' : `${ahead} ${ahead === 1 ? 'persona' : 'personas'} antes de ti`}</h1>
-          <p className="mt-1 text-on-surface-variant">Espera aproximada: <b className="text-on-surface">{me && me.waitMin > 0 ? `${me.waitMin} min` : 'muy poco'}</b></p>
-          <p className="mt-4 font-body-sm text-on-surface-variant flex items-center justify-center gap-1.5"><Icon name="chat" className="text-[18px] text-[#25D366]" />Te escribimos por WhatsApp cuando te falte poco. Esta página se actualiza sola.</p>
+          {pos && ahead > 0 && <p className="mt-1 font-body-sm text-on-surface-variant">{[pos.citas ? `${pos.citas} con cita reservada` : '', pos.fila ? `${pos.fila} de la fila` : ''].filter(Boolean).join(' y ')}</p>}
+          {eta !== null ? <div className="card mt-4 p-4 grid grid-cols-2 gap-3 text-left">
+              <div><p className="font-label-sm text-on-surface-variant uppercase tracking-wider">Hora estimada</p><p className="font-title-lg text-title-lg tnum">{time12(timeOf(eta))}</p></div>
+              <div><p className="font-label-sm text-on-surface-variant uppercase tracking-wider">Espera aprox.</p><p className="font-title-lg text-title-lg tnum">{waitMin! < 5 ? 'Muy poco' : `${waitMin} min`}</p></div>
+              {pos?.me.staffName && <p className="col-span-2 font-body-sm text-on-surface-variant">Te atendería {pos.me.staffName.split(' ')[0]} en el primer espacio libre entre sus citas.</p>}
+            </div>
+            : <p className="mt-3 text-on-surface-variant">Hoy la agenda está llena de citas; te avisaremos si se libera un espacio.</p>}
+          <p className="mt-4 font-body-sm text-on-surface-variant">Las personas con cita reservada se atienden a su hora; la fila usa los espacios libres entre citas, por eso tu hora puede moverse un poco.</p>
+          <p className="mt-2 font-body-sm text-on-surface-variant flex items-center justify-center gap-1.5"><Icon name="chat" className="text-[18px] text-[#25D366]" />Te escribimos por WhatsApp cuando te falte poco. Esta página se actualiza sola.</p>
         </>)}
         {state === 'llamado' && <><h1 className="mt-6 font-headline-sm text-headline-sm">¡Es tu turno!</h1><p className="mt-1 text-on-surface-variant">Acércate a recepción, te estamos esperando.</p></>}
         {state === 'atendido' && <><h1 className="mt-6 font-headline-sm text-headline-sm">Ya te están atendiendo</h1><p className="mt-1 text-on-surface-variant">¡Gracias por visitarnos!</p></>}

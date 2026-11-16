@@ -12,6 +12,7 @@ import { waLink } from '@/lib/notify';
 import { activePeak, describePeak, gapsToday, nearTurnMessage, peakRules, queueToday, todayStart, turnLink, DIAS_LETRA } from '@/lib/fila';
 import { addPeakRule, addWalkInPanel, saveQueueSettings } from '../_actions/fila';
 import { QueueRow, DeletePeak, OpenQueue } from './Rows';
+import { attentionPlan } from '@/lib/turnos';
 
 export const metadata = { title: 'Fila y huecos' };
 const dur = (m: number) => (m >= 60 ? `${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60} min` : ''}` : `${m} min`);
@@ -24,6 +25,9 @@ export default async function Fila() {
     db.service.findMany({ where: { businessId: b.id, active: true }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
     db.walkIn.count({ where: { businessId: b.id, createdAt: { gte: todayStart() }, status: { in: ['ATENDIENDO', 'ATENDIDO'] } } })
   ]);
+  const plan = await attentionPlan(b);
+  const est = (id: string) => { const it = plan.items.find(i => i.id === id); return it && it.start < 1440 ? { wait: Math.max(0, it.start - plan.now), eta: `${time12(timeOf(it.start))}${it.staffName ? ` con ${it.staffName.split(' ')[0]}` : ''}` } : { wait: 0, eta: 'sin espacio libre hoy' }; };
+  const lastWait = q.length ? est(q[q.length - 1].id).wait : 0;
   const peak = activePeak(b); const rules = peakRules(b);
   const freeNow = gaps.filter(g => g.freeNow);
   const link = `/negocio/${b.slug}/fila`;
@@ -31,13 +35,13 @@ export default async function Fila() {
     <>
       <AutoRefresh seconds={20} />
       <PageHeader eyebrow="Agenda" title="Fila y huecos libres" subtitle="Las citas tienen prioridad. Quien llega sin cita se anota con el QR y entra en los huecos libres de la agenda."
-        actions={<><Link href="/panel/fila/qr" className="btn-ghost btn-sm"><Icon name="qr_code_2" className="text-[18px]" />QR de la fila</Link><Link href={link} target="_blank" className="btn-ghost btn-sm"><Icon name="open_in_new" className="text-[18px]" />Ver página</Link></>} />
+        actions={<><Link href={`/pantalla/${b.slug}`} target="_blank" className="btn-ghost btn-sm"><Icon name="tv" className="text-[18px]" />Pantalla del local</Link><Link href="/panel/fila/qr" className="btn-ghost btn-sm"><Icon name="qr_code_2" className="text-[18px]" />QR de la fila</Link><Link href={link} target="_blank" className="btn-ghost btn-sm"><Icon name="open_in_new" className="text-[18px]" />Ver página</Link></>} />
       {peak && <div className="mb-4 p-4 rounded-2xl bg-secondary-fixed/40 border border-gold/50 flex items-center gap-3"><Icon name="lock_clock" className="text-secondary text-[24px]" /><div><p className="font-label-lg">Hora pico: solo con cita hasta las {time12(peak.to)}</p><p className="font-body-sm text-on-surface-variant">{peak.label}. Mientras tanto la fila no recibe turnos nuevos.</p></div></div>}
       {!b.queueEnabled ? <div className="mb-4 p-4 rounded-2xl bg-surface-container-low flex items-center gap-3"><Icon name="pause_circle" className="text-[24px]" /><p className="font-label-lg">La fila virtual está apagada. Actívala abajo en Ajustes de la fila.</p></div>
         : <OpenQueue open={b.queueOpenDate === ymd(new Date())} />}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
         <Stat label="En la fila" value={String(q.length)} icon="groups" />
-        <Stat label="Espera del último" value={q.length ? dur(q[q.length - 1].waitMin) : '—'} icon="hourglass_top" tone="gold" />
+        <Stat label="Espera del último" value={q.length ? dur(lastWait) : '—'} icon="hourglass_top" tone="gold" />
         <Stat label="Libres ahora" value={`${freeNow.length}/${gaps.filter(g => g.working).length}`} icon="person_check" />
         <Stat label="Atendidos hoy sin cita" value={String(served)} icon="how_to_reg" />
       </div>
@@ -47,7 +51,7 @@ export default async function Fila() {
           {q.length === 0 ? <Empty icon="groups" title="No hay nadie en la fila" text="Cuando alguien escanee el QR del local aparecerá aquí." /> : (
             <ul className="space-y-2">{q.map(w => {
               const near = w.status === 'ESPERANDO' && w.position < b.queueNotifyAhead;
-              return <QueueRow key={w.id} w={{ id: w.id, number: w.number, name: w.name, phone: w.phone, status: w.status, service: w.service?.name || null, waitMin: w.waitMin, position: w.position, since: time12(hm(w.createdAt)), notified: !!w.notifiedAt }}
+              return <QueueRow key={w.id} w={{ id: w.id, number: w.number, name: w.name, phone: w.phone, status: w.status, service: w.service?.name || null, waitMin: est(w.id).wait, eta: est(w.id).eta, position: w.position, since: time12(hm(w.createdAt)), notified: !!w.notifiedAt }}
                 near={near} wa={w.phone ? waLink(w.phone, nearTurnMessage(w, b.name, w.position, turnLink(w.id))) : null}
                 staff={freeNow.map(g => ({ id: g.staff.id, name: g.staff.name, freeFor: g.freeFor, fits: g.freeFor >= (w.service?.durationMin || 30) }))} />;
             })}</ul>
