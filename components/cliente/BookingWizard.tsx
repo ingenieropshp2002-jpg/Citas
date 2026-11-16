@@ -26,7 +26,7 @@ export function BookingWizard({ business, services, staff, initialService, initi
   const [bank, setBank] = useState(BANKS[0]);
   const [coupon, setCoupon] = useState(''); const [discount, setDiscount] = useState(0); const [couponMsg, setCouponMsg] = useState('');
   const [notes, setNotes] = useState('');
-  const [error, setError] = useState(''); const [pending, start] = useTransition();
+  const [error, setError] = useState(''); const [alts, setAlts] = useState<{ date: string; time: string }[]>([]); const [pending, start] = useTransition();
 
   const chosen = services.filter(s => sel.includes(s.id));
   const duration = chosen.reduce((a, s) => a + s.durationMin, 0);
@@ -37,10 +37,11 @@ export function BookingWizard({ business, services, staff, initialService, initi
   const stf = staff.find(s => s.id === staffId);
   const canNext = step === 1 ? sel.length > 0 : step === 2 ? true : step === 3 ? !!time : true;
 
-  const confirm = () => start(async () => {
-    setError('');
-    const r = await createBooking({ businessId: business.id, serviceIds: sel, staffId, date, time, method, phone, coupon: discount ? coupon : undefined, notes: [notes, method === 'PSE' ? `Banco: ${bank}` : ''].filter(Boolean).join(' · ') });
-    if ('error' in r && r.error) { setError(r.error); return; }
+  const confirm = (at?: { date: string; time: string }) => start(async () => {
+    setError(''); setAlts([]);
+    if (at) { setDate(at.date); setTime(at.time); }
+    const r = await createBooking({ businessId: business.id, serviceIds: sel, staffId, date: at?.date ?? date, time: at?.time ?? time, method, phone, coupon: discount ? coupon : undefined, notes: [notes, method === 'PSE' ? `Banco: ${bank}` : ''].filter(Boolean).join(' · ') });
+    if ('error' in r && r.error) { setError(r.error); setAlts(('alternatives' in r && r.alternatives) || []); return; }
     if ('redirect' in r && r.redirect) { if (r.redirect.startsWith('http')) window.location.href = r.redirect; else router.push(r.redirect); }
   });
   const ctaLabel = step < 4 ? 'Continuar' : deposit ? `Confirmar y pagar ${cop(deposit, true)} con ${method === 'NEQUI' ? 'Nequi' : method === 'PSE' ? 'PSE' : 'Tarjeta'}` : 'Confirmar reserva';
@@ -196,6 +197,19 @@ export function BookingWizard({ business, services, staff, initialService, initi
             <div className="font-label-sm text-label-sm">{step === 4 ? 'Total Hoy: ' : 'Total: '}<span className="font-title-md text-title-md font-bold text-primary tnum">{cop(step === 4 ? (deposit || 0) : subtotal, true)}</span></div>
           </div>
           {error && <p className="mb-2 text-center font-label-md text-label-md text-danger">{error}</p>}
+          {alts.length > 0 && (
+            <div className="mb-3">
+              <p className="mb-2 text-center font-label-md text-label-md text-on-surface-variant">{stf ? `Próximos horarios libres con ${stf.name.split(' ')[0]}` : 'Próximos horarios libres'} · toca uno para reservar</p>
+              <div className="flex flex-wrap justify-center gap-2">
+                {alts.map(a => (
+                  <button key={a.date + a.time} type="button" disabled={pending} onClick={() => confirm(a)} className="px-3 h-10 rounded-full border border-gold/60 bg-secondary-fixed/30 font-label-md text-label-md text-primary hover:bg-secondary-fixed/60 disabled:opacity-50">
+                    {a.date === ymd(new Date()) ? 'Hoy' : fechaCorta(fromBogota(a.date, '12:00'))} · {time12(a.time)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {error && !alts.length && /ocup/.test(error) && <p className="mb-2 text-center font-label-md text-label-md text-on-surface-variant">No hay horarios libres en los próximos 14 días.</p>}
           <button type="button" disabled={!canNext || pending || (step === 2 && false)} onClick={() => (step < 4 ? setStep(step === 2 && staffId === undefined ? 3 : step + 1) : confirm())}
             className="w-full py-3.5 px-4 rounded-lg bg-primary-container text-white dark:text-on-primary-container font-label-lg text-label-lg font-bold flex items-center justify-center gap-2 active:scale-[0.985] transition-transform shadow-md disabled:opacity-50">
             {step === 4 && <Icon name="lock" className="text-[18px] text-secondary-fixed" />}<span>{pending ? 'Procesando…' : ctaLabel}</span>
