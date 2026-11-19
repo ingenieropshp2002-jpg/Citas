@@ -3,7 +3,7 @@ import { isSuspended } from '@/lib/subscription';
 import { db } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
 import { getSlots, isFree, isOverlapError } from '@/lib/availability';
-import { depositRule } from '@/lib/asistencia';
+import { customerStrikes, depositRule } from '@/lib/asistencia';
 import { getUser } from '@/lib/auth';
 import { addDays, cop, fechaCorta, fromBogota, hm, time12, ymd } from '@/lib/format';
 import { pushToBusiness } from '@/lib/push';
@@ -176,10 +176,11 @@ export async function todayStr() { return ymd(new Date()); }
 /** Para el paso de pago: ¿esta reserva exige anticipo y por qué? */
 export async function depositCheck(businessId: string, date: string, time: string, phone?: string) {
   const b = await db.business.findUnique({ where: { id: businessId } });
-  if (!b) return { required: false, mandatory: false, reason: '' };
+  if (!b) return { required: false, mandatory: false, reason: '', faltas: 0, limite: 0 };
   const user = await getUser();
   const p = (phone || user?.phone || '').replace(/\D/g, '');
   const mine = user ? await db.customer.findMany({ where: { businessId, OR: [{ userId: user.id }, ...(p ? [{ phone: p }] : [])] } }) : [];
   const r = await depositRule(b, date && time ? fromBogota(date, time) : null, mine);
-  return { required: r.required, mandatory: r.required && !r.optionalLocal, reason: r.reason };
+  const faltas = mine.length ? await customerStrikes(businessId, mine.map(c => c.id)) : 0;
+  return { required: r.required, mandatory: r.required && !r.optionalLocal, reason: r.reason, faltas, limite: b.depositForNoShows && b.depositPercent > 0 ? b.noShowLimit : 0 };
 }

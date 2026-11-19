@@ -13,7 +13,7 @@ const STEPS = ['Servicio', 'Profesional', 'Horario', 'Pago'];
 const BANKS = ['Bancolombia', 'Davivienda', 'Banco de Bogotá', 'BBVA', 'Banco de Occidente', 'Banco Popular', 'Scotiabank Colpatria', 'Nu Colombia', 'Banco Caja Social', 'Itaú'];
 
 export function BookingWizard({ business, services, staff, initialService, initialStaff, initialDate, userPhone }: {
-  business: { id: string; name: string; depositPercent: number; requireDeposit: boolean; cancellationHours: number; image?: string; transfer?: boolean; deadlineMin?: number };
+  business: { id: string; name: string; depositPercent: number; requireDeposit: boolean; cancellationHours: number; image?: string; transfer?: boolean; deadlineMin?: number; policy?: string[] };
   services: Svc[]; staff: Stf[]; initialService?: string; initialStaff?: string; initialDate?: string; userPhone: string;
 }) {
   const router = useRouter();
@@ -33,7 +33,7 @@ export function BookingWizard({ business, services, staff, initialService, initi
   const duration = chosen.reduce((a, s) => a + s.durationMin, 0);
   const subtotal = chosen.reduce((a, s) => a + s.price, 0);
   const total = subtotal - discount;
-  const [rule, setRule] = useState<{ required: boolean; mandatory: boolean; reason: string }>({ required: business.requireDeposit, mandatory: false, reason: '' });
+  const [rule, setRule] = useState<{ required: boolean; mandatory: boolean; reason: string; faltas?: number; limite?: number }>({ required: business.requireDeposit, mandatory: false, reason: '' });
   useEffect(() => { if (step === 4 && date && time) depositCheck(business.id, date, time, phone).then(r => { setRule(r); if (r.mandatory) setMethod(m => (m === 'EN_LOCAL' ? (business.transfer ? 'TRANSFERENCIA' : 'NEQUI') : m)); else if (!r.required) setMethod(m => (m === 'TRANSFERENCIA' ? 'EN_LOCAL' : m)); else if (business.transfer) setMethod(m => (m === 'NEQUI' ? 'TRANSFERENCIA' : m)); }); }, [step, date, time, business.id, phone]);
   const deposit = method !== 'EN_LOCAL' && rule.required ? Math.max(1000, Math.round(total * business.depositPercent / 100 / 100) * 100) : 0;
   const eligibleStaff = useMemo(() => staff.filter(st => chosen.every(s => s.staffIds.includes(st.id))), [staff, chosen]);
@@ -142,6 +142,14 @@ export function BookingWizard({ business, services, staff, initialService, initi
           <section className="px-margin mt-space-md">
             <span className="eyebrow">Paso 4 de 4</span>
             <h3 className="font-headline-sm text-headline-sm font-semibold mb-space-xs">Garantía &amp; Pago</h3>
+            {!!business.policy?.length && (
+              <details className="mb-space-sm rounded-xl border border-parchment bg-surface-container-lowest p-space-sm group" open={!!rule.faltas}>
+                <summary className="cursor-pointer list-none flex items-center gap-2 font-label-lg"><Icon name="gavel" className="text-secondary text-[20px]" /><span className="flex-1">Reglas de asistencia de {business.name}</span>{rule.faltas ? <span className="px-2 rounded-full bg-[#FEE2E2] text-[#9F1239] font-label-sm">{rule.faltas} {rule.faltas === 1 ? 'falta' : 'faltas'}</span> : null}<Icon name="expand_more" className="text-[20px] transition group-open:rotate-180" /></summary>
+                <ul className="mt-2 space-y-1.5 font-body-sm text-on-surface-variant list-disc pl-5">{business.policy.map((l, i) => <li key={i}>{l}</li>)}</ul>
+                {!!rule.faltas && !!rule.limite && <p className="mt-2 font-body-sm text-[#9F1239]">Llevas {rule.faltas} de {rule.limite} {rule.limite === 1 ? 'falta permitida' : 'faltas permitidas'} en los últimos 6 meses{rule.faltas >= rule.limite ? ', por eso esta reserva necesita abono.' : '.'}</p>}
+                <p className="mt-2 font-body-sm">Al reservar aceptas estas reglas.</p>
+              </details>
+            )}
             {rule.mandatory && rule.reason && (
               <div className="p-space-sm rounded-xl bg-[#FFF7E6] dark:bg-secondary-fixed/10 border border-gold/50 flex items-start gap-2.5 mb-space-sm">
                 <Icon name="info" className="text-secondary text-[20px] mt-0.5" />

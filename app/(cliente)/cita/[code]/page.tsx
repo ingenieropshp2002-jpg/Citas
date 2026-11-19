@@ -10,6 +10,7 @@ import { attentionPlan, aheadOf } from '@/lib/turnos';
 import { waLink } from '@/lib/notify';
 import { getUser } from '@/lib/auth';
 import { DEPOSIT_NOTE } from '@/lib/abono';
+import { policyLines } from '@/lib/asistencia';
 import { ProofUpload } from './ProofUpload';
 import { AutoRefresh } from '@/components/ui/AutoRefresh';
 
@@ -83,6 +84,12 @@ export default async function Cita({ params }: { params: Promise<{ code: string 
             </div>
           </div>
         </div>
+        {['PENDIENTE', 'CONFIRMADA'].includes(a.status) && (
+          <details className="card mt-5 p-4 group">
+            <summary className="cursor-pointer list-none flex items-center gap-2 font-label-lg"><Icon name="gavel" className="text-secondary text-[20px]" /><span className="flex-1">Reglas de asistencia</span><Icon name="expand_more" className="text-[20px] transition group-open:rotate-180" /></summary>
+            <ul className="mt-2 space-y-1.5 font-body-sm text-on-surface-variant list-disc pl-5">{policyLines(a.business).map((l, i) => <li key={i}>{l}</li>)}</ul>
+          </details>
+        )}
         <div className="grid grid-cols-2 gap-3 mt-5">
           <a href={gcal} target="_blank" rel="noopener noreferrer" className="btn-outline"><Icon name="calendar_add_on" className="text-[18px]" />Google Calendar</a>
           <a href={`/api/cita/${a.code}/ics`} className="btn-outline"><Icon name="download" className="text-[18px]" />Añadir (.ics)</a>

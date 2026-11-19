@@ -19,7 +19,27 @@ type Appt = { code: string; start: Date; customer: { name: string }; staff: { na
 export function reminderText(a: Appt, b: { name: string; address: string }, kind: 'DIA' | 'HORA') {
   const first = a.customer.name.split(' ')[0];
   const when = kind === 'HORA' ? `hoy a las ${time12(hm(a.start))} (en 1 hora)` : `${ymd(a.start) === ymd(new Date()) ? 'hoy' : 'mañana'}, ${fechaLarga(a.start)}, a las ${time12(hm(a.start))}`;
-  return `${kind === 'HORA' ? '⏰' : '📅'} Hola ${first}, te recordamos tu cita en ${b.name} ${when} con ${a.staff.name} (${a.services.map(s => s.service.name).join(' + ')}).\n\nPor favor toca aquí para responder *Confirmo* o *Cancelo*:\n${confirmLink(a.code)}\n\nSi no confirmas, el cupo puede quedar libre para otra persona.\n📍 ${b.address}`;
+  return `${kind === 'HORA' ? '⏰' : '📅'} Hola ${first}, te recordamos tu cita en ${b.name} ${when} con ${a.staff.name} (${a.services.map(s => s.service.name).join(' + ')}).\n\nPor favor toca aquí para responder *Confirmo* o *Cancelo*:\n${confirmLink(a.code)}\n\nSi no confirmas, el cupo puede quedar libre para otra persona. No asistir sin cancelar cuenta como falta y puede hacer que te pidan abono en tus próximas reservas.\n📍 ${b.address}`;
+}
+
+type PolicyBiz = { cancellationHours: number; lateToleranceMin: number; releaseUnconfirmed: boolean; releaseBeforeMin: number; depositPercent: number; depositDeadlineMin: number; transferInfo: string; depositForNoShows: boolean; noShowLimit: number };
+/** Reglas de asistencia del negocio explicadas al cliente: qué cuenta como falta y qué pasa si acumula faltas. */
+export function policyLines(b: PolicyBiz) {
+  const out: string[] = [];
+  out.push(b.cancellationHours > 0 ? `Puedes cancelar o cambiar tu cita sin costo hasta ${b.cancellationHours} ${b.cancellationHours === 1 ? 'hora' : 'horas'} antes${b.depositPercent > 0 ? '; después, el abono no se devuelve' : ''}.` : 'Si no puedes asistir, cancela tu cita para liberar el horario.');
+  if (b.releaseUnconfirmed) out.push(`Te enviaremos un recordatorio para confirmar. Si no confirmas, tu cita se cancela ${b.releaseBeforeMin} minutos antes y el horario queda libre.`);
+  if (b.lateToleranceMin > 0) out.push(`Te esperamos máximo ${b.lateToleranceMin} minutos. Si no llegas en ese tiempo, la cita se marca como "No llegó" y el horario se entrega a otra persona.`);
+  if (b.depositPercent > 0 && b.transferInfo.trim()) out.push('Si reservas con abono por transferencia y no envías el comprobante dentro del plazo, la cita se cancela.');
+  out.push('Cuenta como falta: no llegar, no confirmar o no pagar el abono a tiempo. Dos llegadas tarde (5 minutos o más) cuentan como una falta.');
+  if (b.depositForNoShows && b.depositPercent > 0) out.push(`Con ${b.noShowLimit} ${b.noShowLimit === 1 ? 'falta' : 'faltas'} en 6 meses, para tus próximas reservas tendrás que pagar un abono del ${b.depositPercent}% por adelantado y no podrás reservar para pagar todo en el local.`);
+  return out;
+}
+
+/** Faltas del cliente en los últimos 6 meses (para mostrárselas antes de reservar). */
+export async function customerStrikes(businessId: string, customerIds: string[]) {
+  if (!customerIds.length) return 0;
+  const recs = [...(await attendanceRecord(businessId, customerIds)).values()];
+  return strikes(recs.reduce((a, r) => ({ noShows: a.noShows + r.noShows, released: a.released + r.released, lates: a.lates + r.lates }), { noShows: 0, released: 0, lates: 0 }));
 }
 
 /** Historial de cumplimiento de un cliente en los últimos 6 meses. */

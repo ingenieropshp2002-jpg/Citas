@@ -5,6 +5,7 @@ import { requireUser } from '@/lib/auth';
 import { ShopHeader } from '@/components/cliente/Header';
 import { BookingWizard } from '@/components/cliente/BookingWizard';
 import { parseJson } from '@/lib/format';
+import { policyLines } from '@/lib/asistencia';
 
 export const metadata = { title: 'Agendar cita' };
 export default async function Reservar({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ servicio?: string; profesional?: string; servicios?: string; fecha?: string }> }) {
@@ -18,7 +19,7 @@ export default async function Reservar({ params, searchParams }: { params: Promi
       <ShopHeader shop={{ slug: b.slug, name: b.name, logo: b.logo || parseJson<string[]>(b.images, [])[0] || null }} title="Agendar cita" back />
       <main className="pt-16">
         <BookingWizard
-          business={{ id: b.id, name: b.name, depositPercent: b.depositPercent, requireDeposit: b.requireDeposit, cancellationHours: b.cancellationHours, transfer: !!b.transferInfo.trim(), deadlineMin: b.depositDeadlineMin, image: parseJson<string[]>(b.images, [])[0] }}
+          business={{ id: b.id, name: b.name, depositPercent: b.depositPercent, requireDeposit: b.requireDeposit, cancellationHours: b.cancellationHours, transfer: !!b.transferInfo.trim(), deadlineMin: b.depositDeadlineMin, policy: policyLines(b), image: parseJson<string[]>(b.images, [])[0] }}
           services={b.services.map(s => ({ id: s.id, name: s.name, description: s.description, durationMin: s.durationMin, price: s.price, category: s.category, staffIds: s.staff.map(x => x.staffId) }))}
           staff={b.staff.map(s => ({ id: s.id, name: s.name, title: s.title, photo: s.photo, rating: s.rating }))}
           initialService={sp.servicio} initialStaff={sp.profesional} initialDate={sp.fecha} userPhone={user.phone || ''} />
