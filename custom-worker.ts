@@ -1,10 +1,10 @@
 // Punto de entrada del Worker: envuelve el de OpenNext y guarda en memoria, por pocos segundos,
-// las páginas públicas que ve un visitante sin sesión. En el plan gratis de Cloudflare cada visita
+// las páginas públicas (iguales para todos los visitantes). En el plan gratis de Cloudflare cada visita
 // tiene 10 ms de procesador; servir una copia reciente cuesta casi nada.
 // @ts-expect-error: lo genera OpenNext al compilar
 import handler from './.open-next/worker.js';
 
-const TTL_MS = 30_000;
+const TTL_MS = 60_000;
 const MAX_ENTRIES = 80;
 const cache = new Map<string, { at: number; status: number; headers: [string, string][]; body: ArrayBuffer }>();
 const PUBLIC = [/^\/$/, /^\/buscar$/, /^\/negocio\/[^/]+$/];
@@ -15,7 +15,8 @@ function cacheKey(req: Request) {
   const url = new URL(req.url);
   if (!PUBLIC.some(r => r.test(url.pathname))) return null;
   const cookie = req.headers.get('cookie') || '';
-  if (/(?:^|;\s*)(rc_session|rc_admin_back)=/.test(cookie)) return null;
+  // La sesión del cliente no cambia el HTML (el avatar se pinta en el navegador con /api/yo). Solo el modo «ver como» sí.
+  if (/(?:^|;\s*)rc_admin_back=/.test(cookie)) return null;
   return [url.pathname + url.search, ...VARY.map(h => req.headers.get(h) || '')].join('|');
 }
 

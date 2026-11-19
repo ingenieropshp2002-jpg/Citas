@@ -1,13 +1,11 @@
 import Link from 'next/link';
-import { getUser } from '@/lib/auth';
-import { Icon } from '@/components/ui/Icon';
+import { UserChip } from './UserChip';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { BackButton } from './BackButton';
 import { getSettings } from '@/lib/settings';
 import { AppMark } from '@/components/ui/AppMark';
 
 export async function ClientHeader({ title, back = false }: { title?: string; back?: boolean }) {
-  const user = await getUser();
   const s = await getSettings();
   return (
     <header className="fixed top-0 w-full z-50 bg-surface/85 backdrop-blur-xl pt-safe shadow-[0_1px_8px_rgba(0,0,0,0.04)]">
@@ -27,13 +25,7 @@ export async function ClientHeader({ title, back = false }: { title?: string; ba
         </nav>
         <div className="flex items-center gap-1">
           <ThemeToggle />
-          {user ? (
-            <Link href="/perfil" aria-label="Mi perfil" className="w-9 h-9 rounded-full bg-secondary-fixed p-[1px] overflow-hidden flex items-center justify-center">
-              {user.avatar ? <img src={user.avatar} alt="" className="w-full h-full rounded-full object-cover" /> : <span className="font-label-lg text-on-secondary-fixed">{user.name.charAt(0)}</span>}
-            </Link>
-          ) : (
-            <Link href="/login" aria-label="Ingresar" className="btn-primary btn-sm"><Icon name="login" className="text-[18px]" /><span className="hidden sm:inline">Ingresar</span></Link>
-          )}
+          <UserChip href="/perfil" label="Mi perfil" loginHref="/login" />
         </div>
       </div>
     </header>
@@ -49,7 +41,6 @@ export function ShopMark({ shop, size = 8 }: { shop: { name: string; logo: strin
 
 // Encabezado del enlace propio de cada negocio: solo su marca, sin buscador ni enlaces a otros negocios.
 export async function ShopHeader({ shop, title, back = false }: { shop: { slug: string; name: string; logo: string | null }; title?: string; back?: boolean }) {
-  const user = await getUser();
   const home = `/negocio/${shop.slug}`;
   const citas = `/mis-citas?negocio=${shop.slug}`;
   return (
@@ -69,13 +60,7 @@ export async function ShopHeader({ shop, title, back = false }: { shop: { slug: 
         </nav>
         <div className="flex items-center gap-1">
           <ThemeToggle />
-          {user ? (
-            <Link href={citas} aria-label="Mis citas" className="w-9 h-9 rounded-full bg-secondary-fixed p-[1px] overflow-hidden flex items-center justify-center">
-              {user.avatar ? <img src={user.avatar} alt="" className="w-full h-full rounded-full object-cover" /> : <span className="font-label-lg text-on-secondary-fixed">{user.name.charAt(0)}</span>}
-            </Link>
-          ) : (
-            <Link href={`/login?next=${encodeURIComponent(home)}`} aria-label="Ingresar" className="btn-primary btn-sm"><Icon name="login" className="text-[18px]" /><span className="hidden sm:inline">Ingresar</span></Link>
-          )}
+          <UserChip href={citas} label="Mis citas" loginHref={`/login?next=${encodeURIComponent(home)}`} />
         </div>
       </div>
     </header>
