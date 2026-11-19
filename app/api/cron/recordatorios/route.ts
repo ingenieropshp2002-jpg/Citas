@@ -21,5 +21,6 @@ export async function GET(req: NextRequest) {
     try { const r = await runAutomations(b.id); out.reminders += r.reminders; out.birthdays += r.birthdays; out.reviews += r.reviews; out.businesses++; } catch (e) { console.error('[cron]', b.id, e); }
   }
   const waitlistExpired = await (await import('@/lib/espera')).expireWaitlist().catch(() => 0);
-  return NextResponse.json({ ok: true, ...out, waitlistExpired });
+  const gcal = await (await import('@/lib/gcal')).syncAllGcal().catch(e => { console.error('[cron gcal]', e); return 0; });
+  return NextResponse.json({ ok: true, ...out, waitlistExpired, gcal });
 }

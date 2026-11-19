@@ -172,6 +172,10 @@ model Staff {
   blocked              BlockedTime[]
   saleItems            SaleItem[]
   reviews              Review[]
+  gcalToken            String? // Google Calendar: refresh token cifrado
+  gcalEmail            String?
+  gcalError            String?
+  gcalSyncedAt         DateTime?
 }
 
 model Service {
@@ -278,6 +282,8 @@ model Appointment {
   review            Review?
 
   reviewRequestedAt DateTime? // cuándo se le pidió la reseña
+  gcalEventId       String? // evento copiado en el Google Calendar del profesional
+  gcalHash          String?
 
   @@index([businessId, start])
 }

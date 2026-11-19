@@ -9,10 +9,10 @@ import { PushToggle, dropPushOnThisDevice } from '@/components/panel/PushToggle'
 import { switchSede } from '@/app/admin/_actions/sedes';
 
 export const NAV = [
-  ['/admin', 'space_dashboard', 'Inicio', null], ['/admin/agenda', 'calendar_month', 'Agenda', 'agenda'], ['/admin/fila', 'pending_actions', 'Fila y huecos', 'agenda'], ['/admin/espera', 'hourglass_top', 'Lista de espera', 'agenda'], ['/admin/recordatorios', 'notifications_active', 'Recordatorios', 'agenda'], ['/admin/abonos', 'account_balance', 'Abonos', 'agenda'], ['/admin/clientes', 'groups', 'Clientes', 'clientes'],
+  ['/admin', 'space_dashboard', 'Inicio', null], ['/admin/agenda', 'calendar_month', 'Agenda', 'agenda'], ['/admin/fila', 'pending_actions', 'Fila y huecos', 'agenda'], ['/admin/espera', 'hourglass_top', 'Lista de espera', 'agenda'], ['/admin/calendario', 'event', 'Google Calendar', null], ['/admin/recordatorios', 'notifications_active', 'Recordatorios', 'agenda'], ['/admin/abonos', 'account_balance', 'Abonos', 'agenda'], ['/admin/clientes', 'groups', 'Clientes', 'clientes'],
   ['/admin/servicios', 'content_cut', 'Servicios', 'servicios'], ['/admin/equipo', 'badge', 'Equipo', 'equipo'], ['/admin/caja', 'point_of_sale', 'Caja / POS', 'caja'], ['/admin/paquetes', 'redeem', 'Paquetes y regalos', 'caja'],
   ['/admin/inventario', 'inventory_2', 'Inventario', 'inventario'], ['/admin/facturacion', 'receipt_long', 'Facturación DIAN', 'facturacion'], ['/admin/gastos', 'request_quote', 'Gastos', 'gastos'],
-  ['/admin/fidelizacion', 'loyalty', 'Fidelización', 'fidelizacion'], ['/admin/marketing', 'campaign', 'Marketing', 'marketing'], ['/admin/resenas', 'reviews', 'Reseñas', 'marketing'],
+  ['/admin/fidelizacion', 'loyalty', 'Fidelización', 'fidelizacion'], ['/admin/marketing', 'campaign', 'Marketing', 'marketing'], ['/admin/resenas', 'reviews', 'Reseñas', 'marketing'], ['/admin/instagram', 'photo_camera', 'Instagram', 'marketing'],
   ['/admin/metricas', 'insights', 'Métricas', 'reportes'], ['/admin/reportes', 'monitoring', 'Reportes', 'reportes'], ['/admin/academia', 'school', 'Academia', null], ['/admin/app', 'install_mobile', 'Tu app', 'configuracion'], ['/admin/sedes', 'storefront', 'Sedes', 'configuracion'], ['/admin/suscripcion', 'workspace_premium', 'Suscripción', 'configuracion'], ['/admin/configuracion', 'settings', 'Configuración', 'configuracion']
 ] as const;
 

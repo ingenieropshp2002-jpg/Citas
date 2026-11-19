@@ -20,7 +20,7 @@ export async function onboardingSteps(b: { id: string; slug: string; logo: strin
     { key: 'horario', title: 'Revisa tu horario y tus datos', text: 'Días y horas de atención, dirección, WhatsApp y reglas de abono.', href: '/admin/configuracion', cta: 'Revisar', done: has('horario') },
     { key: 'fotos', title: 'Sube tu logo y fotos', text: 'Los negocios con fotos reciben muchas más reservas.', href: '/admin/app', cta: 'Subir logo', done: !!b.logo || parseJson<string[]>(b.images, []).length > 0 },
     { key: 'equipo', title: 'Agrega a tu equipo', text: 'Cada profesional con sus servicios, horario y comisión.', href: '/admin/equipo', cta: 'Ir a equipo', done: staff > 1 || has('equipo'), manual: true },
-    { key: 'compartir', title: 'Comparte tu enlace de reservas', text: 'En tu Instagram, WhatsApp y en un afiche con código QR.', href: '/admin/qr', cta: 'Compartir', done: has('compartir'), manual: true },
+    { key: 'compartir', title: 'Comparte tu enlace de reservas', text: 'En tu Instagram, WhatsApp y en un afiche con código QR.', href: '/admin/instagram', cta: 'Compartir', done: has('compartir'), manual: true },
     { key: 'cita', title: 'Haz una reserva de prueba', text: 'Reserva como si fueras cliente para ver cómo funciona.', href: `/reservar/${b.slug}`, cta: 'Probar', done: appts > 0 }
   ];
   return { steps, hidden: o.hidden, done: steps.filter(s => s.done).length };
