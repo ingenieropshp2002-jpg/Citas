@@ -18,7 +18,7 @@ const hoursFrom = (fd: FormData, prefix: string) => {
 export async function saveCustomer(_: unknown, fd: FormData) {
   const { business } = await requireBusiness('clientes');
   const id = String(fd.get('id') || '');
-  const data = { name: String(fd.get('name')).trim(), phone: String(fd.get('phone') || '').replace(/\D/g, '') || null, email: String(fd.get('email') || '') || null, docType: String(fd.get('docType') || '13'), docNumber: String(fd.get('docNumber') || '') || null, notes: String(fd.get('notes') || '') || null, preferences: String(fd.get('preferences') || '') || null, tags: JSON.stringify(String(fd.get('tags') || '').split(',').map(t => t.trim()).filter(Boolean)), birthday: fd.get('birthday') ? fromBogota(String(fd.get('birthday')), '12:00') : null };
+  const data = { name: String(fd.get('name')).trim(), phone: String(fd.get('phone') || '').replace(/\D/g, '') || null, email: String(fd.get('email') || '') || null, docType: String(fd.get('docType') || '13'), docNumber: String(fd.get('docNumber') || '') || null, notes: String(fd.get('notes') || '') || null, allergies: String(fd.get('allergies') || '').trim().slice(0, 300) || null, preferences: String(fd.get('preferences') || '') || null, tags: JSON.stringify(String(fd.get('tags') || '').split(',').map(t => t.trim()).filter(Boolean)), birthday: fd.get('birthday') ? fromBogota(String(fd.get('birthday')), '12:00') : null };
   if (!data.name) return { error: 'El nombre es obligatorio.' };
   if (id) await db.customer.updateMany({ where: { id, businessId: business.id }, data });
   else { const c = await db.customer.create({ data: { ...data, businessId: business.id } }); redirect(`/admin/clientes/${c.id}`); }

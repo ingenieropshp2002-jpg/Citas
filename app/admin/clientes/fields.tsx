@@ -1,5 +1,5 @@
 import { parseJson, ymd } from '@/lib/format';
-type C = { id?: string; name?: string; phone?: string | null; email?: string | null; docType?: string; docNumber?: string | null; birthday?: Date | null; notes?: string | null; preferences?: string | null; tags?: string };
+type C = { id?: string; name?: string; phone?: string | null; email?: string | null; docType?: string; docNumber?: string | null; birthday?: Date | null; notes?: string | null; allergies?: string | null; preferences?: string | null; tags?: string };
 export function CustomerFields({ c = {} }: { c?: C }) {
   return (
     <>
@@ -13,8 +13,9 @@ export function CustomerFields({ c = {} }: { c?: C }) {
         <label><span className="label">Cumpleaños</span><input type="date" name="birthday" defaultValue={c.birthday ? ymd(c.birthday) : ''} className="input" /></label>
         <label><span className="label">Etiquetas (coma)</span><input name="tags" defaultValue={parseJson<string[]>(c.tags, []).join(', ')} className="input" placeholder="VIP, Color" /></label>
       </div>
+      <label className="block"><span className="label">Alergias y contraindicaciones</span><input name="allergies" defaultValue={c.allergies || ''} className="input" placeholder="Ej.: PPD (tinte), látex, cuero cabelludo sensible" maxLength={300} /></label>
       <label className="block"><span className="label">Preferencias</span><input name="preferences" defaultValue={c.preferences || ''} className="input" placeholder="Profesional preferido, bebida…" /></label>
-      <label className="block"><span className="label">Notas internas</span><textarea name="notes" defaultValue={c.notes || ''} className="input" rows={3} placeholder="Alergias, fórmula de color, observaciones…" /></label>
+      <label className="block"><span className="label">Notas internas</span><textarea name="notes" defaultValue={c.notes || ''} className="input" rows={3} placeholder="Observaciones generales…" /></label>
     </>
   );
 }

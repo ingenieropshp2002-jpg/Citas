@@ -7,7 +7,7 @@ import { AGENDA_COLORS, StatusBadge } from '@/components/ui/Status';
 import { addDays, cop, DIAS_CORTOS, fromBogota, hm, MESES, minutesOf, time12, timeOf, ymd } from '@/lib/format';
 import { blockTime, createAppointmentPanel, deleteBlock, moveAppointment, setAppointmentStatus } from '@/app/admin/_actions/agenda';
 
-type Appt = { id: string; code: string; staffId: string; start: string; end: string; status: string; confirmed?: boolean; total: number; customer: { id: string; name: string; phone: string | null }; services: string; notes: string | null; depositAmount: number; depositStatus: string; saleId: string | null };
+type Appt = { id: string; code: string; staffId: string; start: string; end: string; status: string; confirmed?: boolean; total: number; customer: { id: string; name: string; phone: string | null; allergies?: string | null }; services: string; notes: string | null; depositAmount: number; depositStatus: string; saleId: string | null };
 type Staff = { id: string; name: string; color: string; photo: string | null };
 type Block = { id: string; staffId: string | null; start: string; end: string; reason: string | null };
 const HOUR = 64; // px por hora
@@ -137,6 +137,7 @@ function Detail({ a, staff, onClose, onDone }: { a: Appt; staff: Staff[]; onClos
       <div className="flex items-center justify-between"><span className="font-label-md tracking-widest text-on-surface-variant">{a.code}</span><span className="flex items-center gap-2">{a.confirmed && <span className="font-label-sm text-[#059669] flex items-center gap-1"><Icon name="mark_chat_read" className="text-[16px]" />Confirmó</span>}<StatusBadge status={a.status} /></span></div>
       <Link href={`/admin/clientes/${a.customer.id}`} className="block mt-3 font-headline-sm text-headline-sm hover:text-secondary">{a.customer.name}</Link>
       {a.customer.phone && <a href={`https://wa.me/57${a.customer.phone}`} target="_blank" rel="noreferrer" className="font-label-md text-[#059669] flex items-center gap-1"><Icon name="chat" className="text-[16px]" />+57 {a.customer.phone}</a>}
+      {a.customer.allergies && <p role="alert" className="mt-3 p-2 rounded-lg bg-[#FFF1F2] text-danger font-label-md flex gap-2"><Icon name="warning" className="text-[18px] shrink-0" /><span><b>Alergias:</b> {a.customer.allergies}</span></p>}
       <dl className="mt-4 space-y-2">
         <div className="flex justify-between"><dt className="text-on-surface-variant">Servicios</dt><dd className="text-right">{a.services}</dd></div>
         <div className="flex justify-between"><dt className="text-on-surface-variant">Profesional</dt><dd>{st?.name}</dd></div>

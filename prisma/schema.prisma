@@ -227,6 +227,7 @@ model Customer {
   birthdayGreetedYear Int?
   winbackSentAt       DateTime?
   requireDeposit      Boolean         @default(false) // el negocio le exige anticipo siempre
+  allergies           String? // alergias y contraindicaciones: se muestran en rojo en la agenda y en la ficha
   createdAt           DateTime        @default(now())
   appointments        Appointment[]
   sales               Sale[]
@@ -695,4 +696,36 @@ model CommissionPayout {
   createdAt          DateTime @default(now())
 
   @@index([businessId, createdAt])
+}
+
+/// Ficha técnica de una visita: fórmula de color, observaciones y fotos de antes y después.
+model ClientRecord {
+  id            String   @id @default(cuid())
+  businessId    String
+  customerId    String
+  appointmentId String?
+  staffName     String?
+  date          DateTime @default(now())
+  service       String?
+  formula       String?
+  notes         String?
+  createdBy     String?
+  createdAt     DateTime @default(now())
+
+  @@index([customerId, date])
+}
+
+model CustomerPhoto {
+  id         String   @id @default(cuid())
+  businessId String
+  customerId String
+  recordId   String?
+  kind       String   @default("ANTES") // ANTES | DESPUES
+  mime       String
+  size       Int
+  data       Bytes
+  createdAt  DateTime @default(now())
+
+  @@index([customerId])
+  @@index([recordId])
 }
