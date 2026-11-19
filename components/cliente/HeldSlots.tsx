@@ -8,7 +8,7 @@ type Held = Awaited<ReturnType<typeof heldSlots>>[number];
 const toKey = (s: string) => { const t = atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)); return Uint8Array.from(t, c => c.charCodeAt(0)); };
 
 /** Pide permiso y suscribe este teléfono a los avisos (si el navegador lo permite). */
-async function subscribeDevice() {
+export async function subscribeDevice() {
   try {
     if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) return null;
     if ((await Notification.requestPermission()) !== 'granted') return null;

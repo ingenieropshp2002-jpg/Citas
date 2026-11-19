@@ -13,21 +13,22 @@ datasource db {
 
 // ───────────── Usuarios y acceso ─────────────
 model User {
-  id           String     @id @default(cuid())
+  id           String      @id @default(cuid())
   name         String
-  email        String?    @unique
-  phone        String?    @unique
+  email        String?     @unique
+  phone        String?     @unique
   passwordHash String?
-  googleId     String?    @unique
-  role         String     @default("CLIENT") // CLIENT | OWNER | STAFF | ADMIN
-  superAdmin   Boolean    @default(false) // controla toda la plataforma desde /admin
-  blocked      Boolean    @default(false) // no puede ingresar
+  googleId     String?     @unique
+  role         String      @default("CLIENT") // CLIENT | OWNER | STAFF | ADMIN
+  superAdmin   Boolean     @default(false) // controla toda la plataforma desde /admin
+  blocked      Boolean     @default(false) // no puede ingresar
   avatar       String?
-  createdAt    DateTime   @default(now())
-  businesses   Business[] @relation("owner")
+  createdAt    DateTime    @default(now())
+  businesses   Business[]  @relation("owner")
   staffProfile Staff?
   customers    Customer[]
   reviews      Review[]
+  waitEntries  WaitEntry[]
 }
 
 model OtpCode {
@@ -43,8 +44,8 @@ model OtpCode {
 
 // ───────────── Negocio ─────────────
 model Business {
-  id                  String    @id @default(cuid())
-  slug                String    @unique
+  id                  String      @id @default(cuid())
+  slug                String      @unique
   name                String
   category            String // PELUQUERIA | BARBERIA | SPA | UNAS
   tagline             String?
@@ -57,73 +58,74 @@ model Business {
   phone               String?
   whatsapp            String?
   instagram           String?
-  images              String    @default("[]") // JSON: string[]
+  images              String      @default("[]") // JSON: string[]
   logo                String?
   appColor            String? // color de la app instalable (#RRGGBB)
   appShortName        String? // nombre corto bajo el ícono
-  rating              Float     @default(0)
-  reviewCount         Int       @default(0)
-  openingHours        String    @default("{}") // JSON: { "1": ["07:00","20:00"], ... } 0=Domingo
-  slotStepMin         Int       @default(15)
-  cancellationHours   Int       @default(24)
-  depositPercent      Int       @default(30)
-  requireDeposit      Boolean   @default(true)
-  reminderHours       Int       @default(24)
-  notifyWhatsapp      Boolean   @default(true)
-  notifyEmail         Boolean   @default(true)
-  plan                String    @default("PRO") // BASICO | PRO | PREMIUM
-  active              Boolean   @default(true)
-  featured            Boolean   @default(false) // destacado en el buscador (lo marca el superadmin)
-  onboarding          String    @default("{}") // guía de primeros pasos: { done: string[], hidden: boolean }
+  rating              Float       @default(0)
+  reviewCount         Int         @default(0)
+  openingHours        String      @default("{}") // JSON: { "1": ["07:00","20:00"], ... } 0=Domingo
+  slotStepMin         Int         @default(15)
+  cancellationHours   Int         @default(24)
+  depositPercent      Int         @default(30)
+  requireDeposit      Boolean     @default(true)
+  reminderHours       Int         @default(24)
+  notifyWhatsapp      Boolean     @default(true)
+  notifyEmail         Boolean     @default(true)
+  plan                String      @default("PRO") // BASICO | PRO | PREMIUM
+  active              Boolean     @default(true)
+  featured            Boolean     @default(false) // destacado en el buscador (lo marca el superadmin)
+  waitEntries         WaitEntry[]
+  onboarding          String      @default("{}") // guía de primeros pasos: { done: string[], hidden: boolean }
   ownerId             String
   parentId            String? // sede principal (si esta es una sede adicional)
-  owner               User      @relation("owner", fields: [ownerId], references: [id])
+  owner               User        @relation("owner", fields: [ownerId], references: [id])
   // Datos fiscales (emisor)
   legalName           String?
-  docType             String    @default("31") // 31 = NIT, 13 = CC
+  docType             String      @default("31") // 31 = NIT, 13 = CC
   nit                 String?
   dv                  String?
-  taxRegime           String    @default("48") // 48 responsable IVA | 49 no responsable
-  taxResponsibilities String    @default("R-99-PN") // O-13, O-15, O-23, O-47, R-99-PN
+  taxRegime           String      @default("48") // 48 responsable IVA | 49 no responsable
+  taxResponsibilities String      @default("R-99-PN") // O-13, O-15, O-23, O-47, R-99-PN
   ciiu                String?
-  department          String?   @default("Bogotá D.C.")
-  departmentCode      String?   @default("11")
-  municipality        String?   @default("Bogotá D.C.")
-  municipalityCode    String?   @default("11001")
+  department          String?     @default("Bogotá D.C.")
+  departmentCode      String?     @default("11")
+  municipality        String?     @default("Bogotá D.C.")
+  municipalityCode    String?     @default("11001")
   fiscalEmail         String?
   // Suscripción: los negocios nuevos tienen 14 días gratis sin tarjeta
-  subscriptionStatus  String    @default("ACTIVA") // PRUEBA | ACTIVA | VENCIDA
+  subscriptionStatus  String      @default("ACTIVA") // PRUEBA | ACTIVA | VENCIDA
   trialEndsAt         DateTime?
   paidUntil           DateTime?
   // WhatsApp (número propio del negocio en WhatsApp Business Cloud API, opcional)
   waPhoneId           String?
-  autoConfirmRequest  Boolean   @default(true) // pedir confirmación por WhatsApp 24 h antes
+  autoConfirmRequest  Boolean     @default(true) // pedir confirmación por WhatsApp 24 h antes
   // Fidelización
-  loyaltyEnabled      Boolean   @default(true)
-  pointsPerThousand   Int       @default(1) // puntos por cada $1.000 pagados
-  inactiveDays        Int       @default(60)
-  birthdayEnabled     Boolean   @default(true)
-  reviewEnabled       Boolean   @default(true) // pedir reseña sola después de cada cita
+  loyaltyEnabled      Boolean     @default(true)
+  pointsPerThousand   Int         @default(1) // puntos por cada $1.000 pagados
+  inactiveDays        Int         @default(60)
+  birthdayEnabled     Boolean     @default(true)
+  reviewEnabled       Boolean     @default(true) // pedir reseña sola después de cada cita
   googleReviewUrl     String? // enlace "Pedir reseñas" del Perfil de Empresa de Google
-  reviewDelayHours    Int       @default(2)
-  birthdayMessage     String    @default("¡Feliz cumpleaños, {nombre}! 🎉 En {negocio} te regalamos un detalle en tu próxima visita. Reserva aquí: {link}")
+  reviewDelayHours    Int         @default(2)
+  birthdayMessage     String      @default("¡Feliz cumpleaños, {nombre}! 🎉 En {negocio} te regalamos un detalle en tu próxima visita. Reserva aquí: {link}")
   birthdayCoupon      String?
   // Fila virtual (clientes sin cita) y horas pico solo con cita
-  queueEnabled        Boolean   @default(true)
-  queueNotifyAhead    Int       @default(2) // avisar por WhatsApp cuando falten N turnos
+  queueEnabled        Boolean     @default(true)
+  queueNotifyAhead    Int         @default(2) // avisar por WhatsApp cuando falten N turnos
   queueOpenDate       String? // YYYY-MM-DD: el dueño abrió la fila ese día
-  peakRules           String    @default("[]") // JSON: { id, label, days: number[], from, to, startDate?, endDate? }[]
+  peakRules           String      @default("[]") // JSON: { id, label, days: number[], from, to, startDate?, endDate? }[]
   // Confirmación, tolerancia y anticipos
-  reminderHourBefore  Boolean   @default(true) // segundo recordatorio 1 hora antes
-  releaseUnconfirmed  Boolean   @default(false) // si no confirma, se libera el cupo
-  releaseBeforeMin    Int       @default(30) // minutos antes de la cita en que se libera
-  lateToleranceMin    Int       @default(0) // 0 = apagado; 10 o 15 = se marca "no llegó"
-  depositInPeak       Boolean   @default(false) // anticipo obligatorio en horas pico / temporada alta
-  depositForNoShows   Boolean   @default(true) // anticipo obligatorio a quien incumple seguido
-  noShowLimit         Int       @default(2) // incumplimientos (6 meses) para exigir anticipo
-  depositDeadlineMin  Int       @default(60) // minutos para pagar el abono por transferencia
-  transferInfo        String    @default("") // datos de la cuenta para el abono (banco, número, titular)
-  createdAt           DateTime  @default(now())
+  reminderHourBefore  Boolean     @default(true) // segundo recordatorio 1 hora antes
+  releaseUnconfirmed  Boolean     @default(false) // si no confirma, se libera el cupo
+  releaseBeforeMin    Int         @default(30) // minutos antes de la cita en que se libera
+  lateToleranceMin    Int         @default(0) // 0 = apagado; 10 o 15 = se marca "no llegó"
+  depositInPeak       Boolean     @default(false) // anticipo obligatorio en horas pico / temporada alta
+  depositForNoShows   Boolean     @default(true) // anticipo obligatorio a quien incumple seguido
+  noShowLimit         Int         @default(2) // incumplimientos (6 meses) para exigir anticipo
+  depositDeadlineMin  Int         @default(60) // minutos para pagar el abono por transferencia
+  transferInfo        String      @default("") // datos de la cuenta para el abono (banco, número, titular)
+  createdAt           DateTime    @default(now())
 
   staff        Staff[]
   services     Service[]
@@ -801,4 +803,27 @@ model PrepaidMove {
   @@index([prepaidId])
   @@index([saleId])
   @@index([cashSessionId])
+}
+
+/// Lista de espera inteligente: el cliente pide fecha(s) y franja; al liberarse un cupo que le sirve se le avisa.
+model WaitEntry {
+  id          String    @id @default(cuid())
+  businessId  String
+  business    Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  staffId     String?
+  serviceIds  String    @default("[]")
+  dateFrom    String // YYYY-MM-DD (hora Colombia)
+  dateTo      String
+  window      String    @default("CUALQUIERA") // CUALQUIERA | MANANA | TARDE | NOCHE
+  phone       String?
+  note        String?
+  status      String    @default("ACTIVA") // ACTIVA | RESERVADA | VENCIDA | CANCELADA | ATENDIDA
+  notifyCount Int       @default(0)
+  notifiedAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([businessId, status, dateFrom], map: "WaitEntry_business_status_idx")
+  @@index([userId, status], map: "WaitEntry_user_idx")
 }

@@ -1,3 +1,5 @@
+import { LeaveWait } from './LeaveWait';
+import { WINDOWS } from '@/lib/espera';
 import Link from 'next/link';
 import { db } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
@@ -7,7 +9,7 @@ import { AppointmentActions } from '@/components/cliente/AppointmentActions';
 import { Empty } from '@/components/ui/Empty';
 import { StatusBadge } from '@/components/ui/Status';
 import { Icon } from '@/components/ui/Icon';
-import { cop, fechaLarga, hm, parseJson, time12 } from '@/lib/format';
+import { cop, fechaCorta, fechaLarga, fromBogota, hm, parseJson, time12 } from '@/lib/format';
 
 export const metadata = { title: 'Mis citas' };
 export default async function MisCitas({ searchParams }: { searchParams: Promise<{ tab?: string; negocio?: string }> }) {
@@ -19,6 +21,7 @@ export default async function MisCitas({ searchParams }: { searchParams: Promise
   const now = new Date();
   const all = await db.appointment.findMany({ where: { customer: { userId: user.id }, ...(shop ? { business: { slug: shop.slug } } : {}) }, include: { business: true, staff: true, services: { include: { service: true } }, review: true }, orderBy: { start: tab === 'proximas' ? 'asc' : 'desc' } });
   const points = shop ? (await db.customer.findMany({ where: { userId: user.id, business: { slug: shop.slug } }, select: { points: true } })).reduce((x, c) => x + c.points, 0) : 0;
+  const waits = await db.waitEntry.findMany({ where: { userId: user.id, status: 'ACTIVA', ...(shop ? { business: { slug: shop.slug } } : {}) }, include: { business: { select: { name: true, slug: true } } }, orderBy: { dateFrom: 'asc' } });
   const list = all.filter(a => tab === 'proximas' ? a.end >= now && ['PENDIENTE', 'CONFIRMADA', 'EN_SERVICIO'].includes(a.status) : !(a.end >= now && ['PENDIENTE', 'CONFIRMADA', 'EN_SERVICIO'].includes(a.status)));
   return (
     <>
@@ -26,6 +29,18 @@ export default async function MisCitas({ searchParams }: { searchParams: Promise
       <main className="pt-20 pb-10 px-margin max-w-3xl mx-auto">
         <h1 className="font-headline-lg-mobile text-headline-lg-mobile text-primary-container dark:text-primary">Mis citas</h1>
         {shop && points > 0 && <p className="mt-2 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary-fixed/50 font-label-lg"><Icon name="loyalty" className="text-[18px] text-secondary" />Tienes {points.toLocaleString('es-CO')} puntos en {shop.name}</p>}
+        {!!waits.length && (
+          <section className="mt-4 rounded-xl border border-gold/40 bg-secondary-fixed/10 p-space-sm">
+            <p className="font-label-lg flex items-center gap-2"><Icon name="hourglass_top" className="text-secondary text-[20px]" />En lista de espera</p>
+            <ul className="mt-2 space-y-2">{waits.map(w => (
+              <li key={w.id} className="flex items-center gap-2 font-body-sm">
+                <Link href={`/reservar/${w.business.slug}?fecha=${w.dateFrom}`} className="flex-1 min-w-0"><b>{w.business.name}</b> · {w.dateFrom === w.dateTo ? fechaCorta(fromBogota(w.dateFrom, '12:00')) : `${fechaCorta(fromBogota(w.dateFrom, '12:00'))} a ${fechaCorta(fromBogota(w.dateTo, '12:00'))}`} · {WINDOWS[w.window as keyof typeof WINDOWS]}</Link>
+                <LeaveWait id={w.id} />
+              </li>
+            ))}</ul>
+            <p className="mt-1 font-body-sm text-on-surface-variant">Te avisamos si se libera un cupo. Sales de la lista cuando reservas.</p>
+          </section>
+        )}
         <div className="flex gap-2 mt-4 mb-5">
           <Link href={`/mis-citas${q ? '?' + q : ''}`} className={`chip ${tab === 'proximas' ? 'chip-on' : ''}`}>Próximas</Link>
           <Link href={`/mis-citas?tab=pasadas${q ? '&' + q : ''}`} className={`chip ${tab === 'pasadas' ? 'chip-on' : ''}`}>Pasadas</Link>

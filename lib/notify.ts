@@ -3,7 +3,7 @@
 // Fuera de la ventana de 24 h Meta solo deja enviar PLANTILLAS aprobadas; por eso cada aviso automático tiene su plantilla.
 import { db } from './db';
 
-export type WaKind = 'RECORDATORIO' | 'CONFIRMACION' | 'CUMPLEANOS' | 'RECUPERAR' | 'CAMPANA' | 'TURNO' | 'RESENA';
+export type WaKind = 'RECORDATORIO' | 'CONFIRMACION' | 'CUMPLEANOS' | 'RECUPERAR' | 'CAMPANA' | 'TURNO' | 'RESENA' | 'CUPO_LIBRE';
 export type WaTemplate = { kind: WaKind; params: string[] };
 export type WaConfig = { token: string; phoneId: string; verifyToken: string; appSecret: string; lang: string; templates: Partial<Record<WaKind, string>> };
 
@@ -12,6 +12,7 @@ export const WA_TEMPLATES: { kind: WaKind; name: string; label: string; body: st
   { kind: 'RECORDATORIO', name: 'recordatorio_cita', label: 'Recordatorio con Confirmo / Cancelo', body: 'Hola {{1}}, te recordamos tu cita en {{2}} el {{3}} con {{4}}. Confirma o cancela aquí: {{5}}' },
   { kind: 'CONFIRMACION', name: 'cita_confirmada', label: 'Reserva recibida o confirmada', body: 'Hola {{1}}, tu cita en {{2}} para el {{3}} quedó {{4}}. Detalles: {{5}}' },
   { kind: 'TURNO', name: 'turno_fila', label: 'Fila virtual: ya casi es tu turno', body: 'Hola {{1}}, en {{2}} ya casi es tu turno (#{{3}}). Por favor acércate al local.' },
+  { kind: 'CUPO_LIBRE', name: 'cupo_liberado', label: 'Lista de espera: se liberó un cupo', body: 'Hola {{1}}, se liberó un cupo en {{2}} el {{3}}. Estabas en la lista de espera; resérvalo aquí: {{4}}' },
   { kind: 'RESENA', name: 'pedir_resena', label: 'Pedir reseña después de la cita', body: 'Hola {{1}}, gracias por visitarnos en {{2}}. ¿Nos regalas tu opinión? Toma menos de un minuto: {{3}}' },
   { kind: 'CUMPLEANOS', name: 'feliz_cumpleanos', label: 'Saludo de cumpleaños', body: '¡Feliz cumpleaños, {{1}}! 🎉 En {{2}} te tenemos un regalo especial.' },
   { kind: 'CAMPANA', name: 'promocion', label: 'Campañas y promociones', body: 'Hola {{1}}, {{2}} te trae una promoción: {{3}}' },

@@ -20,5 +20,6 @@ export async function GET(req: NextRequest) {
   for (const b of await db.business.findMany({ where: { active: true }, select: { id: true } })) {
     try { const r = await runAutomations(b.id); out.reminders += r.reminders; out.birthdays += r.birthdays; out.reviews += r.reviews; out.businesses++; } catch (e) { console.error('[cron]', b.id, e); }
   }
-  return NextResponse.json({ ok: true, ...out });
+  const waitlistExpired = await (await import('@/lib/espera')).expireWaitlist().catch(() => 0);
+  return NextResponse.json({ ok: true, ...out, waitlistExpired });
 }

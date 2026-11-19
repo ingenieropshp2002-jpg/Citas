@@ -94,6 +94,8 @@ export async function createBooking(input: { businessId: string; serviceIds: str
     } catch (e) { if (!isOverlapError(e)) throw e; }
   }
   if (!appt) return await taken(b.id, input, dur);
+  // Ya consiguió cita: sale de la lista de espera de este negocio.
+  await db.waitEntry.updateMany({ where: { businessId: b.id, userId: user.id, status: 'ACTIVA' }, data: { status: 'RESERVADA' } });
   if (couponCode) await db.coupon.updateMany({ where: { businessId: b.id, code: couponCode }, data: { uses: { increment: 1 } } });
   if (deposit > 0 && transfer) {
     // Abono por transferencia: el cupo queda apartado hasta el plazo; el cliente sube el comprobante en /cita/[code].

@@ -5,6 +5,7 @@ import { cop, fechaCorta, fromBogota, time12, ymd } from '@/lib/format';
 import { Icon } from '@/components/ui/Icon';
 import { DateSlotPicker } from './DateSlotPicker';
 import { HeldSlots } from './HeldSlots';
+import { WaitlistJoin } from './WaitlistJoin';
 import { applyCoupon, createBooking, depositCheck } from '@/app/(cliente)/reservar/actions';
 
 type Svc = { id: string; name: string; description: string | null; durationMin: number; price: number; category: string; staffIds: string[] };
@@ -132,7 +133,8 @@ export function BookingWizard({ business, services, staff, initialService, initi
         <section className="px-margin mt-space-md">
           <span className="eyebrow">Paso 3 de 4</span>
           <h3 className="font-headline-sm text-headline-sm font-semibold">Elige fecha y hora</h3>
-          <DateSlotPicker businessId={business.id} duration={duration} staffId={staffId} serviceIds={sel} date={date} time={time} onChange={(d, t) => { setDate(d); setTime(t); }} />
+          <DateSlotPicker businessId={business.id} duration={duration} staffId={staffId} serviceIds={sel} date={date} time={time} onChange={(d, t) => { setDate(d); setTime(t); }}
+            footer={empty => <WaitlistJoin key={`${date}-${staffId}`} businessId={business.id} staffId={staffId} staffName={staff.find(s => s.id === staffId)?.name.split(' ')[0] || null} serviceIds={sel} date={date} empty={empty} />} />
           <HeldSlots businessId={business.id} date={date} staffId={staffId} serviceIds={sel} />
         </section>
       )}
