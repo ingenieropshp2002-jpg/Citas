@@ -19,7 +19,23 @@ function cacheKey(req: Request) {
   return [url.pathname + url.search, ...VARY.map(h => req.headers.get(h) || '')].join('|');
 }
 
+/** Clave interna del cron: HMAC-SHA256(AUTH_SECRET, 'cron-interno'). La ruta /api/cron/recordatorios la calcula igual. */
+async function cronKey(secret: string) {
+  const k = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const sig = new Uint8Array(await crypto.subtle.sign('HMAC', k, new TextEncoder().encode('cron-interno')));
+  let s = ''; for (const x of sig) s += String.fromCharCode(x);
+  return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
 export default {
+  // Cron de Cloudflare (cada 10 minutos, ver wrangler.jsonc): llama a las automatizaciones dentro del mismo Worker.
+  async scheduled(_: unknown, env: { AUTH_SECRET?: string; APP_URL?: string }, ctx: ExecutionContext) {
+    if (!env.AUTH_SECRET) { console.error('[cron] falta AUTH_SECRET'); return; }
+    const base = (env.APP_URL || 'https://reserva-citas.ingenieropshp2002.workers.dev').replace(/\/$/, '');
+    const req = new Request(`${base}/api/cron/recordatorios`, { headers: { authorization: `Bearer cron:${await cronKey(env.AUTH_SECRET)}` } });
+    const res: Response = await handler.fetch(req, env, ctx);
+    console.log('[cron]', res.status, await res.text());
+  },
   async fetch(req: Request, env: unknown, ctx: ExecutionContext) {
     const key = cacheKey(req);
     if (key) {

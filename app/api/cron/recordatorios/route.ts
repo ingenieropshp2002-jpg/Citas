@@ -1,17 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { createHmac, timingSafeEqual } from 'crypto';
 import { runAutomations } from '@/lib/automations';
-// Lo llama cada 10 minutos el pg_cron de Supabase (job registro_citas_automatizaciones) con el encabezado Authorization: Bearer <CRON_SECRET>.
+
+/** Clave del cron de Cloudflare (custom-worker.ts la calcula igual con WebCrypto). */
+const internalKey = () => process.env.AUTH_SECRET ? createHmac('sha256', process.env.AUTH_SECRET).update('cron-interno').digest('base64url') : '';
+const same = (a: string, b: string) => a.length === b.length && timingSafeEqual(Buffer.from(a), Buffer.from(b));
+// Lo llama cada 10 minutos el cron de Cloudflare (scheduled en custom-worker.ts) con Authorization: Bearer cron:<clave interna>.
+// También acepta Bearer <CRON_SECRET> para llamarlo desde fuera.
 // Envía recordatorios con pedido de confirmación, saludos de cumpleaños y actualiza el estado de las pruebas gratis.
 export async function GET(req: NextRequest) {
   // La clave puede venir de Cloudflare (CRON_SECRET) o de la base de datos (la usa el pg_cron de Supabase).
   const auth = req.headers.get('authorization') || '';
   const dbSecret = await db.platformSetting.findUnique({ where: { key: 'cronSecret' } }).then(r => (r ? JSON.parse(r.value) as string : '')).catch(() => '');
-  const ok = [process.env.CRON_SECRET, dbSecret].some(s => s && s.length >= 24 && auth === `Bearer ${s}`);
+  const ik = internalKey();
+  const ok = (ik && same(auth, `Bearer cron:${ik}`)) || [process.env.CRON_SECRET, dbSecret].some(s => s && s.length >= 24 && same(auth, `Bearer ${s}`));
   if (!ok) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-  const out = { reminders: 0, birthdays: 0, businesses: 0 };
+  const out = { reminders: 0, birthdays: 0, reviews: 0, businesses: 0 };
   for (const b of await db.business.findMany({ where: { active: true }, select: { id: true } })) {
-    try { const r = await runAutomations(b.id); out.reminders += r.reminders; out.birthdays += r.birthdays; out.businesses++; } catch (e) { console.error('[cron]', b.id, e); }
+    try { const r = await runAutomations(b.id); out.reminders += r.reminders; out.birthdays += r.birthdays; out.reviews += r.reviews; out.businesses++; } catch (e) { console.error('[cron]', b.id, e); }
   }
   return NextResponse.json({ ok: true, ...out });
 }
