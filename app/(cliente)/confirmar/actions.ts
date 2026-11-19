@@ -15,8 +15,8 @@ export async function answerAttendance(code: string, token: string, answer: 'SI'
   else await db.appointment.update({ where: { id: a.id }, data: { status: 'CANCELADA', clientConfirmedAt: null, notes: [a.notes, 'Cancelada por el cliente desde el recordatorio'].filter(Boolean).join(' · ') } });
   if (answer === 'NO') await notifyFreed([a], null);
   await pushToBusiness(a.businessId, answer === 'SI'
-    ? { title: '✅ Cita confirmada', body: `${a.customer.name} confirmó su cita del ${fechaCorta(a.start)} a las ${time12(hm(a.start))}`, url: '/panel/recordatorios', tag: `cita-${code}` }
-    : { title: '❌ Cita cancelada', body: `${a.customer.name} canceló su cita del ${fechaCorta(a.start)} a las ${time12(hm(a.start))}. El horario quedó libre.`, url: '/panel/agenda', tag: `cita-${code}` }, a.staffId);
-  revalidatePath(`/confirmar/${code}`); revalidatePath('/panel/recordatorios'); revalidatePath('/panel/agenda');
+    ? { title: '✅ Cita confirmada', body: `${a.customer.name} confirmó su cita del ${fechaCorta(a.start)} a las ${time12(hm(a.start))}`, url: '/admin/recordatorios', tag: `cita-${code}` }
+    : { title: '❌ Cita cancelada', body: `${a.customer.name} canceló su cita del ${fechaCorta(a.start)} a las ${time12(hm(a.start))}. El horario quedó libre.`, url: '/admin/agenda', tag: `cita-${code}` }, a.staffId);
+  revalidatePath(`/confirmar/${code}`); revalidatePath('/admin/recordatorios'); revalidatePath('/admin/agenda');
   return { ok: true };
 }

@@ -41,6 +41,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ code: s
     db.depositProof.upsert({ where: { appointmentId: a.id }, create: { appointmentId: a.id, businessId: a.businessId, ...data }, update: { ...data, createdAt: new Date() } }),
     db.appointment.update({ where: { id: a.id }, data: { depositProofAt: new Date() } })
   ]);
-  await pushToBusiness(a.businessId, { title: '💸 Comprobante de abono', body: `${a.customer.name} subió el comprobante de ${cop(a.depositAmount)} · cita ${fechaCorta(a.start)} ${time12(hm(a.start))}`, url: '/panel/abonos', tag: `abono-${a.code}` });
+  await pushToBusiness(a.businessId, { title: '💸 Comprobante de abono', body: `${a.customer.name} subió el comprobante de ${cop(a.depositAmount)} · cita ${fechaCorta(a.start)} ${time12(hm(a.start))}`, url: '/admin/abonos', tag: `abono-${a.code}` });
   return json({ ok: true });
 }

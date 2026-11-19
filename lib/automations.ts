@@ -8,7 +8,7 @@ const appUrl = () => process.env.APP_URL || 'http://localhost:3000';
 
 /** Recordatorios por WhatsApp con enlace "Confirmo / Cancelo": uno el día anterior y otro 1 hora antes. */
 export async function sendReminders(businessId: string) {
-  if (!waConfigured()) return 0; // modo manual: se envían desde /panel/recordatorios
+  if (!waConfigured()) return 0; // modo manual: se envían desde /admin/recordatorios
   const b = await db.business.findUniqueOrThrow({ where: { id: businessId } });
   if (!b.notifyWhatsapp) return 0;
   const include = { customer: true, staff: true, services: { include: { service: true } } } as const;

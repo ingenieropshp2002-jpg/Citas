@@ -28,7 +28,7 @@ export async function notifyFreed(list: Freed[], why: string | null = 'Horario l
         }
       }
       if (watches.length) await db.slotWatch.updateMany({ where: { id: { in: watches.map(w => w.id) } }, data: { notifiedAt: new Date() } });
-      if (why) await pushToBusiness(a.businessId, { title: `🟢 ${why}`, body: `${when} con ${first} quedó libre${watches.length ? `. Avisamos a ${watches.length} ${watches.length === 1 ? 'persona' : 'personas'} en espera.` : '.'}`, url: '/panel/agenda', tag: `libre-${a.staffId}-${a.start.getTime()}` });
+      if (why) await pushToBusiness(a.businessId, { title: `🟢 ${why}`, body: `${when} con ${first} quedó libre${watches.length ? `. Avisamos a ${watches.length} ${watches.length === 1 ? 'persona' : 'personas'} en espera.` : '.'}`, url: '/admin/agenda', tag: `libre-${a.staffId}-${a.start.getTime()}` });
     } catch (e) { console.error('notifyFreed', e); }
   }
 }

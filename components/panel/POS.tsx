@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/ui/Icon';
 import { cop } from '@/lib/format';
 import { computeLine, summarize } from '@/lib/tax';
-import { checkout } from '@/app/panel/_actions/pos';
+import { checkout } from '@/app/admin/_actions/pos';
 
 type Svc = { id: string; name: string; price: number; taxRate: number; category: string; staffIds: string[] };
 type Prod = { id: string; name: string; price: number; taxRate: number; stock: number; sku: string; barcode: string | null; category: string };
@@ -51,7 +51,7 @@ export function POS({ services, products, staff, customers, posLimit, preset }: 
     if (wantsInvoice && !b) { setErr('Para factura electrónica a solicitud del cliente, ingresa su documento y nombre.'); return; }
     const res = await checkout({ items: lines.map(l => ({ kind: l.kind, id: l.id, quantity: l.quantity, unitPrice: l.unitPrice, discount: l.discount, staffId: l.staffId })), customerId: customerId || null, appointmentId: preset?.appointmentId || null, tip, couponCode: coupon || undefined, payments: finalPays, wantsInvoice, buyer: b });
     if ('error' in res && res.error) { setErr(res.error); return; }
-    if ('saleId' in res) r.push(`/panel/caja/ventas/${res.saleId}${res.docError ? `?docError=${encodeURIComponent(res.docError)}` : ''}`);
+    if ('saleId' in res) r.push(`/admin/caja/ventas/${res.saleId}${res.docError ? `?docError=${encodeURIComponent(res.docError)}` : ''}`);
   });
 
   const nq = q.toLowerCase();

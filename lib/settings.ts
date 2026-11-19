@@ -1,7 +1,7 @@
 import { cache } from 'react';
 import { db } from './db';
 
-// Ajustes de la plataforma que el superadmin edita desde /admin/ajustes (sin tocar código).
+// Ajustes de la plataforma que el superadmin edita desde /superadmin/ajustes (sin tocar código).
 export type Plan = { id: string; name: string; price: number; priceYear?: number; desc: string; maxStaff?: number }; // maxStaff 0 = ilimitado; price = mes, priceYear = año
 /** Precio anual del plan (si no está definido: 10 meses, o sea 2 gratis). */
 export const yearPrice = (p: Plan) => (p.priceYear && p.priceYear > 0 ? p.priceYear : p.price * 10);

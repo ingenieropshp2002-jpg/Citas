@@ -3,7 +3,7 @@ import type { Metadata, Viewport } from 'next';
 import { PwaRegister } from '@/components/ui/PwaRegister';
 import { getSettings } from '@/lib/settings';
 import { getImpersonator, getUser } from '@/lib/auth';
-import { stopImpersonationAction } from '@/app/admin/actions';
+import { stopImpersonationAction } from '@/app/superadmin/actions';
 
 export async function generateMetadata(): Promise<Metadata> {
   const s = await getSettings();

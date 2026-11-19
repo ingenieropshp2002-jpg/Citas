@@ -5,7 +5,7 @@ import { provider } from '@/lib/payments';
 export async function simulate(ref: string, approved: boolean) {
   if (provider() !== 'SIMULADO') throw new Error('El modo simulado está desactivado.');
   const pay = await settlePayment(ref, approved, 'SIM-' + Date.now());
-  if (ref.startsWith('SUB-')) redirect(`/panel/suscripcion?pago=${approved ? 'ok' : 'rechazado'}`);
+  if (ref.startsWith('SUB-')) redirect(`/admin/suscripcion?pago=${approved ? 'ok' : 'rechazado'}`);
   redirect(`/cita/${ref.split('_')[0]}${approved ? '' : '?pago=rechazado'}`);
   return pay;
 }

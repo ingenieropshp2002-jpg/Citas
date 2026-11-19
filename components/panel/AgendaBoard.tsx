@@ -5,7 +5,7 @@ import { useActionState, useEffect, useMemo, useRef, useState, useTransition } f
 import { Icon } from '@/components/ui/Icon';
 import { AGENDA_COLORS, StatusBadge } from '@/components/ui/Status';
 import { addDays, cop, DIAS_CORTOS, fromBogota, hm, MESES, minutesOf, time12, timeOf, ymd } from '@/lib/format';
-import { blockTime, createAppointmentPanel, deleteBlock, moveAppointment, setAppointmentStatus } from '@/app/panel/_actions/agenda';
+import { blockTime, createAppointmentPanel, deleteBlock, moveAppointment, setAppointmentStatus } from '@/app/admin/_actions/agenda';
 
 type Appt = { id: string; code: string; staffId: string; start: string; end: string; status: string; confirmed?: boolean; total: number; customer: { id: string; name: string; phone: string | null }; services: string; notes: string | null; depositAmount: number; depositStatus: string; saleId: string | null };
 type Staff = { id: string; name: string; color: string; photo: string | null };
@@ -21,7 +21,7 @@ export function AgendaBoard({ view, date, staff, appts, blocks, range, services,
   const [modal, setModal] = useState<'nueva' | 'bloqueo' | null>(openNew ? 'nueva' : null);
   const [prefill, setPrefill] = useState<{ staffId?: string; date?: string; time?: string }>({});
   const [err, setErr] = useState(''); const [pending, start] = useTransition();
-  const go = (p: Record<string, string>) => { const q = new URLSearchParams({ vista: view, fecha: date, ...(staffFilter ? { prof: staffFilter } : {}), ...p }); r.push(`/panel/agenda?${q}`); };
+  const go = (p: Record<string, string>) => { const q = new URLSearchParams({ vista: view, fecha: date, ...(staffFilter ? { prof: staffFilter } : {}), ...p }); r.push(`/admin/agenda?${q}`); };
   const shift = (n: number) => go({ fecha: view === 'mes' ? (() => { const d = fromBogota(date, '12:00'); d.setUTCMonth(d.getUTCMonth() + n, 1); return ymd(d); })() : addDays(date, view === 'semana' ? 7 * n : n) });
   const weekStart = useMemo(() => { const dow = fromBogota(date, '12:00').getUTCDay(); return addDays(date, -((dow + 6) % 7)); }, [date]);
   const d0 = fromBogota(date, '12:00');
@@ -135,7 +135,7 @@ function Detail({ a, staff, onClose, onDone }: { a: Appt; staff: Staff[]; onClos
   return (
     <Sheet title="Detalle de la cita" onClose={onClose}>
       <div className="flex items-center justify-between"><span className="font-label-md tracking-widest text-on-surface-variant">{a.code}</span><span className="flex items-center gap-2">{a.confirmed && <span className="font-label-sm text-[#059669] flex items-center gap-1"><Icon name="mark_chat_read" className="text-[16px]" />Confirmó</span>}<StatusBadge status={a.status} /></span></div>
-      <Link href={`/panel/clientes/${a.customer.id}`} className="block mt-3 font-headline-sm text-headline-sm hover:text-secondary">{a.customer.name}</Link>
+      <Link href={`/admin/clientes/${a.customer.id}`} className="block mt-3 font-headline-sm text-headline-sm hover:text-secondary">{a.customer.name}</Link>
       {a.customer.phone && <a href={`https://wa.me/57${a.customer.phone}`} target="_blank" rel="noreferrer" className="font-label-md text-[#059669] flex items-center gap-1"><Icon name="chat" className="text-[16px]" />+57 {a.customer.phone}</a>}
       <dl className="mt-4 space-y-2">
         <div className="flex justify-between"><dt className="text-on-surface-variant">Servicios</dt><dd className="text-right">{a.services}</dd></div>
@@ -149,8 +149,8 @@ function Detail({ a, staff, onClose, onDone }: { a: Appt; staff: Staff[]; onClos
       <div className="grid grid-cols-2 gap-2 mt-6">
         {a.status === 'PENDIENTE' && <button disabled={p} className="btn-primary btn-sm col-span-2" onClick={() => set('CONFIRMADA')}>Confirmar</button>}
         {['PENDIENTE', 'CONFIRMADA'].includes(a.status) && <button disabled={p} className="btn-ghost btn-sm" onClick={() => set('EN_SERVICIO')}>Iniciar servicio</button>}
-        {!a.saleId && !['CANCELADA', 'NO_ASISTIO'].includes(a.status) && <Link href={`/panel/caja?cita=${a.id}`} className="btn-gold btn-sm"><Icon name="point_of_sale" className="text-[16px]" />Cobrar</Link>}
-        {a.saleId && <Link href={`/panel/caja/ventas/${a.saleId}`} className="btn-outline btn-sm col-span-2">Ver venta</Link>}
+        {!a.saleId && !['CANCELADA', 'NO_ASISTIO'].includes(a.status) && <Link href={`/admin/caja?cita=${a.id}`} className="btn-gold btn-sm"><Icon name="point_of_sale" className="text-[16px]" />Cobrar</Link>}
+        {a.saleId && <Link href={`/admin/caja/ventas/${a.saleId}`} className="btn-outline btn-sm col-span-2">Ver venta</Link>}
         {['PENDIENTE', 'CONFIRMADA'].includes(a.status) && <button disabled={p} className="btn-ghost btn-sm" onClick={() => set('NO_ASISTIO')}>No asistió</button>}
         {['PENDIENTE', 'CONFIRMADA'].includes(a.status) && <button disabled={p} className="btn-danger btn-sm" onClick={() => { if (confirm('¿Cancelar la cita?')) set('CANCELADA'); }}>Cancelar cita</button>}
       </div>

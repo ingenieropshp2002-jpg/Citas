@@ -19,12 +19,12 @@ export async function joinQueue(_: unknown, fd: FormData) {
   const serviceId = String(fd.get('serviceId') || '') || null;
   const w = await createWalkIn(b, { name, phone, serviceId: serviceId && (await db.service.findFirst({ where: { id: serviceId, businessId: b.id } })) ? serviceId : null });
   await notifyUpcoming(b);
-  revalidatePath('/panel/fila');
+  revalidatePath('/admin/fila');
   redirect(`/fila/${w.id}`);
 }
 
 export async function leaveQueue(id: string) {
   const w = await db.walkIn.findUnique({ where: { id } });
   if (w && ['ESPERANDO', 'LLAMADO'].includes(w.status)) await db.walkIn.update({ where: { id }, data: { status: 'CANCELADO' } });
-  revalidatePath(`/fila/${id}`); revalidatePath('/panel/fila');
+  revalidatePath(`/fila/${id}`); revalidatePath('/admin/fila');
 }

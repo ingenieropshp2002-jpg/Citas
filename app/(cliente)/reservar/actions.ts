@@ -98,7 +98,7 @@ export async function createBooking(input: { businessId: string; serviceIds: str
   if (deposit > 0 && transfer) {
     // Abono por transferencia: el cupo queda apartado hasta el plazo; el cliente sube el comprobante en /cita/[code].
     await db.payment.create({ data: { businessId: b.id, appointmentId: appt.id, method: 'TRANSFERENCIA', amount: deposit, status: 'PENDIENTE', provider: 'MANUAL', providerRef: `ABONO-${code}` } });
-    await pushToBusiness(b.id, { title: '📅 Nueva reserva (abono pendiente)', body: `${customer.name} · ${input.date} ${input.time} · abono ${cop(deposit)} por transferencia`, url: '/panel/abonos', tag: `cita-${code}` }, appt.staffId);
+    await pushToBusiness(b.id, { title: '📅 Nueva reserva (abono pendiente)', body: `${customer.name} · ${input.date} ${input.time} · abono ${cop(deposit)} por transferencia`, url: '/admin/abonos', tag: `cita-${code}` }, appt.staffId);
     return { redirect: `/cita/${code}` };
   }
   if (deposit > 0) {
@@ -107,7 +107,7 @@ export async function createBooking(input: { businessId: string; serviceIds: str
     await db.payment.update({ where: { id: pay.id }, data: { provider: co.provider } });
     return { redirect: co.url };
   }
-  await pushToBusiness(b.id, { title: '📅 Nueva reserva', body: `${customer.name} · ${input.date} ${input.time}`, url: '/panel/agenda', tag: `cita-${code}` }, appt.staffId);
+  await pushToBusiness(b.id, { title: '📅 Nueva reserva', body: `${customer.name} · ${input.date} ${input.time}`, url: '/admin/agenda', tag: `cita-${code}` }, appt.staffId);
   if (phone) await sendWhatsapp(phone, `Hola ${user.name}, recibimos tu solicitud de cita en ${b.name} (${code}) para el ${input.date} a las ${input.time}. Te confirmaremos pronto.`);
   return { redirect: `/cita/${code}` };
 }
@@ -118,7 +118,7 @@ export async function settlePayment(reference: string, approved: boolean, provid
   const pay = await db.payment.findUnique({ where: { id: payId }, include: { appointment: { include: { customer: true, business: true } } } });
   if (!pay || pay.status === 'APROBADO') return pay;
   await db.payment.update({ where: { id: pay.id }, data: { status: approved ? 'APROBADO' : 'RECHAZADO', providerRef } });
-  if (approved && reference.startsWith('SUB-')) { const { applySubscriptionPayment } = await import('@/app/panel/_actions/subscription'); await applySubscriptionPayment(pay.businessId, reference.slice(4).split('_')[0]); }
+  if (approved && reference.startsWith('SUB-')) { const { applySubscriptionPayment } = await import('@/app/admin/_actions/subscription'); await applySubscriptionPayment(pay.businessId, reference.slice(4).split('_')[0]); }
   if (pay.appointment) {
     await db.appointment.update({ where: { id: pay.appointment.id }, data: approved ? { depositStatus: 'PAGADO', status: 'CONFIRMADA' } : { depositStatus: 'PENDIENTE' } });
     if (approved && pay.appointment.customer.phone) await sendWhatsapp(pay.appointment.customer.phone, `✅ Tu cita ${pay.appointment.code} en ${pay.appointment.business.name} está confirmada. Te recordaremos antes de tu cita.`);
@@ -136,7 +136,7 @@ export async function cancelMine(code: string) {
   await db.appointment.update({ where: { id: a.id }, data: { status: 'CANCELADA', depositStatus: a.depositStatus === 'PAGADO' ? (refundable ? 'REEMBOLSADO' : 'PAGADO') : a.depositStatus } });
   revalidatePath('/mis-citas');
   await notifyFreed([a], null);
-  await pushToBusiness(a.businessId, { title: '❌ Cita cancelada', body: `${a.customer.name} canceló su cita del ${fechaCorta(a.start)} a las ${time12(hm(a.start))}`, url: '/panel/agenda', tag: `cita-${a.code}` }, a.staffId);
+  await pushToBusiness(a.businessId, { title: '❌ Cita cancelada', body: `${a.customer.name} canceló su cita del ${fechaCorta(a.start)} a las ${time12(hm(a.start))}`, url: '/admin/agenda', tag: `cita-${a.code}` }, a.staffId);
   return { ok: true, refundable };
 }
 

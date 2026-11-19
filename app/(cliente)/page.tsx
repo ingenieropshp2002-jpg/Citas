@@ -52,7 +52,7 @@ export default async function Home() {
               <h2 className="font-headline-md text-headline-md text-white dark:text-on-surface mt-1">{cfg.businessTitle}</h2>
               <p className="text-white/70 dark:text-on-surface-variant mt-2">{cfg.businessSubtitle}</p>
             </div>
-            <Link href="/panel" className="btn-gold shrink-0">Registrar mi negocio</Link>
+            <Link href="/admin" className="btn-gold shrink-0">Registrar mi negocio</Link>
           </section>
         </div>
       </main>

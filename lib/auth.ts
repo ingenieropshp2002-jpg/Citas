@@ -31,7 +31,7 @@ export function isSuperAdmin(u: { superAdmin?: boolean; email?: string | null } 
 }
 export async function requireSuperAdmin() {
   const u = await getUser();
-  if (!isSuperAdmin(u)) redirect('/admin/ingresar');
+  if (!isSuperAdmin(u)) redirect('/superadmin/ingresar');
   return u!;
 }
 
@@ -64,18 +64,18 @@ export type Perm = 'agenda' | 'clientes' | 'caja' | 'inventario' | 'reportes' | 
 
 /** Devuelve el negocio que administra el usuario (dueño o profesional con permisos). */
 export async function requireBusiness(perm?: Perm, opts: { allowExpired?: boolean } = {}) {
-  const user = await requireUser('/panel');
+  const user = await requireUser('/admin');
   let business = await db.business.findFirst({ where: { ownerId: user.id } });
   let perms: string[] | 'ALL' = 'ALL';
   let staffId: string | null = null;
   if (!business) {
     const staff = await db.staff.findUnique({ where: { userId: user.id }, include: { business: true } });
-    if (!staff) redirect('/panel/registro');
+    if (!staff) redirect('/admin/registro');
     business = staff.business; staffId = staff.id;
     try { perms = JSON.parse(staff.permissions); } catch { perms = []; }
   }
-  if (perm && perms !== 'ALL' && !perms.includes(perm)) redirect('/panel?sinpermiso=1');
+  if (perm && perms !== 'ALL' && !perms.includes(perm)) redirect('/admin?sinpermiso=1');
   // Prueba gratis o suscripción vencida: solo puede entrar a la página de suscripción
-  if (!opts.allowExpired && subscriptionState(business).state === 'VENCIDA' && !isSuperAdmin(user)) redirect('/panel/suscripcion');
+  if (!opts.allowExpired && subscriptionState(business).state === 'VENCIDA' && !isSuperAdmin(user)) redirect('/admin/suscripcion');
   return { user, business, perms, staffId };
 }

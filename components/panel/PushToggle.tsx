@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
-import { pushPublicKey, removePushSubscription, savePushSubscription, testPush } from '@/app/panel/_actions/push';
+import { pushPublicKey, removePushSubscription, savePushSubscription, testPush } from '@/app/admin/_actions/push';
 
 type St = 'cargando' | 'no' | 'ios' | 'bloqueado' | 'apagado' | 'activo';
 const toKey = (s: string) => { const t = atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)); return Uint8Array.from(t, c => c.charCodeAt(0)); };

@@ -17,7 +17,7 @@ export default async function Perfil() {
           <div><h1 className="font-headline-sm text-headline-sm">{u.name}</h1><p className="text-on-surface-variant">{u.email || ''} {u.phone ? `· +57 ${u.phone}` : ''}</p></div>
         </div>
         <div className="card mt-4 divide-y divide-parchment">
-          {[['/mis-citas', 'calendar_month', 'Mis citas'], ['/buscar', 'search', 'Explorar negocios'], ['/panel', 'storefront', owns ? 'Ir al panel de mi negocio' : 'Registrar mi negocio']].map(([h, i, l]) => (
+          {[['/mis-citas', 'calendar_month', 'Mis citas'], ['/buscar', 'search', 'Explorar negocios'], ['/admin', 'storefront', owns ? 'Ir al Admin de mi negocio' : 'Registrar mi negocio']].map(([h, i, l]) => (
             <Link key={h} href={h} className="flex items-center gap-3 p-4 hover:bg-surface-container-low"><Icon name={i} className="text-secondary" /><span className="flex-1 font-title-md text-title-md">{l}</span><Icon name="chevron_right" className="text-outline" /></Link>
           ))}
         </div>

@@ -8,11 +8,11 @@ import { logout } from '@/app/login/actions';
 import { PushToggle, dropPushOnThisDevice } from '@/components/panel/PushToggle';
 
 export const NAV = [
-  ['/panel', 'space_dashboard', 'Inicio', null], ['/panel/agenda', 'calendar_month', 'Agenda', 'agenda'], ['/panel/fila', 'pending_actions', 'Fila y huecos', 'agenda'], ['/panel/recordatorios', 'notifications_active', 'Recordatorios', 'agenda'], ['/panel/abonos', 'account_balance', 'Abonos', 'agenda'], ['/panel/clientes', 'groups', 'Clientes', 'clientes'],
-  ['/panel/servicios', 'content_cut', 'Servicios', 'servicios'], ['/panel/equipo', 'badge', 'Equipo', 'equipo'], ['/panel/caja', 'point_of_sale', 'Caja / POS', 'caja'],
-  ['/panel/inventario', 'inventory_2', 'Inventario', 'inventario'], ['/panel/facturacion', 'receipt_long', 'Facturación DIAN', 'facturacion'], ['/panel/gastos', 'request_quote', 'Gastos', 'gastos'],
-  ['/panel/fidelizacion', 'loyalty', 'Fidelización', 'fidelizacion'], ['/panel/marketing', 'campaign', 'Marketing', 'marketing'],
-  ['/panel/reportes', 'monitoring', 'Reportes', 'reportes'], ['/panel/academia', 'school', 'Academia', null], ['/panel/suscripcion', 'workspace_premium', 'Suscripción', 'configuracion'], ['/panel/configuracion', 'settings', 'Configuración', 'configuracion']
+  ['/admin', 'space_dashboard', 'Inicio', null], ['/admin/agenda', 'calendar_month', 'Agenda', 'agenda'], ['/admin/fila', 'pending_actions', 'Fila y huecos', 'agenda'], ['/admin/recordatorios', 'notifications_active', 'Recordatorios', 'agenda'], ['/admin/abonos', 'account_balance', 'Abonos', 'agenda'], ['/admin/clientes', 'groups', 'Clientes', 'clientes'],
+  ['/admin/servicios', 'content_cut', 'Servicios', 'servicios'], ['/admin/equipo', 'badge', 'Equipo', 'equipo'], ['/admin/caja', 'point_of_sale', 'Caja / POS', 'caja'],
+  ['/admin/inventario', 'inventory_2', 'Inventario', 'inventario'], ['/admin/facturacion', 'receipt_long', 'Facturación DIAN', 'facturacion'], ['/admin/gastos', 'request_quote', 'Gastos', 'gastos'],
+  ['/admin/fidelizacion', 'loyalty', 'Fidelización', 'fidelizacion'], ['/admin/marketing', 'campaign', 'Marketing', 'marketing'],
+  ['/admin/reportes', 'monitoring', 'Reportes', 'reportes'], ['/admin/academia', 'school', 'Academia', null], ['/admin/suscripcion', 'workspace_premium', 'Suscripción', 'configuracion'], ['/admin/configuracion', 'settings', 'Configuración', 'configuracion']
 ] as const;
 
 export function Sidebar({ business, user, perms, lowStock }: { business: { name: string; slug: string; plan: string }; user: { name: string; avatar: string | null }; perms: string[] | 'ALL'; lowStock: number }) {
@@ -21,11 +21,11 @@ export function Sidebar({ business, user, perms, lowStock }: { business: { name:
   const nav = (
     <nav className="flex flex-col gap-0.5 flex-1 min-h-0 overflow-y-auto -mx-1 px-1">
       {items.map(([href, icon, label]) => {
-        const on = href === '/panel' ? p === '/panel' : p.startsWith(href);
+        const on = href === '/admin' ? p === '/admin' : p.startsWith(href);
         return (
           <Link key={href} href={href} onClick={() => setOpen(false)} className={`flex items-center gap-3 h-10 shrink-0 px-3 rounded-xl font-label-lg text-label-lg transition ${on ? 'bg-white/10 text-white' : 'text-white/65 hover:text-white hover:bg-white/5'}`}>
             <Icon name={icon} fill={on} className={`text-[20px] ${on ? 'text-secondary-fixed' : ''}`} />{label}
-            {href === '/panel/inventario' && lowStock > 0 && <span className="ml-auto px-1.5 rounded-full bg-danger text-white text-[11px] font-bold">{lowStock}</span>}
+            {href === '/admin/inventario' && lowStock > 0 && <span className="ml-auto px-1.5 rounded-full bg-danger text-white text-[11px] font-bold">{lowStock}</span>}
           </Link>
         );
       })}
@@ -33,7 +33,7 @@ export function Sidebar({ business, user, perms, lowStock }: { business: { name:
   );
   const head = (
     <div className="px-2 mb-6">
-      <Link href="/panel" className="flex items-center gap-2"><span className="w-9 h-9 rounded-lg bg-secondary-fixed text-primary-container flex items-center justify-center font-headline-sm italic">R</span><div className="min-w-0"><p className="font-title-md text-title-md text-white truncate">{business.name}</p><p className="font-label-sm text-label-sm text-secondary-fixed uppercase tracking-wider">Plan {business.plan}</p></div></Link>
+      <Link href="/admin" className="flex items-center gap-2"><span className="w-9 h-9 rounded-lg bg-secondary-fixed text-primary-container flex items-center justify-center font-headline-sm italic">R</span><div className="min-w-0"><p className="font-title-md text-title-md text-white truncate">{business.name}</p><p className="font-label-sm text-label-sm text-secondary-fixed uppercase tracking-wider">Plan {business.plan}</p></div></Link>
     </div>
   );
   const foot = (
@@ -52,7 +52,7 @@ export function Sidebar({ business, user, perms, lowStock }: { business: { name:
       <header className="lg:hidden fixed top-0 inset-x-0 h-14 z-40 bg-primary-container text-white flex items-center justify-between px-margin">
         <button onClick={() => setOpen(true)} aria-label="Menú" className="w-10 h-10 -ml-2 flex items-center justify-center"><Icon name="menu" /></button>
         <span className="font-title-md truncate">{business.name}</span>
-        <Link href="/panel/agenda?nueva=1" aria-label="Nueva cita" className="w-10 h-10 -mr-2 flex items-center justify-center"><Icon name="add_circle" className="text-secondary-fixed" /></Link>
+        <Link href="/admin/agenda?nueva=1" aria-label="Nueva cita" className="w-10 h-10 -mr-2 flex items-center justify-center"><Icon name="add_circle" className="text-secondary-fixed" /></Link>
       </header>
       {open && <div className="lg:hidden fixed inset-0 z-50 bg-black/40" onClick={() => setOpen(false)}><aside className="w-72 h-full bg-primary-container p-4 flex flex-col overflow-y-auto" onClick={e => e.stopPropagation()}>{head}{nav}<PushToggle />{foot}{salir}</aside></div>}
     </>

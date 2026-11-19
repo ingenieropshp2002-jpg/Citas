@@ -1,6 +1,6 @@
 // Planes y estado de suscripción de cada negocio. Los negocios nuevos tienen 14 días gratis sin tarjeta.
 export const TRIAL_DAYS = 14;
-// Los planes y precios están en lib/settings.ts (editables desde /admin → Ajustes).
+// Los planes y precios están en lib/settings.ts (editables desde /superadmin → Ajustes).
 
 type B = { subscriptionStatus: string; trialEndsAt: Date | null; paidUntil: Date | null };
 export const GRACE_DAYS = 3;

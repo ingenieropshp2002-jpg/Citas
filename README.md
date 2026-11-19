@@ -81,11 +81,11 @@ Qué hace: confirmación al reservar, recordatorio con "responde 1 para confirma
 
 ## Fidelización, gastos, academia y suscripciones
 
-- **Fidelización** (`/panel/fidelizacion`): puntos por cada $1.000 cobrados en caja, premios y canjes, cumpleaños del mes y clientes inactivos.
-- **Gastos** (`/panel/gastos`): registro de gastos por categoría y utilidad del mes (ingresos − gastos). También aparece en Reportes.
-- **QR para la próxima cita**: el recibo de caja trae un QR de reserva y `/panel/qr` imprime un afiche para recepción.
-- **Academia** (`/panel/academia`): cursos cortos para dueños y profesionales, con progreso por usuario.
-- **Prueba gratis**: cada negocio nuevo tiene 14 días del plan Pro sin tarjeta. Al vencer, el panel solo muestra `/panel/suscripcion` (la página pública de reservas sigue funcionando). Los correos en `ADMIN_EMAILS` no tienen bloqueo y ven `/panel/admin` para activar o extender negocios.
+- **Fidelización** (`/admin/fidelizacion`): puntos por cada $1.000 cobrados en caja, premios y canjes, cumpleaños del mes y clientes inactivos.
+- **Gastos** (`/admin/gastos`): registro de gastos por categoría y utilidad del mes (ingresos − gastos). También aparece en Reportes.
+- **QR para la próxima cita**: el recibo de caja trae un QR de reserva y `/admin/qr` imprime un afiche para recepción.
+- **Academia** (`/admin/academia`): cursos cortos para dueños y profesionales, con progreso por usuario.
+- **Prueba gratis**: cada negocio nuevo tiene 14 días del plan Pro sin tarjeta. Al vencer, el panel solo muestra `/admin/suscripcion` (la página pública de reservas sigue funcionando). Los correos en `ADMIN_EMAILS` no tienen bloqueo y ven `/admin/superadmin` para activar o extender negocios.
 - **Base de datos**: si ya tenía el esquema, aplique `prisma/migraciones/2026-11-14_fidelizacion_gastos_suscripcion.sql` (con `SET search_path TO citas;`).
 
 ## Desplegar en producción (Supabase + Cloudflare Workers)
@@ -106,7 +106,7 @@ Para desarrollo local necesita un PostgreSQL (por ejemplo un proyecto gratuito d
 
 ```
 app/(cliente)/   páginas públicas y del cliente
-app/panel/       panel del negocio (_actions = lógica del servidor)
+app/admin/       panel del negocio (_actions = lógica del servidor)
 app/api/         disponibilidad, pagos, cron, XML, reportes, Google
 lib/dian/        CUFE/CUDE, XML UBL, emisión y conector del proveedor
 lib/             disponibilidad, inventario, impuestos, pagos, notificaciones

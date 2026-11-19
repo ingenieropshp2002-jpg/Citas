@@ -18,14 +18,14 @@ self.addEventListener('push', e => {
   let d = {}; try { d = e.data ? e.data.json() : {}; } catch { d = { title: 'Registro Citas', body: e.data ? e.data.text() : '' }; }
   e.waitUntil(self.registration.showNotification(d.title || 'Registro Citas', {
     body: d.body || '', icon: '/icons/icon-192.png', badge: '/icons/icon-192.png', tag: d.tag, renotify: !!d.tag,
-    silent: false, vibrate: [200, 100, 200], requireInteraction: false, data: { url: d.url || '/panel/agenda' }
+    silent: false, vibrate: [200, 100, 200], requireInteraction: false, data: { url: d.url || '/admin/agenda' }
   }));
 });
 self.addEventListener('notificationclick', e => {
   e.notification.close();
-  const url = new URL(e.notification.data?.url || '/panel', self.location.origin).href;
+  const url = new URL(e.notification.data?.url || '/admin', self.location.origin).href;
   e.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then(ws => {
-    for (const w of ws) if (w.url.startsWith(self.location.origin + '/panel') && 'focus' in w) { w.navigate(url); return w.focus(); }
+    for (const w of ws) if (w.url.startsWith(self.location.origin + '/admin') && 'focus' in w) { w.navigate(url); return w.focus(); }
     return clients.openWindow(url);
   }));
 });
