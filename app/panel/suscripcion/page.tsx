@@ -6,7 +6,7 @@ import { Icon } from '@/components/ui/Icon';
 import { Submit } from '@/components/ui/Submit';
 import { cop, fechaLarga, METHOD_LABEL } from '@/lib/format';
 import { subscriptionState } from '@/lib/subscription';
-import { getSettings } from '@/lib/settings';
+import { getSettings, yearPrice } from '@/lib/settings';
 import { provider } from '@/lib/payments';
 import { paySubscription } from '../_actions/subscription';
 
@@ -30,16 +30,26 @@ export default async function Suscripcion({ searchParams }: { searchParams: Prom
         {s.state === 'VENCIDA' && <><p className="eyebrow !text-danger">Suspendido</p><h2 className="font-headline-sm text-headline-sm">Tu negocio está suspendido por falta de pago</h2><p className="text-on-surface-variant mt-1">Tus datos están guardados y tu página de reservas sigue funcionando. Para volver a usar el panel, elige un plan.</p></>}
       </section>
       {!owner && <p className="mb-4 text-on-surface-variant">Solo el dueño del negocio puede pagar la suscripción.</p>}
-      <div className="grid md:grid-cols-3 gap-4">{PLANS.map(p => (
+      <p className="mb-3 text-on-surface-variant">Paga mes a mes o ahorra pagando el año completo.</p>
+      <div className="grid md:grid-cols-3 gap-4">{PLANS.map(p => {
+        const year = yearPrice(p); const save = p.price * 12 - year; const freeMonths = Math.round(save / Math.max(1, p.price));
+        return (
         <form key={p.id} action={paySubscription} className={`card p-5 flex flex-col ${b.plan === p.id ? 'border-gold' : ''}`}>
           <input type="hidden" name="plan" value={p.id} />
           <p className="font-title-lg text-title-lg">{p.name}{b.plan === p.id && <span className="ml-2 font-label-sm px-2 py-0.5 rounded-full bg-secondary-fixed text-on-secondary-fixed align-middle">Actual</span>}</p>
-          <p className="font-currency-display text-currency-display mt-1 tnum">{cop(p.price)}<span className="font-body-sm text-on-surface-variant"> /mes</span></p>
-          <p className="text-on-surface-variant mt-2 flex-1">{p.desc}</p>
-          {owner && <><select name="method" className="input !h-10 mt-4">{['TARJETA', 'PSE', 'NEQUI'].map(m => <option key={m} value={m}>{METHOD_LABEL[m]}</option>)}</select>
-            <Submit className="btn-primary w-full mt-2">Pagar 1 mes</Submit></>}
+          <p className="font-label-md text-secondary mt-0.5">{p.maxStaff ? (p.maxStaff === 1 ? '1 profesional' : `Hasta ${p.maxStaff} profesionales`) : 'Profesionales ilimitados'}</p>
+          <p className="font-currency-display text-currency-display mt-2 tnum">{cop(p.price)}<span className="font-body-sm text-on-surface-variant"> /mes</span></p>
+          <p className="font-body-sm text-on-surface-variant tnum">o {cop(year)} al año{save > 0 && <> · <b className="text-[#059669]">ahorras {cop(save)}{freeMonths > 0 ? ` (${freeMonths} ${freeMonths === 1 ? 'mes gratis' : 'meses gratis'})` : ''}</b></>}</p>
+          <p className="text-on-surface-variant mt-3 flex-1">{p.desc}</p>
+          {owner && <>
+            <div className="grid grid-cols-2 gap-2 mt-4">
+              <label className="flex flex-col items-center gap-0.5 p-2 rounded-xl border border-parchment has-[:checked]:border-gold has-[:checked]:bg-secondary-fixed/20 cursor-pointer text-center"><input type="radio" name="period" value="MENSUAL" defaultChecked className="sr-only" /><span className="font-label-lg">Mensual</span><span className="font-label-sm text-on-surface-variant tnum">{cop(p.price)}</span></label>
+              <label className="relative flex flex-col items-center gap-0.5 p-2 rounded-xl border border-parchment has-[:checked]:border-gold has-[:checked]:bg-secondary-fixed/20 cursor-pointer text-center"><input type="radio" name="period" value="ANUAL" className="sr-only" /><span className="font-label-lg">Anual</span><span className="font-label-sm text-on-surface-variant tnum">{cop(year)}</span>{save > 0 && <span className="absolute -top-2 right-1 px-1.5 rounded-full bg-[#059669] text-white text-[10px] font-bold">-{Math.round(save / (p.price * 12) * 100)}%</span>}</label>
+            </div>
+            <select name="method" className="input !h-10 mt-2">{['TARJETA', 'PSE', 'NEQUI'].map(m => <option key={m} value={m}>{METHOD_LABEL[m]}</option>)}</select>
+            <Submit className="btn-primary w-full mt-2">Pagar</Submit></>}
         </form>
-      ))}</div>
+      ); })}</div>
       {provider() === 'SIMULADO' && <p className="mt-3 font-body-sm text-on-surface-variant">La pasarela está en modo de prueba: configura Wompi o Mercado Pago para cobrar de verdad.</p>}
       {payments.length > 0 && <section className="card p-5 mt-4"><h2 className="h-section mb-3">Pagos de suscripción</h2><ul className="space-y-1">{payments.map(p => <li key={p.id} className="flex justify-between"><span>{fechaLarga(p.createdAt)} · {METHOD_LABEL[p.method] || p.method}</span><span className="tnum">{cop(p.amount)} · {p.status.toLowerCase()}</span></li>)}</ul></section>}
     </>

@@ -2,7 +2,9 @@ import { cache } from 'react';
 import { db } from './db';
 
 // Ajustes de la plataforma que el superadmin edita desde /admin/ajustes (sin tocar código).
-export type Plan = { id: string; name: string; price: number; desc: string; maxStaff?: number }; // maxStaff 0 = ilimitado
+export type Plan = { id: string; name: string; price: number; priceYear?: number; desc: string; maxStaff?: number }; // maxStaff 0 = ilimitado; price = mes, priceYear = año
+/** Precio anual del plan (si no está definido: 10 meses, o sea 2 gratis). */
+export const yearPrice = (p: Plan) => (p.priceYear && p.priceYear > 0 ? p.priceYear : p.price * 10);
 export type Settings = {
   appName: string; shortName: string; tagline: string; logoUrl: string;
   supportWhatsapp: string; supportEmail: string;
@@ -27,9 +29,9 @@ export const DEFAULT_SETTINGS: Settings = {
   registrationsOpen: true,
   trialDays: 14,
   plans: [
-    { id: 'BASICO', name: 'Básico', price: Number(process.env.PLAN_PRICE_BASICO || 49900), maxStaff: 1, desc: '1 profesional, agenda, reservas online y recordatorios' },
-    { id: 'PRO', name: 'Pro', price: Number(process.env.PLAN_PRICE_PRO || 99900), maxStaff: 8, desc: 'Hasta 8 profesionales, caja POS, inventario, gastos, fidelización y marketing' },
-    { id: 'PREMIUM', name: 'Premium', price: Number(process.env.PLAN_PRICE_PREMIUM || 189900), maxStaff: 0, desc: 'Profesionales ilimitados, facturación electrónica y reportes avanzados' }
+    { id: 'BASICO', name: 'Básico', price: 60000, priceYear: 600000, maxStaff: 1, desc: '1 profesional: agenda, reservas online, recordatorios, abonos y fila virtual' },
+    { id: 'PRO', name: 'Pro', price: 90000, priceYear: 900000, maxStaff: 5, desc: 'De 2 a 5 profesionales: todo lo del Básico más caja POS, inventario, gastos, fidelización y marketing' },
+    { id: 'PREMIUM', name: 'Premium', price: 150000, priceYear: 1500000, maxStaff: 0, desc: '6 profesionales o más, sin límite: todo lo del Pro más facturación electrónica y reportes avanzados' }
   ]
 };
 

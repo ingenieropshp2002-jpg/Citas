@@ -1,10 +1,6 @@
 // Planes y estado de suscripción de cada negocio. Los negocios nuevos tienen 14 días gratis sin tarjeta.
 export const TRIAL_DAYS = 14;
-export const PLANS = [
-  { id: 'BASICO', name: 'Básico', price: Number(process.env.PLAN_PRICE_BASICO || 49900), maxStaff: 1, desc: '1 profesional, agenda, reservas online y recordatorios' },
-  { id: 'PRO', name: 'Pro', price: Number(process.env.PLAN_PRICE_PRO || 99900), maxStaff: 8, desc: 'Hasta 8 profesionales, caja POS, inventario, gastos, fidelización y marketing' },
-  { id: 'PREMIUM', name: 'Premium', price: Number(process.env.PLAN_PRICE_PREMIUM || 189900), maxStaff: 0, desc: 'Profesionales ilimitados, facturación electrónica y reportes avanzados' }
-] as const;
+// Los planes y precios están en lib/settings.ts (editables desde /admin → Ajustes).
 
 type B = { subscriptionStatus: string; trialEndsAt: Date | null; paidUntil: Date | null };
 export const GRACE_DAYS = 3;

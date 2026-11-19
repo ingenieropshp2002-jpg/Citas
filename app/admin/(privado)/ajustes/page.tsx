@@ -41,13 +41,15 @@ export default async function Ajustes() {
           <F name="supportEmail" label="Correo de soporte" value={s.supportEmail} type="email" />
         </section>
         <section id="planes" className="card p-5 space-y-4 scroll-mt-32">
-          <h2 className="h-section">Planes y precios mensuales</h2>
+          <h2 className="h-section">Planes y precios</h2>
+          <p className="font-body-sm text-on-surface-variant">El empresario elige pagar mes a mes o un año completo. Si dejas el anual en 0, se cobra 10 meses (2 gratis).</p>
           {s.plans.map(p => (
             <fieldset key={p.id} className="p-3 rounded-xl bg-surface-container-low space-y-2">
               <legend className="eyebrow px-1">{p.id}</legend>
               <div className="grid grid-cols-2 gap-2">
                 <F name={`plan_${p.id}_name`} label="Nombre" value={p.name} />
-                <F name={`plan_${p.id}_price`} label="Precio (COP)" value={p.price} inputMode="numeric" />
+                <F name={`plan_${p.id}_price`} label="Precio mensual (COP)" value={p.price} inputMode="numeric" />
+                <F name={`plan_${p.id}_priceYear`} label="Precio anual (COP)" value={p.priceYear ?? p.price * 10} inputMode="numeric" />
                 <F name={`plan_${p.id}_maxStaff`} label="Profesionales activos (0 = ilimitado)" value={p.maxStaff ?? 0} inputMode="numeric" />
               </div>
               <F name={`plan_${p.id}_desc`} label="Qué incluye" value={p.desc} area />

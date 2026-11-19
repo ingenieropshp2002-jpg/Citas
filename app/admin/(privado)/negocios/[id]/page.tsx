@@ -6,7 +6,8 @@ import { ActionForm } from '@/components/ui/ActionForm';
 import { Submit } from '@/components/ui/Submit';
 import { Icon } from '@/components/ui/Icon';
 import { ImageInput } from '@/components/ui/ImageInput';
-import { getSettings } from '@/lib/settings';
+import { getSettings, yearPrice } from '@/lib/settings';
+import { cop } from '@/lib/format';
 import { deleteBusinessAction, impersonateAction, registerPaymentAction, saveBusinessAction } from '@/app/admin/actions';
 import { subscriptionState } from '@/lib/subscription';
 
@@ -63,11 +64,11 @@ export default async function EditarNegocio({ params }: { params: Promise<{ id: 
       </ActionForm>
       <section className="card p-5 mt-6 space-y-3">
         <h2 className="h-section flex items-center gap-2"><Icon name="payments" className="text-[20px]" />Registrar pago de suscripción</h2>
-        <p className="font-body-sm text-on-surface-variant">Estado actual: <b>{st.state === 'VENCIDA' ? 'Suspendido' : st.state === 'GRACIA' ? `En gracia (${st.graceLeft} días)` : st.state === 'PRUEBA' ? 'En prueba' : 'Activa'}</b>{b.paidUntil ? ` · pagado hasta ${d(b.paidUntil)}` : ''}. Al registrar el pago el negocio queda activo y se suman los meses desde hoy o desde la fecha de vencimiento, la que sea mayor.</p>
+        <p className="font-body-sm text-on-surface-variant">Estado actual: <b>{st.state === 'VENCIDA' ? 'Suspendido' : st.state === 'GRACIA' ? `En gracia (${st.graceLeft} días)` : st.state === 'PRUEBA' ? 'En prueba' : 'Activa'}</b>{b.paidUntil ? ` · pagado hasta ${d(b.paidUntil)}` : ''}. Precios del plan actual: {cop(plans.find(p => p.id === b.plan)?.price || 0)} al mes o {cop(yearPrice(plans.find(p => p.id === b.plan) || plans[0]))} al año. Al registrar el pago el negocio queda activo y se suman los meses desde hoy o desde la fecha de vencimiento, la que sea mayor.</p>
         <ActionForm action={registerPaymentAction} className="grid sm:grid-cols-4 gap-3 items-end" success="Pago registrado. El negocio quedó activo.">
           <input type="hidden" name="id" value={b.id} />
           <label className="block"><span className="label">Plan</span><select name="plan" defaultValue={b.plan} className="input">{plans.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
-          <label className="block"><span className="label">Meses</span><select name="months" defaultValue="1" className="input">{[1, 2, 3, 6, 12].map(m => <option key={m} value={m}>{m}</option>)}</select></label>
+          <label className="block"><span className="label">Meses</span><select name="months" defaultValue="1" className="input">{[1, 2, 3, 6, 12].map(m => <option key={m} value={m}>{m === 12 ? '12 (1 año)' : m}</option>)}</select></label>
           <label className="block"><span className="label">Valor recibido</span><input name="amount" inputMode="numeric" defaultValue={plans.find(p => p.id === b.plan)?.price ?? ''} className="input" /></label>
           <label className="block"><span className="label">Medio</span><select name="method" className="input"><option value="TRANSFERENCIA">Transferencia</option><option value="EFECTIVO">Efectivo</option><option value="NEQUI">Nequi</option><option value="OTRO">Otro</option></select></label>
           <div className="sm:col-span-4"><Submit className="btn-primary">Registrar pago y activar</Submit></div>

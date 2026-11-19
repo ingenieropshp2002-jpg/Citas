@@ -5,7 +5,7 @@ import { db } from '@/lib/db';
 import { requireBusiness, requireUser } from '@/lib/auth';
 import { createCheckout } from '@/lib/payments';
 import { isSuperAdmin } from '@/lib/auth';
-import { getSettings } from '@/lib/settings';
+import { getSettings, yearPrice } from '@/lib/settings';
 
 const appUrl = () => process.env.APP_URL || 'http://localhost:3000';
 
@@ -14,19 +14,24 @@ export async function paySubscription(fd: FormData) {
   if (perms !== 'ALL') redirect('/panel/suscripcion?error=permiso');
   const plan = (await getSettings()).plans.find(p => p.id === String(fd.get('plan')));
   if (!plan) redirect('/panel/suscripcion');
+  const anual = String(fd.get('period')) === 'ANUAL';
+  const amount = anual ? yearPrice(plan) : plan.price;
   const method = String(fd.get('method') || 'TARJETA');
-  const pay = await db.payment.create({ data: { businessId: business.id, method, amount: plan.price, status: 'PENDIENTE', provider: 'PENDIENTE' } });
-  const reference = `SUB-${plan.id}_${pay.id}`;
-  const co = await createCheckout({ reference, amount: plan.price, description: `Suscripción ${plan.name} (1 mes) - ${business.name}`, email: user.email, method, redirectUrl: `${appUrl()}/pago/retorno?ref=${reference}`, notificationUrl: `${appUrl()}/api/pagos/webhook` });
+  const pay = await db.payment.create({ data: { businessId: business.id, method, amount, status: 'PENDIENTE', provider: 'PENDIENTE' } });
+  // La referencia lleva el plan y el período: SUB-PRO.A_<id> (anual) o SUB-PRO_<id> (mensual).
+  const reference = `SUB-${plan.id}${anual ? '.A' : ''}_${pay.id}`;
+  const co = await createCheckout({ reference, amount, description: `Suscripción ${plan.name} (${anual ? '1 año' : '1 mes'}) - ${business.name}`, email: user.email, method, redirectUrl: `${appUrl()}/pago/retorno?ref=${reference}`, notificationUrl: `${appUrl()}/api/pagos/webhook` });
   await db.payment.update({ where: { id: pay.id }, data: { provider: co.provider } });
   redirect(co.url);
 }
 
-/** Activa o extiende la suscripción tras un pago aprobado (lo llama settlePayment). */
-export async function applySubscriptionPayment(businessId: string, plan: string) {
+/** Activa o extiende la suscripción tras un pago aprobado (lo llama settlePayment). "PRO.A" = un año; "PRO" = un mes. */
+export async function applySubscriptionPayment(businessId: string, planRef: string) {
+  const [plan, period] = planRef.split('.');
+  const days = period === 'A' ? 365 : 30;
   const b = await db.business.findUniqueOrThrow({ where: { id: businessId } });
   const base = b.paidUntil && b.paidUntil > new Date() ? b.paidUntil : new Date();
-  await db.business.update({ where: { id: b.id }, data: { plan, subscriptionStatus: 'ACTIVA', paidUntil: new Date(base.getTime() + 30 * 86400000) } });
+  await db.business.update({ where: { id: b.id }, data: { plan, subscriptionStatus: 'ACTIVA', paidUntil: new Date(base.getTime() + days * 86400000) } });
 }
 
 // ───── Administración de la plataforma (ADMIN_EMAILS) ─────
