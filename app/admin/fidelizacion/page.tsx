@@ -5,7 +5,7 @@ import { PageHeader, Stat } from '@/components/panel/PageHeader';
 import { ActionForm } from '@/components/ui/ActionForm';
 import { Icon } from '@/components/ui/Icon';
 import { bogota, fechaCorta } from '@/lib/format';
-import { waLink, fillVars, waConfigured } from '@/lib/notify';
+import { waLink, fillVars, waReady } from '@/lib/notify';
 import { adjustPoints, redeemReward, saveLoyaltySettings, saveReward, sendWinback } from '../_actions/loyalty';
 import { BirthdaysNow, ToggleReward } from './Buttons';
 
@@ -28,7 +28,7 @@ export default async function Fidelizacion() {
   return (
     <>
       <PageHeader eyebrow="Crecimiento" title="Fidelización" subtitle="Puntos y premios, cumpleaños y recuperación de clientes" />
-      {!waConfigured() && <p className="mb-4 p-3 rounded-xl bg-secondary-fixed/40 font-body-sm">WhatsApp está en modo simulado: los mensajes automáticos se registran pero no salen hasta configurar las claves de WhatsApp Business. Usa los botones verdes: abren tu WhatsApp con el mensaje listo y solo tocas enviar.</p>}
+      {!(await waReady()) && <p className="mb-4 p-3 rounded-xl bg-secondary-fixed/40 font-body-sm">WhatsApp está en modo simulado: los mensajes automáticos se registran pero no salen hasta configurar las claves de WhatsApp Business. Usa los botones verdes: abren tu WhatsApp con el mensaje listo y solo tocas enviar.</p>}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-4">
         <Stat label="Clientes con puntos" value={String(withPoints.length)} icon="loyalty" tone="gold" />
         <Stat label="Puntos por canjear" value={withPoints.reduce((a, c) => a + c.points, 0).toLocaleString('es-CO')} icon="stars" />
@@ -83,7 +83,7 @@ export default async function Fidelizacion() {
       </div>
       <div className="grid xl:grid-cols-2 gap-4 mt-4">
         <section className="card p-5">
-          <div className="flex flex-wrap items-center justify-between gap-2 mb-3"><h2 className="h-section flex items-center gap-2"><Icon name="cake" className="text-secondary" />Cumpleaños de este mes</h2>{waConfigured() && <BirthdaysNow />}</div>
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3"><h2 className="h-section flex items-center gap-2"><Icon name="cake" className="text-secondary" />Cumpleaños de este mes</h2>{(await waReady()) && <BirthdaysNow />}</div>
           <p className="font-body-sm text-on-surface-variant mb-3">{b.birthdayEnabled ? 'El saludo sale solo el día del cumpleaños a partir de las 9 a. m.' : 'El saludo automático está apagado.'} Registra la fecha de nacimiento en la ficha del cliente.</p>
           <ul className="space-y-2">{bdays.map(c => { const d = bogota(c.birthday!); const today = d.d === t.d; return (
             <li key={c.id} className={`flex items-center justify-between gap-2 p-2.5 rounded-xl ${today ? 'bg-secondary-fixed/40' : 'bg-surface-container-low'}`}>
@@ -99,7 +99,7 @@ export default async function Fidelizacion() {
               <div className="min-w-0"><Link href={`/admin/clientes/${c.id}`} className="font-label-lg truncate block hover:text-secondary">{c.name}</Link><p className="font-body-sm text-on-surface-variant">Última visita: {c.lastVisit ? fechaCorta(c.lastVisit) : '—'} · {c.visits} visitas{c.winbackSentAt ? ` · contactado ${fechaCorta(c.winbackSentAt)}` : ''}</p></div>
               {c.phone && <a target="_blank" rel="noreferrer" className="btn-sm btn bg-[#25D366] text-white shrink-0" href={waLink(c.phone, fillVars(WINBACK, { nombre: c.name.split(' ')[0], negocio: b.name, link }))}><Icon name="chat" className="text-[16px]" />Escribir</a>}
             </li>))}{!inactive.length && <li className="text-on-surface-variant">¡Excelente! No tienes clientes inactivos.</li>}</ul>
-          {inactive.length > 0 && waConfigured() && <ActionForm action={sendWinback} className="space-y-2 mt-4" success="Mensajes enviados">
+          {inactive.length > 0 && (await waReady()) && <ActionForm action={sendWinback} className="space-y-2 mt-4" success="Mensajes enviados">
             <label className="block"><span className="label">Mensaje para todos los inactivos</span><textarea name="message" rows={3} defaultValue={WINBACK} className="input" /></label>
             <input name="coupon" className="input uppercase" placeholder="Cupón para {cupon} (opcional)" />
             <button className="btn-primary btn-sm w-full"><Icon name="send" className="text-[16px]" />Enviar por WhatsApp</button>

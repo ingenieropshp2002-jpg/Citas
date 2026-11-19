@@ -3,7 +3,7 @@ import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db';
 import { requireBusiness } from '@/lib/auth';
 import { isOverlapError } from '@/lib/availability';
-import { sendWhatsapp, waConfigured } from '@/lib/notify';
+import { sendWhatsapp, waReady } from '@/lib/notify';
 import { activePeak, createWalkIn, notifyUpcoming, peakRules, QUEUE_DEFAULT_MIN, turnMessage, type PeakRule } from '@/lib/fila';
 import { ymd } from '@/lib/format';
 import { newCode } from '@/app/(cliente)/reservar/actions';
@@ -33,7 +33,7 @@ export async function callWalkIn(id: string) {
   const w = await db.walkIn.findFirst({ where: { id, businessId: b.id } });
   if (!w) return;
   await db.walkIn.update({ where: { id }, data: { status: 'LLAMADO', calledAt: new Date() } });
-  if (w.phone && waConfigured()) await sendWhatsapp(w.phone, turnMessage(w, b.name), { phoneId: b.waPhoneId });
+  if (w.phone && (await waReady())) await sendWhatsapp(w.phone, turnMessage(w, b.name), { phoneId: b.waPhoneId, businessId: b.id, template: { kind: 'TURNO', params: [w.name.split(' ')[0], b.name, String(w.number)] } });
   done();
 }
 

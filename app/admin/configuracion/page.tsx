@@ -7,7 +7,7 @@ import { Icon } from '@/components/ui/Icon';
 import { saveSettings } from '../_actions/catalog';
 import { parseJson } from '@/lib/format';
 import { CopyLink } from './CopyLink';
-import { waConfigured, waLink } from '@/lib/notify';
+import { waReady, waLink } from '@/lib/notify';
 import Link from 'next/link';
 
 export const metadata = { title: 'Configuración' };
@@ -80,7 +80,7 @@ export default async function Configuracion({ searchParams }: { searchParams: Pr
             <label className="block"><span className="label">Recordatorio (horas antes)</span><input name="reminderHours" type="number" min={1} defaultValue={b.reminderHours} className="input" /></label>
             <label className="flex items-center gap-2"><input type="checkbox" name="autoConfirmRequest" defaultChecked={b.autoConfirmRequest} className="accent-primary-container" />Pedir al cliente que confirme respondiendo 1 (o 2 para reprogramar)</label>
             <label className="block"><span className="label">ID del número de WhatsApp del negocio (opcional)</span><input name="waPhoneId" defaultValue={b.waPhoneId || ''} className="input" placeholder="Phone number ID de Meta" /></label>
-            <p className="font-body-sm text-on-surface-variant">{waConfigured() ? '✓ WhatsApp Business conectado.' : 'WhatsApp está en modo simulado: los mensajes no salen hasta configurar WHATSAPP_TOKEN y WHATSAPP_PHONE_ID en Cloudflare (ver README).'}</p>
+            <p className="font-body-sm text-on-surface-variant">{(await waReady()) ? '✓ WhatsApp automático activo: confirmaciones y recordatorios salen solos.' : 'WhatsApp automático aún no está activo en la plataforma: mientras tanto envía los mensajes con los botones de WhatsApp (en Recordatorios). Si tienes tu propio número de WhatsApp Business, escribe su ID abajo.'}</p>
           </Sec>
           <Sec title="Plan de suscripción" icon="workspace_premium">
             <p className="text-on-surface-variant">Plan actual: <b>{b.plan}</b>. Cambia de plan o paga tu suscripción desde la página de suscripción.</p>

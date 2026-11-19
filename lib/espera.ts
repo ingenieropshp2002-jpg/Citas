@@ -1,7 +1,7 @@
 // Lista de espera de horarios apartados: cuando se liberan, se avisa a quienes tocaron "Avísame si se libera".
 import { db } from './db';
 import { pushToBusiness, pushToUsers } from './push';
-import { sendWhatsapp, waConfigured } from './notify';
+import { sendWhatsapp, waReady } from './notify';
 import { fechaCorta, hm, time12, ymd } from './format';
 
 type Freed = { businessId: string; staffId: string; start: Date };
@@ -22,7 +22,7 @@ export async function notifyFreed(list: Freed[], why: string | null = 'Horario l
         const svc = (() => { try { return (JSON.parse(w.serviceIds) as string[])[0]; } catch { return undefined; } })();
         const url = `/reservar/${b.slug}?profesional=${a.staffId}&fecha=${ymd(a.start)}${svc ? `&servicio=${svc}` : ''}`;
         await pushToUsers([w.userId], { title: '🔔 ¡Se liberó el horario!', body: `${when} con ${first} en ${b.name}. Resérvalo antes que otra persona.`, url, tag: `libre-${a.staffId}-${a.start.getTime()}` });
-        if (waConfigured()) {
+        if ((await waReady())) {
           const u = await db.user.findUnique({ where: { id: w.userId }, select: { phone: true, name: true } });
           if (u?.phone) await sendWhatsapp(u.phone, `🔔 ${u.name.split(' ')[0]}, se liberó el horario que esperabas: ${when} con ${first} en ${b.name}. Resérvalo aquí antes que otra persona: ${(process.env.APP_URL || '').replace(/\/$/, '')}${url}`, { phoneId: b.waPhoneId });
         }

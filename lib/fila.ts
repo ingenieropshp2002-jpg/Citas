@@ -100,12 +100,12 @@ export const turnLink = (id: string) => `${process.env.APP_URL || ''}/fila/${id}
 
 /** Avisa automáticamente (si WhatsApp API está configurado) a quienes ya están cerca de su turno. */
 export async function notifyUpcoming(b: { id: string; name: string; queueNotifyAhead: number; waPhoneId?: string | null }) {
-  const { waConfigured, sendWhatsapp } = await import('@/lib/notify');
-  if (!waConfigured()) return;
+  const { waReady, sendWhatsapp } = await import('@/lib/notify');
+  if (!(await waReady())) return;
   const q = (await queueToday(b.id)).filter(w => w.status === 'ESPERANDO');
   for (const w of q.slice(0, Math.max(0, b.queueNotifyAhead))) {
     if (w.notifiedAt || !w.phone) continue;
-    await sendWhatsapp(w.phone, nearTurnMessage(w, b.name, w.position, turnLink(w.id)), { phoneId: b.waPhoneId });
+    await sendWhatsapp(w.phone, nearTurnMessage(w, b.name, w.position, turnLink(w.id)), { phoneId: b.waPhoneId, businessId: b.id, template: { kind: 'TURNO', params: [w.name.split(' ')[0], b.name, String(w.number)] } });
     await db.walkIn.update({ where: { id: w.id }, data: { notifiedAt: new Date() } });
   }
 }

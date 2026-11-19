@@ -20,7 +20,7 @@ export async function acceptDeposit(fd: FormData) {
     db.appointment.update({ where: { id: a.id }, data: { depositStatus: 'PAGADO', status: a.status === 'PENDIENTE' ? 'CONFIRMADA' : a.status } }),
     db.payment.updateMany({ where: { appointmentId: a.id, status: 'PENDIENTE' }, data: { status: 'APROBADO' } })
   ]);
-  if (a.customer.phone) await sendWhatsapp(a.customer.phone, `✅ ${a.customer.name.split(' ')[0]}, recibimos tu abono. Tu cita en ${business.name} el ${fechaLarga(a.start)} a las ${time12(hm(a.start))} quedó confirmada (${a.code}).`, { phoneId: business.waPhoneId });
+  if (a.customer.phone) await sendWhatsapp(a.customer.phone, `✅ ${a.customer.name.split(' ')[0]}, recibimos tu abono. Tu cita en ${business.name} el ${fechaLarga(a.start)} a las ${time12(hm(a.start))} quedó confirmada (${a.code}).`, { phoneId: business.waPhoneId, businessId: business.id, template: { kind: 'CONFIRMACION', params: [a.customer.name.split(' ')[0], business.name, `${fechaLarga(a.start)} a las ${time12(hm(a.start))}`, 'confirmada (abono recibido)', `${(process.env.APP_URL || '').replace(/\/$/, '')}/cita/${a.code}`] } });
   revalidatePath('/admin/abonos'); revalidatePath('/admin/agenda');
   return { ok: true };
 }

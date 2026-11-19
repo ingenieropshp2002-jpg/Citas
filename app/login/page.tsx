@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { LoginForms } from './LoginForms';
-import { waConfigured } from '@/lib/notify';
+import { waReady } from '@/lib/notify';
 import { getSettings } from '@/lib/settings';
 import { AppMark } from '@/components/ui/AppMark';
 import { IMG } from '@/lib/images';
@@ -21,7 +21,7 @@ export default async function Login({ searchParams }: { searchParams: Promise<{ 
           : <Link href="/" className="flex items-center gap-2 mb-8"><AppMark s={s} size={9} /><span className="font-headline-sm text-headline-sm text-primary-container dark:text-primary">{s.appName}</span></Link>}
         <h1 className="font-headline-lg-mobile text-headline-lg-mobile text-primary-container dark:text-primary">Te damos la bienvenida</h1>
         <p className="text-on-surface-variant mb-6">Ingresa para reservar y gestionar tus citas.</p>
-        <LoginForms next={next} google={!!process.env.GOOGLE_CLIENT_ID} phone={waConfigured()} />
+        <LoginForms next={next} google={!!process.env.GOOGLE_CLIENT_ID} phone={(await waReady())} />
         {process.env.SHOW_DEMO === '1' && <p className="mt-6 text-center font-body-sm text-body-sm text-on-surface-variant">Demo: dueno@demo.co · cliente@demo.co (clave demo1234)</p>}
       </div>
     </main>

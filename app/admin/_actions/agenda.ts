@@ -3,7 +3,7 @@ import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db';
 import { requireBusiness } from '@/lib/auth';
 import { isFree, isOverlapError } from '@/lib/availability';
-import { fromBogota } from '@/lib/format';
+import { fechaLarga, fromBogota, hm, time12 } from '@/lib/format';
 import { consumeSupplies } from '@/lib/inventory';
 import { sendWhatsapp } from '@/lib/notify';
 import { sendReminders } from '@/lib/automations';
@@ -30,7 +30,7 @@ export async function createAppointmentPanel(_: unknown, fd: FormData) {
   let a;
   try { a = await db.appointment.create({ data: { code: await newCode(), businessId: business.id, customerId, staffId, start, end, status: 'CONFIRMADA', source: 'PANEL', total: services.reduce((x, s) => x + s.price, 0), notes: String(fd.get('notes') || '') || null, services: { create: services.map(s => ({ serviceId: s.id, price: s.price, durationMin: s.durationMin })) } }, include: { customer: true } }); }
   catch (e) { if (isOverlapError(e)) return { error: 'Ese horario se acaba de ocupar. Elige otro.' }; throw e; }
-  if (a.customer.phone && fd.get('notify')) await sendWhatsapp(a.customer.phone, `Hola ${a.customer.name}, tu cita en ${business.name} quedó agendada (${a.code}).`);
+  if (a.customer.phone && fd.get('notify')) await sendWhatsapp(a.customer.phone, `Hola ${a.customer.name}, tu cita en ${business.name} quedó agendada (${a.code}).`, { phoneId: business.waPhoneId, businessId: business.id, template: { kind: 'CONFIRMACION', params: [a.customer.name.split(' ')[0], business.name, `${fechaLarga(a.start)} a las ${time12(hm(a.start))}`, 'agendada', `${(process.env.APP_URL || '').replace(/\/$/, '')}/cita/${a.code}`] } });
   revalidatePath('/admin/agenda');
   return { ok: true };
 }

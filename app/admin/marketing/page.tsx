@@ -7,14 +7,14 @@ import { Drawer } from '@/components/ui/Drawer';
 import { Icon } from '@/components/ui/Icon';
 import { audience, saveCampaign, saveCoupon } from '../_actions/marketing';
 import { cop, fechaCorta } from '@/lib/format';
-import { fillVars, waConfigured, waLink } from '@/lib/notify';
+import { fillVars, waReady, waLink } from '@/lib/notify';
 import { RemindersNow, SendCampaign, ToggleCoupon } from './Buttons';
 
 export const metadata = { title: 'Marketing' };
 const AUD: Record<string, string> = { TODOS: 'Todos los clientes', INACTIVOS: 'Inactivos (+60 días)', CUMPLEANOS: 'Cumpleañeros del mes', NUEVOS: 'Nuevos (1 visita)' };
 export default async function Marketing() {
   const { business: b } = await requireBusiness('marketing');
-  const manual = !waConfigured();
+  const manual = !(await waReady());
   const link = `${process.env.APP_URL || ''}/negocio/${b.slug}`;
   const [campaigns, coupons, inactive] = await Promise.all([
     db.campaign.findMany({ where: { businessId: b.id }, orderBy: { createdAt: 'desc' } }),

@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { db } from '@/lib/db';
 import { fechaLarga, hm, time12 } from '@/lib/format';
-import { sendWhatsapp } from '@/lib/notify';
+import { getWa, sendWhatsapp } from '@/lib/notify';
 
 // Webhook de WhatsApp Cloud API (Meta). Configúrelo en Meta > WhatsApp > Configuración con la URL
-// https://SU-DOMINIO/api/whatsapp/webhook y el token WHATSAPP_VERIFY_TOKEN; suscriba el campo "messages".
+// https://SU-DOMINIO/api/whatsapp/webhook y el token de verificación de /superadmin/whatsapp; suscriba el campo "messages".
 // - "1", "sí", "confirmo"  → confirma la próxima cita del cliente.
 // - "2", "reprogramar"      → envía el enlace para reprogramar.
 // - saludo o palabras como cita/reservar/agendar → responde con el enlace para reservar en ese negocio (reserva por WhatsApp).
@@ -13,12 +13,12 @@ const appUrl = () => process.env.APP_URL || 'http://localhost:3000';
 
 export async function GET(req: NextRequest) {
   const p = req.nextUrl.searchParams;
-  if (p.get('hub.mode') === 'subscribe' && process.env.WHATSAPP_VERIFY_TOKEN && p.get('hub.verify_token') === process.env.WHATSAPP_VERIFY_TOKEN) return new NextResponse(p.get('hub.challenge') || '', { status: 200 });
+  const { verifyToken } = await getWa();
+  if (p.get('hub.mode') === 'subscribe' && verifyToken && p.get('hub.verify_token') === verifyToken) return new NextResponse(p.get('hub.challenge') || '', { status: 200 });
   return new NextResponse('Forbidden', { status: 403 });
 }
 
-function validSignature(raw: string, sig: string | null) {
-  const secret = process.env.WHATSAPP_APP_SECRET;
+function validSignature(raw: string, sig: string | null, secret: string) {
   if (!secret) return true; // sin secreto configurado no se valida (solo para pruebas)
   if (!sig?.startsWith('sha256=')) return false;
   const a = Buffer.from(sig.slice(7), 'hex'); const b = createHmac('sha256', secret).update(raw).digest();
@@ -29,7 +29,7 @@ const last10 = (p: string) => p.replace(/\D/g, '').slice(-10);
 
 export async function POST(req: NextRequest) {
   const raw = await req.text();
-  if (!validSignature(raw, req.headers.get('x-hub-signature-256'))) return NextResponse.json({ error: 'firma inválida' }, { status: 401 });
+  if (!validSignature(raw, req.headers.get('x-hub-signature-256'), (await getWa()).appSecret)) return NextResponse.json({ error: 'firma inválida' }, { status: 401 });
   let body: any; try { body = JSON.parse(raw); } catch { return NextResponse.json({ ok: true }); }
   for (const entry of body.entry || []) for (const ch of entry.changes || []) {
     const v = ch.value || {}; const phoneId: string | undefined = v.metadata?.phone_number_id;

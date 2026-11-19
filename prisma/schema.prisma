@@ -656,3 +656,17 @@ model SlotWatch {
 
   @@unique([staffId, start, userId], map: "SlotWatch_staff_start_user")
 }
+
+/// Registro de mensajes de WhatsApp (enviados, con error o en modo de prueba).
+model WaLog {
+  id         String   @id @default(cuid())
+  businessId String?
+  to         String
+  kind       String
+  text       String
+  status     String // PRUEBA | ENVIADO | ERROR
+  error      String?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+}

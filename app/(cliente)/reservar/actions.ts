@@ -108,7 +108,7 @@ export async function createBooking(input: { businessId: string; serviceIds: str
     return { redirect: co.url };
   }
   await pushToBusiness(b.id, { title: '📅 Nueva reserva', body: `${customer.name} · ${input.date} ${input.time}`, url: '/admin/agenda', tag: `cita-${code}` }, appt.staffId);
-  if (phone) await sendWhatsapp(phone, `Hola ${user.name}, recibimos tu solicitud de cita en ${b.name} (${code}) para el ${input.date} a las ${input.time}. Te confirmaremos pronto.`);
+  if (phone) await sendWhatsapp(phone, `Hola ${user.name}, recibimos tu solicitud de cita en ${b.name} (${code}) para el ${fechaCorta(start)} a las ${time12(input.time)}. Te confirmaremos pronto.`, { phoneId: b.waPhoneId, businessId: b.id, template: { kind: 'CONFIRMACION', params: [user.name.split(' ')[0], b.name, `${fechaCorta(start)} a las ${time12(input.time)}`, 'reservada', `${appUrl()}/cita/${code}`] } });
   return { redirect: `/cita/${code}` };
 }
 
@@ -121,7 +121,7 @@ export async function settlePayment(reference: string, approved: boolean, provid
   if (approved && reference.startsWith('SUB-')) { const { applySubscriptionPayment } = await import('@/app/admin/_actions/subscription'); await applySubscriptionPayment(pay.businessId, reference.slice(4).split('_')[0]); }
   if (pay.appointment) {
     await db.appointment.update({ where: { id: pay.appointment.id }, data: approved ? { depositStatus: 'PAGADO', status: 'CONFIRMADA' } : { depositStatus: 'PENDIENTE' } });
-    if (approved && pay.appointment.customer.phone) await sendWhatsapp(pay.appointment.customer.phone, `✅ Tu cita ${pay.appointment.code} en ${pay.appointment.business.name} está confirmada. Te recordaremos antes de tu cita.`);
+    if (approved && pay.appointment.customer.phone) await sendWhatsapp(pay.appointment.customer.phone, `✅ Tu cita ${pay.appointment.code} en ${pay.appointment.business.name} está confirmada. Te recordaremos antes de tu cita.`, { phoneId: pay.appointment.business.waPhoneId, businessId: pay.appointment.businessId, template: { kind: 'CONFIRMACION', params: [pay.appointment.customer.name.split(' ')[0], pay.appointment.business.name, `${fechaCorta(pay.appointment.start)} a las ${time12(hm(pay.appointment.start))}`, 'confirmada', `${appUrl()}/cita/${pay.appointment.code}`] } });
   }
   return pay;
 }
