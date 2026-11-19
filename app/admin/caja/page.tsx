@@ -47,7 +47,10 @@ export default async function Caja({ searchParams }: { searchParams: Promise<{ c
     if (a) preset = { appointmentId: a.id, customerId: a.customerId, lines: a.services.map(s => ({ serviceId: s.serviceId, staffId: a.staffId, price: s.price })), deposit: a.depositStatus === 'PAGADO' ? a.depositAmount : 0, depositMethod: a.paymentMethod || 'NEQUI' };
   }
   const valid = session.sales.filter(s => s.status === 'PAGADA');
-  const byMethod = valid.flatMap(s => s.payments).reduce<Record<string, number>>((a, p) => ({ ...a, [p.method]: (a[p.method] || 0) + p.amount }), {});
+  const byMethod = valid.flatMap(s => s.payments).filter(p => p.method !== 'PAQUETE').reduce<Record<string, number>>((a, p) => ({ ...a, [p.method]: (a[p.method] || 0) + p.amount }), {});
+  // Paquetes, membresías y tarjetas de regalo vendidos con la caja abierta
+  const prepaidSales = await db.prepaidMove.findMany({ where: { businessId: b.id, cashSessionId: session.id, type: { in: ['VENTA', 'RENOVACION'] } }, select: { method: true, amount: true } });
+  for (const m of prepaidSales) if (m.method) byMethod[m.method] = (byMethod[m.method] || 0) + m.amount;
   const expected = session.openingAmount + (byMethod.EFECTIVO || 0);
   return (
     <>

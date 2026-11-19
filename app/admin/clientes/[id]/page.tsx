@@ -16,15 +16,17 @@ import { Drawer } from '@/components/ui/Drawer';
 import { ConfirmButton } from '@/components/ui/Confirm';
 import { FORMULA_FIELDS, parseFormula } from '@/lib/ficha';
 import { deleteRecord } from '../../_actions/ficha';
+import { customerWallet } from '@/lib/prepago';
 
 export default async function Cliente({ params }: { params: Promise<{ id: string }> }) {
   const { business: b, staffId, user } = await requireBusiness('clientes');
   const c = await db.customer.findFirst({ where: { id: (await params).id, businessId: b.id }, include: { appointments: { include: { staff: true, services: { include: { service: true } } }, orderBy: { start: 'desc' } }, sales: { include: { items: true }, orderBy: { createdAt: 'desc' } } } });
   if (!c) notFound();
-  const [records, photos, me] = await Promise.all([
+  const [records, photos, me, wallet] = await Promise.all([
     db.clientRecord.findMany({ where: { customerId: c.id, businessId: b.id }, orderBy: [{ date: 'desc' }, { createdAt: 'desc' }] }),
     db.customerPhoto.findMany({ where: { customerId: c.id, businessId: b.id }, select: { id: true, recordId: true, kind: true }, orderBy: { createdAt: 'asc' } }),
-    staffId ? db.staff.findFirst({ where: { id: staffId }, select: { name: true } }) : null
+    staffId ? db.staff.findFirst({ where: { id: staffId }, select: { name: true } }) : null,
+    customerWallet(b.id, c.id)
   ]);
   const lastFormula = records.map(r => ({ r, f: parseFormula(r.formula) })).find(x => x.f);
   const visits = c.appointments.filter(a => a.start <= new Date() && !['CANCELADA', 'NO_ASISTIO'].includes(a.status)).slice(0, 15).map(a => ({ id: a.id, label: `${fechaCorta(a.start)} · ${a.services.map(s => s.service.name).join(', ')}`, service: a.services.map(s => s.service.name).join(', '), staff: a.staff.name, date: new Date(a.start.getTime() - 5 * 3600_000).toISOString().slice(0, 10) }));
@@ -65,9 +67,12 @@ export default async function Cliente({ params }: { params: Promise<{ id: string
             );
           })}</ol>
         </section>
-        <section className="card p-5">
+        <section className="card p-5 space-y-5">
+          {wallet.length > 0 && <div><h2 className="h-section mb-2">Paquetes y membresías</h2><ul className="space-y-2">{wallet.map(w => <li key={w.id}><Link href={`/admin/paquetes/${w.id}`} className="block p-3 rounded-xl bg-secondary-fixed/25 hover:bg-secondary-fixed/40"><p className="font-label-lg">{w.name}</p><p className="font-body-sm text-on-surface-variant">{[...w.credits.map(x => `${x.total - x.used}/${x.total} ${x.name}`), w.discountPct ? `${w.discountPct}% dto.` : ''].filter(Boolean).join(' · ')}{w.expiresAt ? ` · vence ${fechaCorta(new Date(w.expiresAt))}` : ''}</p></Link></li>)}</ul></div>}
+          <div>
           <h2 className="h-section mb-3">Última fórmula</h2>
           {lastFormula ? <><p className="font-body-sm text-on-surface-variant mb-2">{fechaCorta(lastFormula.r.date)}{lastFormula.r.staffName ? ` · ${lastFormula.r.staffName}` : ''}</p><dl className="space-y-1">{FORMULA_FIELDS.filter(([k]) => lastFormula.f![k]).map(([k, l]) => <div key={k} className="flex justify-between gap-3"><dt className="text-on-surface-variant">{l}</dt><dd className="font-label-lg text-right">{lastFormula.f![k]}</dd></div>)}</dl></> : <p className="text-on-surface-variant">Sin fórmulas registradas.</p>}
+          </div>
         </section>
         <section className="card p-5 xl:col-span-2">
           <h2 className="h-section mb-3">Historial de citas</h2>

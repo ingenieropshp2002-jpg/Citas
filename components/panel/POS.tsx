@@ -1,16 +1,17 @@
 'use client';
-import { useMemo, useState, useTransition } from 'react';
+import { useEffect, useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/ui/Icon';
 import { cop } from '@/lib/format';
 import { computeLine, summarize } from '@/lib/tax';
-import { checkout } from '@/app/admin/_actions/pos';
+import { checkout, posWallet } from '@/app/admin/_actions/pos';
+import type { Wallet } from '@/lib/prepago';
 
 type Svc = { id: string; name: string; price: number; taxRate: number; category: string; staffIds: string[] };
 type Prod = { id: string; name: string; price: number; taxRate: number; stock: number; sku: string; barcode: string | null; category: string };
 type Cust = { id: string; name: string; phone: string | null; docType: string; docNumber: string | null; email: string | null };
-type Line = { key: string; kind: 'SERVICIO' | 'PRODUCTO'; id: string; name: string; unitPrice: number; taxRate: number; quantity: number; discount: number; staffId: string | null; max?: number };
-const METHODS = [['EFECTIVO', 'Efectivo', 'payments'], ['TARJETA', 'Datáfono', 'credit_card'], ['NEQUI', 'Nequi', 'smartphone'], ['DAVIPLATA', 'Daviplata', 'smartphone'], ['TRANSFERENCIA', 'Transferencia', 'account_balance'], ['PSE', 'PSE', 'account_balance']];
+type Line = { key: string; kind: 'SERVICIO' | 'PRODUCTO'; id: string; name: string; unitPrice: number; taxRate: number; quantity: number; discount: number; staffId: string | null; max?: number; prepaidId?: string | null };
+const METHODS = [['EFECTIVO', 'Efectivo', 'payments'], ['TARJETA', 'Datáfono', 'credit_card'], ['NEQUI', 'Nequi', 'smartphone'], ['DAVIPLATA', 'Daviplata', 'smartphone'], ['TRANSFERENCIA', 'Transferencia', 'account_balance'], ['PSE', 'PSE', 'account_balance'], ['REGALO', 'Tarjeta de regalo', 'redeem']];
 
 export function POS({ services, products, staff, customers, posLimit, preset }: {
   services: Svc[]; products: Prod[]; staff: { id: string; name: string }[]; customers: Cust[]; posLimit: number;
@@ -25,12 +26,18 @@ export function POS({ services, products, staff, customers, posLimit, preset }: 
   const [wantsInvoice, setWantsInvoice] = useState(false);
   const cust = customers.find(c => c.id === customerId);
   const [buyer, setBuyer] = useState({ docType: '13', docNumber: '', name: '', email: '' });
-  const [pays, setPays] = useState<{ method: string; amount: number; received?: number }[]>(preset?.deposit ? [{ method: preset.depositMethod, amount: preset.deposit }, { method: 'EFECTIVO', amount: 0 }] : [{ method: 'EFECTIVO', amount: 0 }]);
+  const [wallet, setWallet] = useState<Wallet>([]);
+  useEffect(() => { setWallet([]); setLines(ls => ls.map(l => ({ ...l, prepaidId: null }))); if (customerId) posWallet(customerId).then(setWallet).catch(() => {}); }, [customerId]);
+  const [pays, setPays] = useState<{ method: string; amount: number; received?: number; ref?: string }[]>(preset?.deposit ? [{ method: preset.depositMethod, amount: preset.deposit }, { method: 'EFECTIVO', amount: 0 }] : [{ method: 'EFECTIVO', amount: 0 }]);
   const [err, setErr] = useState(''); const [pending, start] = useTransition();
 
   const calc = useMemo(() => lines.map(l => ({ ...l, ...computeLine(l) })), [lines]);
   const sum = summarize(calc);
-  const total = sum.total + tip;
+  const covered = calc.filter(l => l.prepaidId).reduce((a, l) => a + l.total, 0);
+  const total = sum.total + tip - covered;
+  // Sesiones que aún quedan en cada paquete, descontando las que ya se marcaron en esta venta
+  const left = (pid: string, serviceId: string, except?: string) => { const c = wallet.find(w => w.id === pid)?.credits.find(x => x.serviceId === serviceId); return c ? c.total - c.used - lines.filter(l => l.key !== except && l.prepaidId === pid && l.id === serviceId).reduce((a, l) => a + l.quantity, 0) : 0; };
+  const member = wallet.find(w => w.discountPct > 0);
   const deposit = preset?.deposit || 0;
   const paid = pays.reduce((a, p) => a + (p.amount || 0), 0);
   const needsFE = wantsInvoice || sum.total > posLimit;
@@ -49,7 +56,7 @@ export function POS({ services, products, staff, customers, posLimit, preset }: 
     const empty = pays.findIndex(p => !p.amount); const finalPays = empty >= 0 && pays.filter(p => !p.amount).length === 1 ? pays.map((p, j) => j === empty ? { ...p, amount: Math.max(0, total - paid) } : p) : pays;
     const b = needsFE ? (buyer.docNumber ? buyer : cust?.docNumber ? { docType: cust.docType, docNumber: cust.docNumber, name: cust.name, email: cust.email || '' } : null) : (cust?.docNumber ? { docType: cust.docType, docNumber: cust.docNumber, name: cust.name, email: cust.email || '' } : null);
     if (wantsInvoice && !b) { setErr('Para factura electrónica a solicitud del cliente, ingresa su documento y nombre.'); return; }
-    const res = await checkout({ items: lines.map(l => ({ kind: l.kind, id: l.id, quantity: l.quantity, unitPrice: l.unitPrice, discount: l.discount, staffId: l.staffId })), customerId: customerId || null, appointmentId: preset?.appointmentId || null, tip, couponCode: coupon || undefined, payments: finalPays, wantsInvoice, buyer: b });
+    const res = await checkout({ items: lines.map(l => ({ kind: l.kind, id: l.id, quantity: l.quantity, unitPrice: l.unitPrice, discount: l.discount, staffId: l.staffId, prepaidId: l.prepaidId || null })), customerId: customerId || null, appointmentId: preset?.appointmentId || null, tip, couponCode: coupon || undefined, payments: finalPays, wantsInvoice, buyer: b });
     if ('error' in res && res.error) { setErr(res.error); return; }
     if ('saleId' in res) r.push(`/admin/caja/ventas/${res.saleId}${res.docError ? `?docError=${encodeURIComponent(res.docError)}` : ''}`);
   });
@@ -85,7 +92,10 @@ export function POS({ services, products, staff, customers, posLimit, preset }: 
         {lines.length === 0 ? <p className="text-center text-on-surface-variant py-10">Agrega servicios o productos</p> : (
           <ul className="divide-y divide-parchment max-h-[34vh] overflow-y-auto">{calc.map(l => (
             <li key={l.key} className="py-2.5">
-              <div className="flex justify-between gap-2"><span className="font-label-lg text-label-lg">{l.name}</span><span className="tnum font-bold">{cop(l.total)}</span></div>
+              <div className="flex justify-between gap-2"><span className="font-label-lg text-label-lg">{l.name}</span><span className={`tnum font-bold ${l.prepaidId ? 'line-through text-on-surface-variant' : ''}`}>{cop(l.total)}</span></div>
+              {l.kind === 'SERVICIO' && wallet.filter(w => w.credits.some(c => c.serviceId === l.id)).map(w => { const n = left(w.id, l.id, l.key); return (n >= l.quantity || l.prepaidId === w.id) && (
+                <label key={w.id} className="mt-1 flex items-center gap-2 font-label-md text-[#065F46] dark:text-[#6EE7B7]"><input type="checkbox" className="accent-primary-container" checked={l.prepaidId === w.id} onChange={e => upd(l.key, { prepaidId: e.target.checked ? w.id : null })} />Usar {w.kind === 'MEMBRESIA' ? 'membresía' : 'paquete'} «{w.name}» (quedan {n})</label>
+              ); })}
               <div className="flex items-center gap-2 mt-1.5">
                 <div className="flex items-center rounded-lg border border-parchment"><button className="w-7 h-7" onClick={() => l.quantity > 1 ? upd(l.key, { quantity: l.quantity - 1 }) : setLines(lines.filter(x => x.key !== l.key))}>−</button><span className="w-6 text-center tnum">{l.quantity}</span><button className="w-7 h-7" onClick={() => (!l.max || l.quantity < l.max) && upd(l.key, { quantity: l.quantity + 1 })}>+</button></div>
                 {l.kind === 'SERVICIO' && <select value={l.staffId || ''} onChange={e => upd(l.key, { staffId: e.target.value })} className="input !h-7 !px-2 !text-[12px] flex-1">{staff.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select>}
@@ -95,6 +105,7 @@ export function POS({ services, products, staff, customers, posLimit, preset }: 
             </li>
           ))}</ul>
         )}
+        {member && lines.some(l => !l.prepaidId) && <button onClick={() => setLines(lines.map(l => l.prepaidId ? l : { ...l, discount: Math.round(l.unitPrice * l.quantity * member.discountPct / 100) }))} className="mt-2 w-full chip !h-9 justify-center"><Icon name="workspace_premium" className="text-[16px] text-secondary" />Aplicar {member.discountPct}% de la membresía «{member.name}»</button>}
         <div className="grid grid-cols-2 gap-2 mt-3">
           <input value={coupon} onChange={e => setCoupon(e.target.value.toUpperCase())} className="input !h-9" placeholder="Cupón" />
           <div className="flex gap-1">{[0, 10].map(p => <button key={p} onClick={() => setTip(Math.round(sum.total * p / 100 / 100) * 100)} className={`chip !h-9 flex-1 min-w-0 !px-2 whitespace-nowrap ${tip === Math.round(sum.total * p / 100 / 100) * 100 ? 'chip-on' : ''}`}>{p ? '+10%' : 'Sin propina'}</button>)}</div>
@@ -103,6 +114,7 @@ export function POS({ services, products, staff, customers, posLimit, preset }: 
           <div className="flex justify-between text-on-surface-variant"><dt>Subtotal (base)</dt><dd>{cop(sum.subtotal)}</dd></div>
           {sum.byRate.map(t => <div key={t.rate} className="flex justify-between text-on-surface-variant"><dt>IVA {t.rate}% sobre {cop(t.base)}</dt><dd>{cop(t.tax)}</dd></div>)}
           {tip > 0 && <div className="flex justify-between text-on-surface-variant"><dt>Propina voluntaria</dt><dd>{cop(tip)}</dd></div>}
+          {covered > 0 && <div className="flex justify-between text-success"><dt>Cubierto con paquete / membresía</dt><dd>−{cop(covered)}</dd></div>}
           {deposit > 0 && <div className="flex justify-between text-success"><dt>Incluye depósito pagado online</dt><dd>{cop(deposit)}</dd></div>}
           <div className="flex justify-between font-title-lg text-title-lg pt-1 border-t border-parchment"><dt>Total</dt><dd>{cop(total)}</dd></div>
         </dl>
@@ -127,6 +139,7 @@ export function POS({ services, products, staff, customers, posLimit, preset }: 
               <select value={p.method} onChange={e => setPays(pays.map((x, j) => j === i ? { ...x, method: e.target.value } : x))} className="input !h-10">{METHODS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
               <input type="number" min={0} value={p.amount || ''} onFocus={() => fillPays(i)} onChange={e => setPays(pays.map((x, j) => j === i ? { ...x, amount: Number(e.target.value) } : x))} className="input !h-10" placeholder={cop(total)} />
               {pays.length > 1 ? <button onClick={() => setPays(pays.filter((_, j) => j !== i))} className="text-danger" aria-label="Quitar pago"><Icon name="close" /></button> : <span />}
+              {p.method === 'REGALO' && <input value={p.ref || ''} onChange={e => setPays(pays.map((x, j) => j === i ? { ...x, ref: e.target.value.toUpperCase() } : x))} className="input !h-9 col-span-3 tracking-widest" placeholder="Código de la tarjeta (XXXX-XXXX)" />}
               {p.method === 'EFECTIVO' && <div className="col-span-3 grid grid-cols-2 gap-2"><input type="number" min={0} value={p.received || ''} onChange={e => setPays(pays.map((x, j) => j === i ? { ...x, received: Number(e.target.value) } : x))} className="input !h-9" placeholder="Efectivo recibido" /><p className="self-center font-label-lg tnum">Cambio: {cop(Math.max(0, (p.received || 0) - (p.amount || total)))}</p></div>}
             </div>
           ))}

@@ -729,3 +729,65 @@ model CustomerPhoto {
   @@index([customerId])
   @@index([recordId])
 }
+
+/// Plan de paquete (N sesiones de servicios) o membresía (mensual, con sesiones incluidas y % de descuento).
+model PrepaidPlan {
+  id           String   @id @default(cuid())
+  businessId   String
+  kind         String   @default("PAQUETE") // PAQUETE | MEMBRESIA
+  name         String
+  description  String?
+  price        Int
+  items        String   @default("[]") // [{serviceId, qty}]
+  validityDays Int      @default(90)
+  discountPct  Int      @default(0)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  @@index([businessId])
+}
+
+/// Paquete o membresía de un cliente, o tarjeta de regalo (con código y saldo).
+model Prepaid {
+  id             String    @id @default(cuid())
+  businessId     String
+  kind           String // PAQUETE | MEMBRESIA | REGALO
+  planId         String?
+  customerId     String?
+  code           String?   @unique
+  name           String
+  price          Int       @default(0)
+  balance        Int       @default(0)
+  credits        String    @default("[]") // [{serviceId, name, total, used}]
+  discountPct    Int       @default(0)
+  buyerName      String?
+  recipientName  String?
+  recipientPhone String?
+  message        String?
+  startsAt       DateTime  @default(now())
+  expiresAt      DateTime?
+  status         String    @default("ACTIVO") // ACTIVO | AGOTADO | ANULADO
+  createdAt      DateTime  @default(now())
+
+  @@index([businessId, status])
+  @@index([customerId])
+}
+
+model PrepaidMove {
+  id            String   @id @default(cuid())
+  businessId    String
+  prepaidId     String
+  type          String // VENTA | RENOVACION | USO | REVERSO | ANULACION
+  amount        Int      @default(0)
+  method        String?
+  cashSessionId String?
+  saleId        String?
+  serviceId     String?
+  note          String?
+  userName      String?
+  createdAt     DateTime @default(now())
+
+  @@index([prepaidId])
+  @@index([saleId])
+  @@index([cashSessionId])
+}
