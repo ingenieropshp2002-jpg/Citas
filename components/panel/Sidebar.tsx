@@ -6,16 +6,17 @@ import { Icon } from '@/components/ui/Icon';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { logout } from '@/app/login/actions';
 import { PushToggle, dropPushOnThisDevice } from '@/components/panel/PushToggle';
+import { switchSede } from '@/app/admin/_actions/sedes';
 
 export const NAV = [
   ['/admin', 'space_dashboard', 'Inicio', null], ['/admin/agenda', 'calendar_month', 'Agenda', 'agenda'], ['/admin/fila', 'pending_actions', 'Fila y huecos', 'agenda'], ['/admin/recordatorios', 'notifications_active', 'Recordatorios', 'agenda'], ['/admin/abonos', 'account_balance', 'Abonos', 'agenda'], ['/admin/clientes', 'groups', 'Clientes', 'clientes'],
   ['/admin/servicios', 'content_cut', 'Servicios', 'servicios'], ['/admin/equipo', 'badge', 'Equipo', 'equipo'], ['/admin/caja', 'point_of_sale', 'Caja / POS', 'caja'], ['/admin/paquetes', 'redeem', 'Paquetes y regalos', 'caja'],
   ['/admin/inventario', 'inventory_2', 'Inventario', 'inventario'], ['/admin/facturacion', 'receipt_long', 'Facturación DIAN', 'facturacion'], ['/admin/gastos', 'request_quote', 'Gastos', 'gastos'],
   ['/admin/fidelizacion', 'loyalty', 'Fidelización', 'fidelizacion'], ['/admin/marketing', 'campaign', 'Marketing', 'marketing'], ['/admin/resenas', 'reviews', 'Reseñas', 'marketing'],
-  ['/admin/reportes', 'monitoring', 'Reportes', 'reportes'], ['/admin/academia', 'school', 'Academia', null], ['/admin/suscripcion', 'workspace_premium', 'Suscripción', 'configuracion'], ['/admin/configuracion', 'settings', 'Configuración', 'configuracion']
+  ['/admin/reportes', 'monitoring', 'Reportes', 'reportes'], ['/admin/academia', 'school', 'Academia', null], ['/admin/sedes', 'storefront', 'Sedes', 'configuracion'], ['/admin/suscripcion', 'workspace_premium', 'Suscripción', 'configuracion'], ['/admin/configuracion', 'settings', 'Configuración', 'configuracion']
 ] as const;
 
-export function Sidebar({ business, user, perms, lowStock }: { business: { name: string; slug: string; plan: string }; user: { name: string; avatar: string | null }; perms: string[] | 'ALL'; lowStock: number }) {
+export function Sidebar({ business, user, perms, lowStock, sedes = [] }: { sedes?: { id: string; name: string }[]; business: { id?: string; name: string; slug: string; plan: string }; user: { name: string; avatar: string | null }; perms: string[] | 'ALL'; lowStock: number }) {
   const p = usePathname(); const [open, setOpen] = useState(false);
   const items = NAV.filter(n => !n[3] || perms === 'ALL' || perms.includes(n[3]));
   const nav = (
@@ -34,6 +35,7 @@ export function Sidebar({ business, user, perms, lowStock }: { business: { name:
   const head = (
     <div className="px-2 mb-6">
       <Link href="/admin" className="flex items-center gap-2"><span className="w-9 h-9 rounded-lg bg-secondary-fixed text-primary-container flex items-center justify-center font-headline-sm italic">R</span><div className="min-w-0"><p className="font-title-md text-title-md text-white truncate">{business.name}</p><p className="font-label-sm text-label-sm text-secondary-fixed uppercase tracking-wider">Plan {business.plan}</p></div></Link>
+      {sedes.length > 1 && <form action={switchSede} className="mt-3"><label className="sr-only" htmlFor="sede">Sede</label><select id="sede" name="id" defaultValue={business.id} onChange={e => e.currentTarget.form?.requestSubmit()} className="w-full h-9 rounded-lg bg-white/10 text-white border border-white/15 px-2 font-label-md [&>option]:text-on-surface">{sedes.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}</select></form>}
     </div>
   );
   const foot = (

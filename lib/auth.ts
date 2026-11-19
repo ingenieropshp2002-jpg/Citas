@@ -60,12 +60,21 @@ export async function requireUser(next = '/') {
   return u;
 }
 
+export const SEDE_COOKIE = 'rc_sede';
+/** Sedes del dueño (la principal primero) y la que tiene elegida en el panel. Se calcula una vez por petición. */
+export const ownedBusinesses = cache(async (userId: string) => {
+  const list = await db.business.findMany({ where: { ownerId: userId }, orderBy: { createdAt: 'asc' } });
+  list.sort((a, b) => (a.parentId ? 1 : 0) - (b.parentId ? 1 : 0));
+  const want = (await cookies()).get(SEDE_COOKIE)?.value;
+  return { list, current: list.find(b => b.id === want) || list[0] || null };
+});
+
 export type Perm = 'agenda' | 'clientes' | 'caja' | 'inventario' | 'reportes' | 'configuracion' | 'marketing' | 'servicios' | 'equipo' | 'facturacion' | 'gastos' | 'fidelizacion';
 
 /** Devuelve el negocio que administra el usuario (dueño o profesional con permisos). */
 export async function requireBusiness(perm?: Perm, opts: { allowExpired?: boolean } = {}) {
   const user = await requireUser('/admin');
-  let business = await db.business.findFirst({ where: { ownerId: user.id } });
+  let business = (await ownedBusinesses(user.id)).current;
   let perms: string[] | 'ALL' = 'ALL';
   let staffId: string | null = null;
   if (!business) {

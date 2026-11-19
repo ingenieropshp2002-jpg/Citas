@@ -1,4 +1,4 @@
-import { getUser } from '@/lib/auth';
+import { getUser, ownedBusinesses } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { redirect } from 'next/navigation';
 import { Sidebar } from '@/components/panel/Sidebar';
@@ -12,7 +12,8 @@ export async function generateMetadata() { const s = await getSettings(); return
 export default async function PanelLayout({ children }: { children: React.ReactNode }) {
   const user = await getUser();
   if (!user) redirect('/login?next=/admin');
-  let business = await db.business.findFirst({ where: { ownerId: user.id } });
+  const owned = await ownedBusinesses(user.id);
+  let business = owned.current;
   let perms: string[] | 'ALL' = 'ALL';
   if (!business) {
     const st = await db.staff.findUnique({ where: { userId: user.id }, include: { business: true } });
@@ -23,7 +24,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   const sub = subscriptionState(business);
   return (
     <div className="min-h-screen bg-surface-container-low/60 dark:bg-surface">
-      <Sidebar business={{ name: business.name, slug: business.slug, plan: business.plan }} user={{ name: user.name, avatar: user.avatar }} perms={perms} lowStock={low} />
+      <Sidebar sedes={owned.list.map(s => ({ id: s.id, name: s.name }))} business={{ id: business.id, name: business.name, slug: business.slug, plan: business.plan }} user={{ name: user.name, avatar: user.avatar }} perms={perms} lowStock={low} />
       <div className="lg:pl-64 pt-14 lg:pt-0">{sub.state === 'GRACIA' ? <div className="bg-[#FEE2E2] text-[#9F1239] px-margin py-2 font-label-md text-center">Tu plan venció. Tienes {sub.graceLeft} {sub.graceLeft === 1 ? 'día' : 'días'} de gracia antes de que tu negocio se suspenda. <Link href="/admin/suscripcion" className="underline font-bold">Pagar ahora</Link></div>
         : sub.state === 'PRUEBA' ? <div className="bg-secondary-fixed/60 text-on-secondary-fixed px-margin py-2 font-label-md text-center">Prueba gratis: te quedan {sub.daysLeft} {sub.daysLeft === 1 ? 'día' : 'días'}, sin tarjeta. <Link href="/admin/suscripcion" className="underline font-bold">Ver planes</Link></div>
         : sub.state === 'ACTIVA' && sub.warn ? <div className="bg-[#FEF3C7] text-[#92400E] px-margin py-2 font-label-md text-center">Tu plan vence en {sub.daysLeft} {sub.daysLeft === 1 ? 'día' : 'días'}. Después tienes 3 días de gracia. <Link href="/admin/suscripcion" className="underline font-bold">Renovar</Link></div> : null}<main className="p-margin md:p-margin-tablet xl:px-margin-desktop max-w-[1500px] mx-auto"><PushToggle variant="banner" />{children}</main></div>

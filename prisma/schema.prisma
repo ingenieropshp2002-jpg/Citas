@@ -72,6 +72,7 @@ model Business {
   plan                String    @default("PRO") // BASICO | PRO | PREMIUM
   active              Boolean   @default(true)
   ownerId             String
+  parentId            String? // sede principal (si esta es una sede adicional)
   owner               User      @relation("owner", fields: [ownerId], references: [id])
   // Datos fiscales (emisor)
   legalName           String?

@@ -48,6 +48,7 @@ export async function saveBusinessAction(_: unknown, fd: FormData) {
     active: fd.get('active') === 'on', ...(ownerId ? { ownerId } : {})
   } });
   if (ownerId) await db.user.update({ where: { id: ownerId }, data: { role: 'OWNER' } });
+  await (await import('@/lib/sedes')).syncSedes(id);
   revalidatePath('/superadmin', 'layout'); revalidatePath(`/negocio/${slug}`);
   return { ok: true };
 }
@@ -118,6 +119,7 @@ export async function registerPaymentAction(_: unknown, fd: FormData) {
     db.payment.create({ data: { businessId: b.id, method: str(fd, 'method') || 'TRANSFERENCIA', amount, status: 'APROBADO', provider: 'MANUAL', providerRef: `SUB-${plan}-ADMIN-${now}` } }),
     db.business.update({ where: { id: b.id }, data: { plan, subscriptionStatus: 'ACTIVA', paidUntil } })
   ]);
+  await (await import('@/lib/sedes')).syncSedes(b.id);
   revalidatePath('/superadmin', 'layout');
   return { ok: true };
 }

@@ -34,6 +34,9 @@ export default async function Negocio({ params }: { params: Promise<{ slug: stri
   const imgs = parseJson<string[]>(b.images, []);
   const products = await db.product.findMany({ where: { businessId: b.id, active: true, showInShop: true, kind: { in: ['VENTA', 'AMBOS'] }, price: { gt: 0 } }, orderBy: [{ category: 'asc' }, { name: 'asc' }] });
   const cats = [...new Set(products.map(p => p.category))];
+  // Otras sedes de la misma marca
+  const root = b.parentId || b.id;
+  const sedes = (await db.business.findMany({ where: { OR: [{ id: root }, { parentId: root }], id: { not: b.id }, active: true }, select: { slug: true, name: true, address: true, zone: true, city: true, subscriptionStatus: true, trialEndsAt: true, paidUntil: true } })).filter(x => !isSuspended(x));
   const hours = parseJson<Record<string, [string, string] | null>>(b.openingHours, {});
   const now = bogota(new Date());
   const today = hours[String(now.dow)];
@@ -84,6 +87,7 @@ export default async function Negocio({ params }: { params: Promise<{ slug: stri
           </div>
           <div className="flex items-center gap-space-xs mt-space-sm text-on-surface-variant"><Icon name="location_on" className="text-[18px] text-secondary" /><p className="font-body-md text-body-md truncate">{b.address}</p></div>
           <p className="mt-3 text-on-surface-variant max-w-3xl">{b.description}</p>
+          {sedes.length > 0 && <div className="mt-3 flex flex-wrap items-center gap-2"><span className="font-label-md text-on-surface-variant">Otras sedes:</span>{sedes.map(x => <Link key={x.slug} href={`/negocio/${x.slug}`} className="chip !h-8"><Icon name="storefront" className="text-[16px] text-secondary" />{x.name}{x.zone ? ` · ${x.zone}` : ''}</Link>)}</div>}
           {queueStatus(b).open && <div className="mt-4 p-3 rounded-2xl border border-parchment bg-surface-container-low flex flex-wrap items-center gap-3 max-w-xl">
             <Icon name="storefront" className="text-secondary text-[22px]" />
             <div className="flex-1 min-w-[180px]"><p className="font-label-lg">¿Ya estás en el local?</p><p className="font-body-sm text-on-surface-variant">Fila abierta hoy, solo para quienes están aquí sin cita.</p></div>

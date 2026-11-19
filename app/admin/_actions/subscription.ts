@@ -29,9 +29,11 @@ export async function paySubscription(fd: FormData) {
 export async function applySubscriptionPayment(businessId: string, planRef: string) {
   const [plan, period] = planRef.split('.');
   const days = period === 'A' ? 365 : 30;
-  const b = await db.business.findUniqueOrThrow({ where: { id: businessId } });
+  const { principalId, syncSedes } = await import('@/lib/sedes');
+  const b = await db.business.findUniqueOrThrow({ where: { id: await principalId(businessId) } });
   const base = b.paidUntil && b.paidUntil > new Date() ? b.paidUntil : new Date();
   await db.business.update({ where: { id: b.id }, data: { plan, subscriptionStatus: 'ACTIVA', paidUntil: new Date(base.getTime() + days * 86400000) } });
+  await syncSedes(b.id);
 }
 
 // ───── Administración de la plataforma (ADMIN_EMAILS) ─────
@@ -50,5 +52,6 @@ export async function adminSetSubscription(fd: FormData) {
   if (action === 'ACTIVAR_SIEMPRE') await db.business.update({ where: { id }, data: { subscriptionStatus: 'ACTIVA', paidUntil: null, trialEndsAt: null } });
   if (action === 'EXTENDER_PRUEBA') await db.business.update({ where: { id }, data: { subscriptionStatus: 'PRUEBA', trialEndsAt: new Date(Math.max(now, b.trialEndsAt?.getTime() || 0) + (await getSettings()).trialDays * day) } });
   if (action === 'SUSPENDER') await db.business.update({ where: { id }, data: { subscriptionStatus: 'VENCIDA', paidUntil: null, trialEndsAt: new Date(now - day) } });
+  await (await import('@/lib/sedes')).syncSedes(id);
   revalidatePath('/superadmin', 'layout');
 }

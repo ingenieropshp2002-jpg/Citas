@@ -11,15 +11,16 @@ import { waReady, waLink } from '@/lib/notify';
 import Link from 'next/link';
 
 export const metadata = { title: 'Configuración' };
-export default async function Configuracion({ searchParams }: { searchParams: Promise<{ nuevo?: string }> }) {
+export default async function Configuracion({ searchParams }: { searchParams: Promise<{ nuevo?: string; sede?: string }> }) {
   const { business: b } = await requireBusiness('configuracion');
-  const nuevo = (await searchParams).nuevo;
+  const sp = await searchParams; const nuevo = sp.nuevo;
   const url = `${process.env.APP_URL || 'http://localhost:3000'}/negocio/${b.slug}`;
   const qr = await QRCode.toDataURL(url, { margin: 1, width: 220, color: { dark: '#0d2538' } });
   const Sec = ({ title, icon, children }: { title: string; icon: string; children: React.ReactNode }) => <section className="card p-5"><h2 className="font-title-lg text-title-lg flex items-center gap-2 mb-4"><Icon name={icon} className="text-secondary" />{title}</h2><div className="space-y-3">{children}</div></section>;
   return (
     <>
       <PageHeader eyebrow="Ajustes" title="Configuración" />
+      {sp.sede && <div className="mb-4 p-4 rounded-xl bg-secondary-fixed/40">¡Sede creada! Ya la estás administrando. Revisa sus datos, agrega su equipo y comparte su link de reservas. Cambias de sede desde el menú.</div>}
       {nuevo && <div className="mb-4 p-4 rounded-xl bg-secondary-fixed/40">¡Tu negocio fue creado! Completa los datos, agrega servicios y profesionales, y comparte tu link de reservas.</div>}
       <section className="card-raised p-5 mb-4 grid md:grid-cols-[1fr_auto] gap-4 items-center">
         <div>
