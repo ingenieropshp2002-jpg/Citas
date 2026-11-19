@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { createSession } from '@/lib/auth';
+import { signIn } from '@/lib/auth';
 export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get('code'); const state = req.nextUrl.searchParams.get('state') || '/';
   const app = process.env.APP_URL || req.nextUrl.origin;
@@ -11,6 +11,5 @@ export async function GET(req: NextRequest) {
   let user = await db.user.findFirst({ where: { OR: [{ googleId: info.sub }, ...(info.email ? [{ email: info.email }] : [])] } });
   if (!user) user = await db.user.create({ data: { googleId: info.sub, email: info.email, name: info.name || info.email, avatar: info.picture } });
   else if (!user.googleId) user = await db.user.update({ where: { id: user.id }, data: { googleId: info.sub } });
-  await createSession(user.id);
-  return NextResponse.redirect(`${app}${state.startsWith('/') && !state.startsWith('//') ? state : '/'}`);
+  return NextResponse.redirect(`${app}${await signIn(user.id, state.startsWith('/') && !state.startsWith('//') ? state : '/')}`);
 }

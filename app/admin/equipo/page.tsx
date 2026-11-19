@@ -9,9 +9,10 @@ import { saveStaff } from '../_actions/catalog';
 import { cop, fromBogota, parseJson, ymd } from '@/lib/format';
 import Link from 'next/link';
 import { getSettings, planMaxStaff } from '@/lib/settings';
+import { roleOf } from '@/lib/roles';
+import { RolePicker } from './RolePicker';
 
 export const metadata = { title: 'Equipo' };
-const PERMS = [['agenda', 'Agenda'], ['clientes', 'Clientes'], ['caja', 'Caja / POS'], ['inventario', 'Inventario'], ['servicios', 'Servicios'], ['equipo', 'Equipo'], ['facturacion', 'Facturación'], ['marketing', 'Marketing'], ['gastos', 'Gastos'], ['fidelizacion', 'Fidelización'], ['reportes', 'Reportes'], ['configuracion', 'Configuración (ve toda la agenda)']];
 type S = Awaited<ReturnType<typeof db.staff.findMany>>[number] & { user?: { email: string | null } | null };
 
 function Fields({ s, businessHours }: { s?: S; businessHours: string }) {
@@ -33,7 +34,7 @@ function Fields({ s, businessHours }: { s?: S; businessHours: string }) {
         <HoursFields prefix="w" value={custom ? s!.workHours : businessHours} />
       </fieldset>
       <label className="block"><span className="label">Días libres / vacaciones (AAAA-MM-DD separados por coma)</span><input name="daysOff" defaultValue={parseJson<string[]>(s?.daysOff, []).join(', ')} className="input" placeholder="2026-12-24, 2026-12-31" /></label>
-      <fieldset><legend className="label">Permisos en el Admin</legend><div className="grid grid-cols-2 gap-1">{PERMS.map(([v, l]) => <label key={v} className="flex items-center gap-2"><input type="checkbox" name="permissions" value={v} defaultChecked={perms.includes(v)} className="accent-primary-container" />{l}</label>)}</div></fieldset>
+      <RolePicker initial={perms} />
       <fieldset className="p-3 rounded-xl bg-surface-container-low"><legend className="label px-1">Acceso al Admin (opcional)</legend>
         <div className="grid grid-cols-2 gap-2"><input name="loginEmail" type="email" defaultValue={s?.user?.email || ''} className="input" placeholder="correo@ejemplo.com" /><input name="loginPassword" type="password" className="input" placeholder={s?.userId ? 'Sin cambios' : 'Contraseña (mín. 8)'} /></div>
       </fieldset>
@@ -68,7 +69,7 @@ export default async function Equipo() {
                 <div className="p-3 rounded-xl bg-surface-container-low"><p className="font-label-sm text-label-sm text-on-surface-variant uppercase">Ventas del mes</p><p className="font-title-md tnum">{cop(sales)}</p></div>
                 <div className="p-3 rounded-xl bg-secondary-fixed/30"><p className="font-label-sm text-label-sm text-on-surface-variant uppercase">Comisión del mes</p><p className="font-title-md tnum">{cop(com)}</p></div>
               </div>
-              <p className="font-body-sm text-on-surface-variant mt-3">{s.userId ? `Acceso: ${s.user?.email}` : 'Sin acceso al Admin'} · {parseJson<string[]>(s.permissions, []).length} permisos</p>
+              <p className="font-body-sm text-on-surface-variant mt-3">{s.userId ? `Acceso: ${s.user?.email}` : 'Sin acceso al Admin'} · {s.userId ? roleOf(parseJson<string[]>(s.permissions, [])) : 'sin rol'}</p>
               <div className="mt-3"><Drawer title={`Editar: ${s.name}`} triggerClass="btn-ghost btn-sm" trigger={<><Icon name="edit" className="text-[16px]" />Editar</>}><ActionForm action={saveStaff}><Fields s={s} businessHours={b.openingHours} /><button className="btn-primary w-full">Guardar</button></ActionForm></Drawer></div>
             </div>
           );

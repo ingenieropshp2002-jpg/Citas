@@ -1,0 +1,49 @@
+# Copia de respaldo automática de la base de datos (esquema citas), todas las noches.
+# El archivo sale cifrado con AES-256 (gpg) y se guarda 30 días como artefacto de la ejecución.
+# Necesita dos secretos del repositorio (Settings → Secrets and variables → Actions):
+#   BACKUP_DATABASE_URL  cadena de conexión "Session pooler" de Supabase (puerto 5432)
+#   BACKUP_PASSPHRASE    frase larga para cifrar; guárdala aparte, sin ella no se puede abrir la copia
+# Para restaurar: gpg -d respaldo.sql.gz.gpg | gunzip | psql "<cadena de conexión>"
+name: Respaldo nocturno
+on:
+  schedule:
+    - cron: '17 7 * * *' # 2:17 a. m. hora Colombia
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  respaldo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Revisar secretos
+        id: check
+        env:
+          DB: ${{ secrets.BACKUP_DATABASE_URL }}
+          PASS: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          if [ -z "$DB" ] || [ -z "$PASS" ]; then echo "Faltan BACKUP_DATABASE_URL o BACKUP_PASSPHRASE: no se hace copia."; echo "ok=false" >> "$GITHUB_OUTPUT"; else echo "ok=true" >> "$GITHUB_OUTPUT"; fi
+      - name: Instalar pg_dump 17
+        if: steps.check.outputs.ok == 'true'
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSo /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client-17
+      - name: Copia cifrada
+        if: steps.check.outputs.ok == 'true'
+        env:
+          DB: ${{ secrets.BACKUP_DATABASE_URL }}
+          PASS: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          set -o pipefail
+          /usr/lib/postgresql/17/bin/pg_dump "$DB" --schema=citas --no-owner --no-privileges | gzip -9 \
+            | gpg --batch --yes --symmetric --cipher-algo AES256 --passphrase "$PASS" -o respaldo.sql.gz.gpg
+          ls -lh respaldo.sql.gz.gpg
+      - name: Guardar 30 días
+        if: steps.check.outputs.ok == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: respaldo-${{ github.run_number }}
+          path: respaldo.sql.gz.gpg
+          retention-days: 30

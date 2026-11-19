@@ -14,6 +14,29 @@ export async function createSession(userId: string) {
 }
 export async function destroySession() { (await cookies()).delete(COOKIE); }
 
+// ───── Verificación en dos pasos ─────
+const PENDING = 'rc_2fa';
+/** Inicia sesión; si la cuenta tiene verificación en dos pasos, deja el ingreso pendiente y devuelve la página del código. */
+export async function signIn(userId: string, next: string) {
+  const u = await db.user.findUnique({ where: { id: userId }, select: { totpEnabledAt: true } });
+  if (!u?.totpEnabledAt) { await createSession(userId); return next; }
+  const token = await new SignJWT({ uid: userId, next, n: 0 }).setProtectedHeader({ alg: 'HS256' }).setIssuedAt().setExpirationTime('10m').sign(secret());
+  (await cookies()).set(PENDING, token, { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', path: '/', maxAge: 600 });
+  return '/login/verificar';
+}
+export async function pendingSignIn() {
+  const t = (await cookies()).get(PENDING)?.value; if (!t) return null;
+  try { const { payload } = await jwtVerify(t, secret()); return { uid: String(payload.uid), next: String(payload.next || '/'), n: Number(payload.n || 0) }; } catch { return null; }
+}
+/** Suma un intento fallido (máximo 5) o termina el ingreso pendiente. */
+export async function bumpPending(p: { uid: string; next: string; n: number }) {
+  const c = await cookies();
+  if (p.n + 1 >= 5) { c.delete(PENDING); return false; }
+  c.set(PENDING, await new SignJWT({ ...p, n: p.n + 1 }).setProtectedHeader({ alg: 'HS256' }).setIssuedAt().setExpirationTime('10m').sign(secret()), { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', path: '/', maxAge: 600 });
+  return true;
+}
+export async function finishPending(uid: string) { (await cookies()).delete(PENDING); await createSession(uid); }
+
 /** Usuario de la sesión (una sola consulta por petición). */
 export const getUser = cache(async function getUser() {
   const token = (await cookies()).get(COOKIE)?.value;
@@ -69,7 +92,7 @@ export const ownedBusinesses = cache(async (userId: string) => {
   return { list, current: list.find(b => b.id === want) || list[0] || null };
 });
 
-export type Perm = 'agenda' | 'clientes' | 'caja' | 'inventario' | 'reportes' | 'configuracion' | 'marketing' | 'servicios' | 'equipo' | 'facturacion' | 'gastos' | 'fidelizacion';
+export type Perm = 'agenda' | 'agenda_todos' | 'clientes' | 'caja' | 'inventario' | 'reportes' | 'configuracion' | 'marketing' | 'servicios' | 'equipo' | 'facturacion' | 'gastos' | 'fidelizacion';
 
 /** Devuelve el negocio que administra el usuario (dueño o profesional con permisos). */
 export async function requireBusiness(perm?: Perm, opts: { allowExpired?: boolean } = {}) {

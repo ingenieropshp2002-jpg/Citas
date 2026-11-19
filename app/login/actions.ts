@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import { createHash, randomInt } from 'crypto';
 import { redirect } from 'next/navigation';
 import { db } from '@/lib/db';
-import { createSession, destroySession } from '@/lib/auth';
+import { createSession, destroySession, signIn } from '@/lib/auth';
 import { sendWhatsapp } from '@/lib/notify';
 import { emailConfigured, readResetToken, resetLink, sendEmail } from '@/lib/reset';
 import { getSettings } from '@/lib/settings';
@@ -31,8 +31,7 @@ export async function verifyOtp(phoneRaw: string, code: string, name: string, ne
   await db.otpCode.deleteMany({ where: { phone } });
   let user = await db.user.findUnique({ where: { phone } });
   if (!user) { if (!name.trim()) return { needName: true }; user = await db.user.create({ data: { phone, name: name.trim() } }); }
-  await createSession(user.id);
-  redirect(safeNext(next));
+  redirect(await signIn(user.id, safeNext(next)));
 }
 
 export async function loginEmail(_: unknown, fd: FormData) {
@@ -42,8 +41,7 @@ export async function loginEmail(_: unknown, fd: FormData) {
   if (user?.blocked) return { error: 'Esta cuenta está suspendida. Escríbenos si crees que es un error.', email };
   if (user && !user.passwordHash) return { error: 'Esta cuenta se creó con Google o con celular. Ingresa por ese medio o crea una contraseña con “¿Olvidaste tu contraseña?”.', email };
   if (!user?.passwordHash || !(await bcrypt.compare(String(fd.get('password') || ''), user.passwordHash))) return { error: 'El correo o la contraseña no coinciden.', email };
-  await createSession(user.id);
-  redirect(safeNext(fd.get('next')));
+  redirect(await signIn(user.id, safeNext(fd.get('next'))));
 }
 
 export async function registerEmail(_: unknown, fd: FormData) {
@@ -83,8 +81,7 @@ export async function resetPassword(_: unknown, fd: FormData) {
   if (password.length < 8) return { error: 'La contraseña debe tener al menos 8 caracteres.' };
   if (password !== String(fd.get('password2') || '')) return { error: 'Las contraseñas no coinciden.' };
   await db.user.update({ where: { id: data.user.id }, data: { passwordHash: await bcrypt.hash(password, 10) } });
-  await createSession(data.user.id);
-  redirect(safeNext(data.next));
+  redirect(await signIn(data.user.id, safeNext(data.next)));
 }
 
 export async function logout() { await destroySession(); redirect('/'); }

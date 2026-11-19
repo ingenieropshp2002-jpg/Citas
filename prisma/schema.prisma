@@ -13,22 +13,25 @@ datasource db {
 
 // ───────────── Usuarios y acceso ─────────────
 model User {
-  id           String      @id @default(cuid())
-  name         String
-  email        String?     @unique
-  phone        String?     @unique
-  passwordHash String?
-  googleId     String?     @unique
-  role         String      @default("CLIENT") // CLIENT | OWNER | STAFF | ADMIN
-  superAdmin   Boolean     @default(false) // controla toda la plataforma desde /admin
-  blocked      Boolean     @default(false) // no puede ingresar
-  avatar       String?
-  createdAt    DateTime    @default(now())
-  businesses   Business[]  @relation("owner")
-  staffProfile Staff?
-  customers    Customer[]
-  reviews      Review[]
-  waitEntries  WaitEntry[]
+  id            String      @id @default(cuid())
+  name          String
+  email         String?     @unique
+  phone         String?     @unique
+  passwordHash  String?
+  googleId      String?     @unique
+  role          String      @default("CLIENT") // CLIENT | OWNER | STAFF | ADMIN
+  superAdmin    Boolean     @default(false) // controla toda la plataforma desde /admin
+  blocked       Boolean     @default(false) // no puede ingresar
+  avatar        String?
+  createdAt     DateTime    @default(now())
+  businesses    Business[]  @relation("owner")
+  staffProfile  Staff?
+  customers     Customer[]
+  reviews       Review[]
+  waitEntries   WaitEntry[]
+  totpSecret    String? // verificación en dos pasos (cifrado)
+  totpEnabledAt DateTime?
+  totpRecovery  String?
 }
 
 model OtpCode {

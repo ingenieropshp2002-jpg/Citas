@@ -20,7 +20,7 @@ export default async function Agenda({ searchParams }: { searchParams: Promise<{
   else if (view === 'semana') { from = addDays(date, -((d.getUTCDay() + 6) % 7)); to = addDays(from, 7); }
   else { from = date; to = addDays(date, 1); }
   // Un profesional sin permiso de "configuracion" ve solo su propia agenda
-  const onlyMine = perms !== 'ALL' && !perms.includes('configuracion') && myStaff;
+  const onlyMine = perms !== 'ALL' && !perms.includes('configuracion') && !perms.includes('agenda_todos') && myStaff;
   const staffWhere = { businessId: b.id, active: true, ...(onlyMine ? { id: myStaff! } : {}) };
   const [staff, appts, blocks, services, customers] = await Promise.all([
     db.staff.findMany({ where: staffWhere, orderBy: { name: 'asc' } }),

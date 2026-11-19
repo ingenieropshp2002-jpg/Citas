@@ -20,7 +20,7 @@ export default async function Recordatorios({ searchParams }: { searchParams: Pr
   const today = ymd(new Date()); const date = dia === 'manana' ? addDays(today, 1) : today;
   const range = dia === 'hora' ? { gt: new Date(), lte: new Date(Date.now() + 90 * 60000) } : { gte: fromBogota(date), lt: fromBogota(addDays(date, 1)) };
   const list = await db.appointment.findMany({
-    where: { businessId: b.id, start: range, status: { in: ['PENDIENTE', 'CONFIRMADA'] }, ...(perms !== 'ALL' && !perms.includes('configuracion') && staffId ? { staffId } : {}) },
+    where: { businessId: b.id, start: range, status: { in: ['PENDIENTE', 'CONFIRMADA'] }, ...(perms !== 'ALL' && !perms.includes('configuracion') && !perms.includes('agenda_todos') && staffId ? { staffId } : {}) },
     include: { customer: true, staff: true, services: { include: { service: true } } }, orderBy: { start: 'asc' }
   });
   const kind = dia === 'hora' ? 'HORA' as const : 'DIA' as const;
