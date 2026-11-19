@@ -47,6 +47,14 @@ export default async function Negocio({ params, searchParams }: { params: Promis
   const mapQ = b.lat && b.lng ? `${b.lat},${b.lng}` : encodeURIComponent(b.address);
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+        '@context': 'https://schema.org', '@type': b.category === 'SPA' ? 'DaySpa' : b.category === 'UNAS' ? 'NailSalon' : 'HairSalon',
+        name: b.name, description: b.description, image: imgs.slice(0, 3), telephone: b.phone ? `+57${b.phone}` : undefined,
+        address: { '@type': 'PostalAddress', streetAddress: b.address, addressLocality: b.city, addressCountry: 'CO' },
+        ...(b.lat && b.lng ? { geo: { '@type': 'GeoCoordinates', latitude: b.lat, longitude: b.lng } } : {}),
+        ...(b.reviewCount ? { aggregateRating: { '@type': 'AggregateRating', ratingValue: b.rating, reviewCount: b.reviewCount } } : {}),
+        priceRange: '$$', url: `${(process.env.APP_URL || '').replace(/\/$/, '')}/negocio/${b.slug}`
+      }).replace(/</g, '\\u003c') }} />
       <ShopHeader shop={{ slug: b.slug, name: b.name, logo: b.logo || imgs[0] || null }} />
       <main className="pt-16 pb-28 max-w-[1100px] mx-auto">
         {/* Galería */}

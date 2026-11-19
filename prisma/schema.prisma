@@ -73,6 +73,7 @@ model Business {
   notifyEmail         Boolean   @default(true)
   plan                String    @default("PRO") // BASICO | PRO | PREMIUM
   active              Boolean   @default(true)
+  featured            Boolean   @default(false) // destacado en el buscador (lo marca el superadmin)
   ownerId             String
   parentId            String? // sede principal (si esta es una sede adicional)
   owner               User      @relation("owner", fields: [ownerId], references: [id])

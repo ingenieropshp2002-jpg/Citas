@@ -45,7 +45,7 @@ export async function saveBusinessAction(_: unknown, fd: FormData) {
     city: str(fd, 'city'), zone: str(fd, 'zone') || null, address: str(fd, 'address'), phone: str(fd, 'phone') || null, whatsapp: str(fd, 'whatsapp') || null,
     instagram: str(fd, 'instagram') || null, logo: str(fd, 'logo') || null, rating: Math.min(5, Math.max(0, num(fd, 'rating'))), reviewCount: Math.max(0, Math.round(num(fd, 'reviewCount'))),
     plan: str(fd, 'plan'), subscriptionStatus: str(fd, 'subscriptionStatus'), trialEndsAt: date(fd, 'trialEndsAt'), paidUntil: date(fd, 'paidUntil'),
-    active: fd.get('active') === 'on', ...(ownerId ? { ownerId } : {})
+    active: fd.get('active') === 'on', featured: fd.get('featured') === 'on', ...(ownerId ? { ownerId } : {})
   } });
   if (ownerId) await db.user.update({ where: { id: ownerId }, data: { role: 'OWNER' } });
   await (await import('@/lib/sedes')).syncSedes(id);

@@ -54,6 +54,7 @@ export default async function EditarNegocio({ params }: { params: Promise<{ id: 
           </div>
           <p className="font-body-sm text-on-surface-variant">Si "Pagado hasta" queda vacío y el estado es Activa, el negocio no vence.</p>
           <label className="flex items-center gap-3 p-3 rounded-xl bg-surface-container-low"><input type="checkbox" name="active" defaultChecked={b.active} className="w-5 h-5 accent-primary-container" /><span className="font-label-lg">Visible en el buscador</span></label>
+          <label className="flex items-center gap-3 p-3 rounded-xl bg-surface-container-low"><input type="checkbox" name="featured" defaultChecked={b.featured} className="w-5 h-5 accent-primary-container" /><span className="font-label-lg">Destacado (aparece primero en el buscador)</span></label>
         </section>
         <section className="card p-5 space-y-3">
           <h2 className="h-section">Cambiar de dueño</h2>
