@@ -49,12 +49,12 @@ export function Sidebar({ business, user, perms, lowStock }: { business: { name:
   return (
     <>
       <aside className="hidden lg:flex fixed inset-y-0 left-0 w-64 bg-primary-container dark:bg-[#07111c] p-4 flex-col z-40">{head}{nav}<PushToggle />{foot}{salir}</aside>
-      <header className="lg:hidden fixed top-0 inset-x-0 h-14 z-40 bg-primary-container text-white flex items-center justify-between px-margin">
+      <header className="lg:hidden fixed top-0 inset-x-0 h-14 z-40 bg-primary-container dark:bg-[#07111c] text-white flex items-center justify-between px-margin">
         <button onClick={() => setOpen(true)} aria-label="Menú" className="w-10 h-10 -ml-2 flex items-center justify-center"><Icon name="menu" /></button>
         <span className="font-title-md truncate">{business.name}</span>
         <Link href="/admin/agenda?nueva=1" aria-label="Nueva cita" className="w-10 h-10 -mr-2 flex items-center justify-center"><Icon name="add_circle" className="text-secondary-fixed" /></Link>
       </header>
-      {open && <div className="lg:hidden fixed inset-0 z-50 bg-black/40" onClick={() => setOpen(false)}><aside className="w-72 h-full bg-primary-container p-4 flex flex-col overflow-y-auto" onClick={e => e.stopPropagation()}>{head}{nav}<PushToggle />{foot}{salir}</aside></div>}
+      {open && <div className="lg:hidden fixed inset-0 z-50 bg-black/40" onClick={() => setOpen(false)}><aside className="w-72 h-full bg-primary-container dark:bg-[#07111c] p-4 flex flex-col overflow-y-auto" onClick={e => e.stopPropagation()}>{head}{nav}<PushToggle />{foot}{salir}</aside></div>}
     </>
   );
 }

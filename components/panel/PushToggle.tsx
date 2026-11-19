@@ -56,14 +56,14 @@ export function PushToggle({ variant = 'sidebar' }: { variant?: 'sidebar' | 'ban
       </div>
     );
   }
-  const cls = 'w-full flex items-center gap-3 min-h-10 px-3 rounded-xl font-label-lg text-label-lg transition text-left';
+  const cls = 'w-full flex items-center gap-3 min-h-10 px-3 py-2 rounded-xl font-label-lg text-label-lg transition text-left';
   if (st === 'cargando' || st === 'no') return null;
   return (
     <div className="mt-2 shrink-0">
       {st === 'activo'
         ? <button onClick={desactivar} disabled={busy} className={`${cls} text-white/80 hover:bg-white/5`}><Icon name="notifications_active" className="text-[20px] text-secondary-fixed" /><span className="flex-1">Avisos activos<span className="block text-[11px] text-white/50 font-normal">Toca para apagarlos en este teléfono</span></span></button>
         : st === 'apagado'
-          ? <button onClick={activar} disabled={busy} className={`${cls} bg-secondary-fixed text-primary-container hover:opacity-90`}><Icon name="notifications" className="text-[20px]" />{busy ? 'Activando…' : 'Activar avisos con sonido'}</button>
+          ? <button onClick={activar} disabled={busy} className={`${cls} border border-secondary-fixed/60 text-secondary-fixed hover:bg-white/10 font-semibold`}><Icon name="notifications_active" className="text-[20px] text-secondary-fixed" />{busy ? 'Activando…' : 'Activar avisos con sonido'}</button>
           : <p className="px-3 py-2 text-white/60 font-label-sm flex gap-2"><Icon name="notifications_off" className="text-[18px]" />{st === 'ios' ? 'En iPhone, primero agrega la app a la pantalla de inicio para recibir avisos.' : 'Los avisos están bloqueados. Permítelos en los ajustes del navegador para este sitio.'}</p>}
       {msg && <p className="px-3 text-danger font-label-sm">{msg}</p>}
     </div>
