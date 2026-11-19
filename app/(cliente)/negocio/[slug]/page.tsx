@@ -6,29 +6,30 @@ import { ShopHeader } from '@/components/cliente/Header';
 import { ServiceList } from '@/components/cliente/ServiceList';
 import { ShopTabs } from '@/components/cliente/ShopTabs';
 import { InstallApp } from '@/components/ui/InstallApp';
+import { shopAppMeta, shopViewport } from '@/lib/appBrand';
 import { Icon } from '@/components/ui/Icon';
 import { bogota, cop, DIAS, parseJson, time12 } from '@/lib/format';
 import { waLink } from '@/lib/notify';
 import { queueStatus } from '@/lib/fila';
 
+export async function generateViewport({ params }: { params: Promise<{ slug: string }> }) {
+  const b = await db.business.findFirst({ where: { slug: (await params).slug }, select: { appColor: true } });
+  return shopViewport(b || {});
+}
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const slug = (await params).slug;
-  const b = await db.business.findUnique({ where: { slug }, select: { name: true, tagline: true, description: true } });
+  const b = await db.business.findUnique({ where: { slug }, select: { slug: true, name: true, tagline: true, description: true, appColor: true, appShortName: true } });
   if (!b) return { title: 'Negocio no encontrado' };
-  const base = `/negocio/${slug}`;
   return {
     title: { absolute: b.name },
     description: b.tagline ? `${b.tagline}. Reserva tu cita en línea.` : b.description.slice(0, 155),
-    manifest: `${base}/app.webmanifest`,
-    applicationName: b.name,
-    icons: { icon: `${base}/icono/192`, apple: `${base}/icono/180` },
-    appleWebApp: { capable: true, title: b.name, statusBarStyle: 'default' as const },
+    ...shopAppMeta(b),
     openGraph: { title: b.name, description: b.tagline || undefined, type: 'website' as const }
   };
 }
 
-export default async function Negocio({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params;
+export default async function Negocio({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ instalar?: string }> }) {
+  const { slug } = await params; const instalar = (await searchParams).instalar;
   const b = await db.business.findUnique({ where: { slug }, include: { services: { where: { active: true }, orderBy: [{ popular: 'desc' }, { price: 'desc' }] }, staff: { where: { active: true } }, reviews: { orderBy: { createdAt: 'desc' }, take: 6 } } });
   if (!b || isSuspended(b)) notFound();
   const imgs = parseJson<string[]>(b.images, []);
@@ -49,6 +50,7 @@ export default async function Negocio({ params }: { params: Promise<{ slug: stri
       <ShopHeader shop={{ slug: b.slug, name: b.name, logo: b.logo || imgs[0] || null }} />
       <main className="pt-16 pb-28 max-w-[1100px] mx-auto">
         {/* Galería */}
+        {instalar && <div className="max-w-2xl mx-auto px-margin pt-4"><InstallApp variant="banner" name={b.name} icon={`/negocio/${b.slug}/icono/192`} /></div>}
         <section className="relative w-full px-margin pt-space-md">
           <div className="grid grid-cols-12 gap-space-xs rounded-xl overflow-hidden shadow-lg bg-surface-container-high p-space-xs">
             <div className="col-span-8 relative aspect-[4/3] md:aspect-[16/9] rounded-lg overflow-hidden group">

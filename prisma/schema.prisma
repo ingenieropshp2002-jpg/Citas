@@ -59,6 +59,8 @@ model Business {
   instagram           String?
   images              String    @default("[]") // JSON: string[]
   logo                String?
+  appColor            String? // color de la app instalable (#RRGGBB)
+  appShortName        String? // nombre corto bajo el ícono
   rating              Float     @default(0)
   reviewCount         Int       @default(0)
   openingHours        String    @default("{}") // JSON: { "1": ["07:00","20:00"], ... } 0=Domingo

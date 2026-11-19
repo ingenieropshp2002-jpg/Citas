@@ -1,3 +1,4 @@
+import { shopAppMeta } from '@/lib/appBrand';
 import { isSuspended } from '@/lib/subscription';
 import { notFound } from 'next/navigation';
 import { db } from '@/lib/db';
@@ -7,7 +8,10 @@ import { BookingWizard } from '@/components/cliente/BookingWizard';
 import { parseJson } from '@/lib/format';
 import { policyLines } from '@/lib/asistencia';
 
-export const metadata = { title: 'Agendar cita' };
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+  const b = await db.business.findFirst({ where: { slug: (await params).slug }, select: { slug: true, name: true, appColor: true, appShortName: true } });
+  return b ? { title: `Agendar cita · ${b.name}`, ...shopAppMeta(b) } : { title: 'Agendar cita' };
+}
 export default async function Reservar({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ servicio?: string; profesional?: string; servicios?: string; fecha?: string }> }) {
   const { slug } = await params; const sp = await searchParams;
   const q = new URLSearchParams(sp as Record<string, string>).toString();
