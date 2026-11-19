@@ -1,3 +1,4 @@
+import { isSuspended } from './subscription';
 import { db } from './db';
 import { parseJson } from './format';
 
@@ -14,7 +15,7 @@ export async function searchBusinesses(p: SearchParams) {
   const q = (p.q || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
   const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
   const here = p.lat && p.lng ? { lat: Number(p.lat), lng: Number(p.lng) } : null;
-  let out = list.map(b => ({
+  let out = list.filter(b => !isSuspended(b)).map(b => ({
     ...b, imgs: parseJson<string[]>(b.images, []),
     from: b.services.length ? Math.min(...b.services.map(s => s.price)) : 0,
     distance: here && b.lat != null && b.lng != null ? km(here, { lat: b.lat, lng: b.lng! }) : null

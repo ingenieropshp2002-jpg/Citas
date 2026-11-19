@@ -3,6 +3,7 @@ import { createHmac } from 'crypto';
 import { db } from './db';
 import { fechaLarga, hm, time12, ymd, bogota } from './format';
 import { peakRules } from './fila';
+import { DEPOSIT_NOTE } from './abono';
 
 const appUrl = () => (process.env.APP_URL || 'http://localhost:3000').replace(/\/$/, '');
 export const confirmToken = (code: string) => createHmac('sha256', (process.env.AUTH_SECRET || 'dev-secret-change-me') + ':confirmar').update(code).digest('base64url').slice(0, 16);
@@ -71,6 +72,13 @@ export async function sweepAppointments(businessId: string, force = false) {
       OR: [{ reminderSent: true }, { reminder1hSent: true }], start: { gt: new Date(now), lte: new Date(now + b.releaseBeforeMin * 60000) } }, select: { id: true, notes: true } });
     for (const a of list) await db.appointment.update({ where: { id: a.id }, data: { status: 'CANCELADA', notes: [a.notes, RELEASED_NOTE].filter(Boolean).join(' · ') } });
     released = list.length;
+  }
+  // Abono por transferencia vencido sin comprobante: se cancela y el horario queda libre.
+  {
+    const list = await db.appointment.findMany({ where: { businessId, status: 'PENDIENTE', paymentMethod: 'TRANSFERENCIA', depositStatus: 'PENDIENTE', depositProofAt: null, depositDueAt: { lte: new Date(now) } }, select: { id: true, notes: true } });
+    for (const a of list) await db.appointment.update({ where: { id: a.id }, data: { status: 'CANCELADA', notes: [a.notes, DEPOSIT_NOTE].filter(Boolean).join(' · ') } });
+    if (list.length) await db.payment.updateMany({ where: { appointmentId: { in: list.map(a => a.id) }, status: 'PENDIENTE' }, data: { status: 'RECHAZADO' } });
+    released += list.length;
   }
   if (b.lateToleranceMin > 0) {
     const list = await db.appointment.findMany({ where: { businessId, status: { in: ['PENDIENTE', 'CONFIRMADA'] }, start: { lt: new Date(now - b.lateToleranceMin * 60000), gt: new Date(now - 24 * 3600e3) } }, select: { id: true, notes: true } });

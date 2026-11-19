@@ -12,7 +12,7 @@ const STEPS = ['Servicio', 'Profesional', 'Horario', 'Pago'];
 const BANKS = ['Bancolombia', 'Davivienda', 'Banco de Bogotá', 'BBVA', 'Banco de Occidente', 'Banco Popular', 'Scotiabank Colpatria', 'Nu Colombia', 'Banco Caja Social', 'Itaú'];
 
 export function BookingWizard({ business, services, staff, initialService, initialStaff, userPhone }: {
-  business: { id: string; name: string; depositPercent: number; requireDeposit: boolean; cancellationHours: number; image?: string };
+  business: { id: string; name: string; depositPercent: number; requireDeposit: boolean; cancellationHours: number; image?: string; transfer?: boolean; deadlineMin?: number };
   services: Svc[]; staff: Stf[]; initialService?: string; initialStaff?: string; userPhone: string;
 }) {
   const router = useRouter();
@@ -21,7 +21,7 @@ export function BookingWizard({ business, services, staff, initialService, initi
   const [staffId, setStaffId] = useState<string | null>(initialStaff || null);
   const [date, setDate] = useState(ymd(new Date()));
   const [time, setTime] = useState('');
-  const [method, setMethod] = useState('NEQUI');
+  const [method, setMethod] = useState(business.transfer && business.requireDeposit ? 'TRANSFERENCIA' : 'NEQUI');
   const [phone, setPhone] = useState(userPhone);
   const [bank, setBank] = useState(BANKS[0]);
   const [coupon, setCoupon] = useState(''); const [discount, setDiscount] = useState(0); const [couponMsg, setCouponMsg] = useState('');
@@ -33,7 +33,7 @@ export function BookingWizard({ business, services, staff, initialService, initi
   const subtotal = chosen.reduce((a, s) => a + s.price, 0);
   const total = subtotal - discount;
   const [rule, setRule] = useState<{ required: boolean; mandatory: boolean; reason: string }>({ required: business.requireDeposit, mandatory: false, reason: '' });
-  useEffect(() => { if (step === 4 && date && time) depositCheck(business.id, date, time, phone).then(r => { setRule(r); if (r.mandatory) setMethod(m => (m === 'EN_LOCAL' ? 'NEQUI' : m)); }); }, [step, date, time, business.id, phone]);
+  useEffect(() => { if (step === 4 && date && time) depositCheck(business.id, date, time, phone).then(r => { setRule(r); if (r.mandatory) setMethod(m => (m === 'EN_LOCAL' ? (business.transfer ? 'TRANSFERENCIA' : 'NEQUI') : m)); else if (!r.required) setMethod(m => (m === 'TRANSFERENCIA' ? 'EN_LOCAL' : m)); else if (business.transfer) setMethod(m => (m === 'NEQUI' ? 'TRANSFERENCIA' : m)); }); }, [step, date, time, business.id, phone]);
   const deposit = method !== 'EN_LOCAL' && rule.required ? Math.max(1000, Math.round(total * business.depositPercent / 100 / 100) * 100) : 0;
   const eligibleStaff = useMemo(() => staff.filter(st => chosen.every(s => s.staffIds.includes(st.id))), [staff, chosen]);
   const stf = staff.find(s => s.id === staffId);
@@ -46,7 +46,8 @@ export function BookingWizard({ business, services, staff, initialService, initi
     if ('error' in r && r.error) { setError(r.error); setAlts(('alternatives' in r && r.alternatives) || []); setTaken('taken' in r && !!r.taken); return; }
     if ('redirect' in r && r.redirect) { if (r.redirect.startsWith('http')) window.location.href = r.redirect; else router.push(r.redirect); }
   });
-  const ctaLabel = step < 4 ? 'Continuar' : deposit ? `Confirmar y pagar ${cop(deposit, true)} con ${method === 'NEQUI' ? 'Nequi' : method === 'PSE' ? 'PSE' : 'Tarjeta'}` : 'Confirmar reserva';
+  const dl = business.deadlineMin || 60; const plazo = dl % 60 ? `${dl} minutos` : `${dl / 60} ${dl === 60 ? 'hora' : 'horas'}`;
+  const ctaLabel = step < 4 ? 'Continuar' : deposit && method === 'TRANSFERENCIA' ? `Reservar y pagar abono de ${cop(deposit, true)}` : deposit ? `Confirmar y pagar ${cop(deposit, true)} con ${method === 'NEQUI' ? 'Nequi' : method === 'PSE' ? 'PSE' : 'Tarjeta'}` : 'Confirmar reserva';
 
   return (
     <div className="flex flex-col w-full pb-44 max-w-3xl mx-auto">
@@ -154,6 +155,7 @@ export function BookingWizard({ business, services, staff, initialService, initi
             )}
             <div className="space-y-space-xs">
               {[
+                ...(business.transfer && rule.required ? [['TRANSFERENCIA', 'Abono por transferencia', 'Transfieres y subes el comprobante', <span key="tr" className="w-8 h-8 rounded-lg bg-primary-container flex items-center justify-center text-secondary-fixed"><Icon name="account_balance" className="text-[18px]" /></span>, 'Sin comisión']] : []),
                 ['NEQUI', 'Nequi', 'Notificación push al celular', <span key="n" className="w-8 h-8 rounded-lg bg-nequi flex items-center justify-center text-white font-bold text-xs">N</span>, 'Instantáneo'],
                 ['PSE', 'PSE (Débito Bancario)', 'Bancolombia, Davivienda, etc.', <span key="p" className="w-8 h-8 rounded-lg bg-pse flex items-center justify-center font-bold text-[10px] text-white">PSE</span>],
                 ['TARJETA', 'Tarjeta débito / Crédito', 'Visa, Mastercard, Amex', <span key="t" className="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-on-surface-variant"><Icon name="credit_card" className="text-[18px]" /></span>],
@@ -164,6 +166,7 @@ export function BookingWizard({ business, services, staff, initialService, initi
                     <div className="flex items-center gap-3">{icon}<div><div className="font-label-lg text-label-lg font-bold flex items-center gap-1.5">{l}{badge && <span className="text-[10px] px-1.5 rounded bg-secondary-fixed text-on-secondary-fixed font-semibold">{badge}</span>}</div><span className="font-body-sm text-body-sm text-on-surface-variant">{d}</span></div></div>
                     <input type="radio" name="pm" className="accent-primary-container w-4 h-4" checked={method === v} onChange={() => setMethod(v as string)} />
                   </label>
+                  {method === 'TRANSFERENCIA' && v === 'TRANSFERENCIA' && <p className="mt-2 font-body-sm text-body-sm text-on-surface-variant">Al reservar verás los datos de la cuenta. Tienes {plazo} para transferir y subir el comprobante; mientras tanto el horario queda apartado para ti. El negocio confirma tu cita al recibirlo.</p>}
                   {method === 'NEQUI' && v === 'NEQUI' && (
                     <div className="mt-space-sm pt-space-xs"><label className="block font-label-sm text-label-sm text-on-surface-variant mb-1">Número de celular Nequi (+57)</label>
                       <div className="relative"><span className="absolute inset-y-0 left-0 pl-3 flex items-center font-label-md text-label-md text-on-surface-variant">+57</span><input className="w-full pl-12 pr-4 py-2.5 rounded-lg bg-surface outline-none focus:bg-surface-container-low" type="tel" inputMode="numeric" value={phone} onChange={e => setPhone(e.target.value)} placeholder="300 000 0000" /></div></div>
@@ -189,7 +192,7 @@ export function BookingWizard({ business, services, staff, initialService, initi
                 {chosen.map(s => <div key={s.id} className="flex justify-between"><span>{s.name}</span><span className="font-medium text-on-surface">{cop(s.price, true)}</span></div>)}
                 {discount > 0 && <div className="flex justify-between text-success"><span>Descuento</span><span>-{cop(discount, true)}</span></div>}
                 <div className="flex justify-between"><span>Tarifa de plataforma &amp; recordatorios</span><span className="text-secondary font-medium">Gratis</span></div>
-                <div className="flex justify-between items-center pt-2 font-semibold text-primary"><span>{deposit ? 'Anticipo a pagar hoy (Online)' : 'Total a pagar en el salón'}</span><span className="text-title-md font-currency-display">{cop(deposit || total, true)}</span></div>
+                <div className="flex justify-between items-center pt-2 font-semibold text-primary"><span>{deposit ? (method === 'TRANSFERENCIA' ? 'Abono por transferencia' : 'Anticipo a pagar hoy (Online)') : 'Total a pagar en el salón'}</span><span className="text-title-md font-currency-display">{cop(deposit || total, true)}</span></div>
                 {deposit > 0 && <div className="flex justify-between"><span>Saldo restante en recepción ({fechaCorta(fromBogota(date, '12:00'))})</span><span className="font-medium">{cop(total - deposit, true)}</span></div>}
               </div>
             </div>

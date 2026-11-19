@@ -15,7 +15,7 @@ export async function saveSettingsAction(_: unknown, fd: FormData) {
   await requireSuperAdmin();
   const appName = str(fd, 'appName');
   if (appName.length < 2) return { error: 'El nombre de la app debe tener al menos 2 caracteres.' };
-  const plans: Plan[] = DEFAULT_SETTINGS.plans.map(p => ({ id: p.id, name: str(fd, `plan_${p.id}_name`) || p.name, price: Math.max(0, Math.round(num(fd, `plan_${p.id}_price`, p.price))), desc: str(fd, `plan_${p.id}_desc`) || p.desc }));
+  const plans: Plan[] = DEFAULT_SETTINGS.plans.map(p => ({ id: p.id, name: str(fd, `plan_${p.id}_name`) || p.name, price: Math.max(0, Math.round(num(fd, `plan_${p.id}_price`, p.price))), desc: str(fd, `plan_${p.id}_desc`) || p.desc, maxStaff: Math.max(0, Math.round(num(fd, `plan_${p.id}_maxStaff`, p.maxStaff ?? 0))) }));
   const logo = str(fd, 'logoUrl');
   if (logo && !/^(https:\/\/|data:image\/)/.test(logo)) return { error: 'El logo debe ser una dirección https:// o una imagen subida.' };
   await saveSettings({
@@ -101,4 +101,23 @@ export async function deleteBusinessAction(_: unknown, fd: FormData) {
   ]);
   revalidatePath('/admin', 'layout'); revalidatePath('/'); revalidatePath(`/negocio/${b.slug}`);
   redirect('/admin/negocios?eliminado=1');
+}
+
+/** Registra un pago de suscripción recibido por fuera (transferencia, efectivo) y reactiva el negocio. */
+export async function registerPaymentAction(_: unknown, fd: FormData) {
+  await requireSuperAdmin();
+  const b = await db.business.findUnique({ where: { id: str(fd, 'id') } });
+  if (!b) return { error: 'El negocio ya no existe.' };
+  const months = Math.min(12, Math.max(1, Math.round(num(fd, 'months', 1))));
+  const plan = str(fd, 'plan') || b.plan;
+  const amount = Math.max(0, Math.round(num(fd, 'amount', 0)));
+  const now = Date.now();
+  const base = Math.max(now, b.paidUntil?.getTime() || 0);
+  const paidUntil = new Date(base + months * 30 * 86400000);
+  await db.$transaction([
+    db.payment.create({ data: { businessId: b.id, method: str(fd, 'method') || 'TRANSFERENCIA', amount, status: 'APROBADO', provider: 'MANUAL', providerRef: `SUB-${plan}-ADMIN-${now}` } }),
+    db.business.update({ where: { id: b.id }, data: { plan, subscriptionStatus: 'ACTIVA', paidUntil } })
+  ]);
+  revalidatePath('/admin', 'layout');
+  return { ok: true };
 }

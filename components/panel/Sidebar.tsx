@@ -5,9 +5,10 @@ import { useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { logout } from '@/app/login/actions';
+import { PushToggle, dropPushOnThisDevice } from '@/components/panel/PushToggle';
 
 export const NAV = [
-  ['/panel', 'space_dashboard', 'Inicio', null], ['/panel/agenda', 'calendar_month', 'Agenda', 'agenda'], ['/panel/fila', 'pending_actions', 'Fila y huecos', 'agenda'], ['/panel/recordatorios', 'notifications_active', 'Recordatorios', 'agenda'], ['/panel/clientes', 'groups', 'Clientes', 'clientes'],
+  ['/panel', 'space_dashboard', 'Inicio', null], ['/panel/agenda', 'calendar_month', 'Agenda', 'agenda'], ['/panel/fila', 'pending_actions', 'Fila y huecos', 'agenda'], ['/panel/recordatorios', 'notifications_active', 'Recordatorios', 'agenda'], ['/panel/abonos', 'account_balance', 'Abonos', 'agenda'], ['/panel/clientes', 'groups', 'Clientes', 'clientes'],
   ['/panel/servicios', 'content_cut', 'Servicios', 'servicios'], ['/panel/equipo', 'badge', 'Equipo', 'equipo'], ['/panel/caja', 'point_of_sale', 'Caja / POS', 'caja'],
   ['/panel/inventario', 'inventory_2', 'Inventario', 'inventario'], ['/panel/facturacion', 'receipt_long', 'Facturación DIAN', 'facturacion'], ['/panel/gastos', 'request_quote', 'Gastos', 'gastos'],
   ['/panel/fidelizacion', 'loyalty', 'Fidelización', 'fidelizacion'], ['/panel/marketing', 'campaign', 'Marketing', 'marketing'],
@@ -43,17 +44,17 @@ export function Sidebar({ business, user, perms, lowStock }: { business: { name:
     </div>
   );
   const salir = (
-    <form action={logout} className="mt-1 shrink-0"><button type="submit" className="w-full flex items-center gap-3 h-11 px-3 rounded-xl font-label-lg text-label-lg text-white/65 hover:text-white hover:bg-white/5 transition"><Icon name="logout" className="text-[20px]" />Cerrar sesión</button></form>
+    <form action={logout} onSubmit={async e => { e.preventDefault(); await Promise.race([dropPushOnThisDevice(), new Promise(r => setTimeout(r, 2500))]); await logout(); }} className="mt-1 shrink-0"><button type="submit" className="w-full flex items-center gap-3 h-11 px-3 rounded-xl font-label-lg text-label-lg text-white/65 hover:text-white hover:bg-white/5 transition"><Icon name="logout" className="text-[20px]" />Cerrar sesión</button></form>
   );
   return (
     <>
-      <aside className="hidden lg:flex fixed inset-y-0 left-0 w-64 bg-primary-container dark:bg-[#07111c] p-4 flex-col z-40">{head}{nav}{foot}{salir}</aside>
+      <aside className="hidden lg:flex fixed inset-y-0 left-0 w-64 bg-primary-container dark:bg-[#07111c] p-4 flex-col z-40">{head}{nav}<PushToggle />{foot}{salir}</aside>
       <header className="lg:hidden fixed top-0 inset-x-0 h-14 z-40 bg-primary-container text-white flex items-center justify-between px-margin">
         <button onClick={() => setOpen(true)} aria-label="Menú" className="w-10 h-10 -ml-2 flex items-center justify-center"><Icon name="menu" /></button>
         <span className="font-title-md truncate">{business.name}</span>
         <Link href="/panel/agenda?nueva=1" aria-label="Nueva cita" className="w-10 h-10 -mr-2 flex items-center justify-center"><Icon name="add_circle" className="text-secondary-fixed" /></Link>
       </header>
-      {open && <div className="lg:hidden fixed inset-0 z-50 bg-black/40" onClick={() => setOpen(false)}><aside className="w-72 h-full bg-primary-container p-4 flex flex-col overflow-y-auto" onClick={e => e.stopPropagation()}>{head}{nav}{foot}{salir}</aside></div>}
+      {open && <div className="lg:hidden fixed inset-0 z-50 bg-black/40" onClick={() => setOpen(false)}><aside className="w-72 h-full bg-primary-container p-4 flex flex-col overflow-y-auto" onClick={e => e.stopPropagation()}>{head}{nav}<PushToggle />{foot}{salir}</aside></div>}
     </>
   );
 }

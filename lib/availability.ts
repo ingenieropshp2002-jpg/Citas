@@ -1,3 +1,4 @@
+import { isSuspended } from './subscription';
 import { db } from './db';
 import { bogota, fromBogota, hm, minutesOf, parseJson, timeOf, ymd } from './format';
 
@@ -21,6 +22,7 @@ export function workRange(businessHours: string, staffHours: string, daysOff: st
 export async function getSlots(businessId: string, date: string, durationMin: number, staffId?: string | null, serviceIds: string[] = []) {
   await (await import('./asistencia')).sweepAppointments(businessId);
   const business = await db.business.findUniqueOrThrow({ where: { id: businessId } });
+  if (isSuspended(business)) return [] as Slot[];
   let staff = await db.staff.findMany({ where: { businessId, active: true, ...(staffId ? { id: staffId } : {}) }, include: { services: true } });
   if (serviceIds.length) staff = staff.filter(s => serviceIds.every(id => s.services.some(x => x.serviceId === id)));
   const dayStart = fromBogota(date, '00:00'); const dayEnd = fromBogota(date, '23:59');

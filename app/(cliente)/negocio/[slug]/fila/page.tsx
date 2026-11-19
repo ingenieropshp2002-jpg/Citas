@@ -1,3 +1,4 @@
+import { isSuspended } from '@/lib/subscription';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { db } from '@/lib/db';
@@ -16,7 +17,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 // Página a la que lleva el QR del local: quien llega sin cita se anota y espera afuera.
 export default async function FilaNegocio({ params }: { params: Promise<{ slug: string }> }) {
   const b = await db.business.findUnique({ where: { slug: (await params).slug }, include: { services: { where: { active: true }, orderBy: { name: 'asc' }, select: { id: true, name: true } } } });
-  if (!b || !b.active) notFound();
+  if (!b || !b.active || isSuspended(b)) notFound();
   const q = await queueToday(b.id);
   const st = queueStatus(b);
   const wait = q.length ? q[q.length - 1].waitMin + 15 : 0;

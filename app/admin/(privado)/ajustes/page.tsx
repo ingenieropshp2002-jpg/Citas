@@ -48,6 +48,7 @@ export default async function Ajustes() {
               <div className="grid grid-cols-2 gap-2">
                 <F name={`plan_${p.id}_name`} label="Nombre" value={p.name} />
                 <F name={`plan_${p.id}_price`} label="Precio (COP)" value={p.price} inputMode="numeric" />
+                <F name={`plan_${p.id}_maxStaff`} label="Profesionales activos (0 = ilimitado)" value={p.maxStaff ?? 0} inputMode="numeric" />
               </div>
               <F name={`plan_${p.id}_desc`} label="Qué incluye" value={p.desc} area />
             </fieldset>

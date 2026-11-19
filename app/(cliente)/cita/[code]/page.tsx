@@ -8,6 +8,10 @@ import { StatusBadge } from '@/components/ui/Status';
 import { cop, fechaLarga, hm, METHOD_LABEL, time12, timeOf, ymd } from '@/lib/format';
 import { attentionPlan, aheadOf } from '@/lib/turnos';
 import { waLink } from '@/lib/notify';
+import { getUser } from '@/lib/auth';
+import { DEPOSIT_NOTE } from '@/lib/abono';
+import { ProofUpload } from './ProofUpload';
+import { AutoRefresh } from '@/components/ui/AutoRefresh';
 
 export const metadata = { title: 'Cita confirmada' };
 const g = (d: Date) => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
@@ -18,6 +22,11 @@ export default async function Cita({ params }: { params: Promise<{ code: string 
   const msg = `Tengo cita en ${a.business.name} el ${fechaLarga(a.start)} a las ${time12(hm(a.start))} (${names}). Código ${a.code}. ${a.business.address}`;
   const gcal = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(names + ' - ' + a.business.name)}&dates=${g(a.start)}/${g(a.end)}&location=${encodeURIComponent(a.business.address)}&details=${encodeURIComponent('Código ' + a.code)}`;
   const ok = a.status === 'CONFIRMADA';
+  const abono = a.paymentMethod === 'TRANSFERENCIA' && a.depositAmount > 0;
+  const waiting = abono && a.depositStatus === 'PENDIENTE' && a.status === 'PENDIENTE';
+  const expired = abono && a.status === 'CANCELADA' && !!a.notes?.includes(DEPOSIT_NOTE);
+  const user = waiting ? await getUser() : null;
+  const mine = !!user && !!(await db.customer.findFirst({ where: { id: a.customerId, userId: user.id }, select: { id: true } }));
   // El día de la cita: ¿va a tiempo o hay personas antes? (citas del mismo profesional y fila en sus huecos)
   const today = ymd(a.start) === ymd(new Date()) && ['PENDIENTE', 'CONFIRMADA', 'EN_SERVICIO'].includes(a.status);
   const plan = today ? await attentionPlan(a.business) : null;
@@ -29,8 +38,25 @@ export default async function Cita({ params }: { params: Promise<{ code: string 
         <div className="text-center">
           <div className={`mx-auto w-20 h-20 rounded-full flex items-center justify-center shadow-raised ${ok ? 'bg-primary-container' : 'bg-secondary-fixed'}`}><Icon name={ok ? 'check' : 'hourglass_top'} className={`text-[40px] ${ok ? 'text-secondary-fixed' : 'text-on-secondary-fixed'}`} /></div>
           <h1 className="mt-4 font-headline-lg-mobile text-headline-lg-mobile text-primary-container dark:text-primary">{ok ? '¡Cita confirmada!' : a.status === 'PENDIENTE' ? 'Solicitud recibida' : 'Detalle de la cita'}</h1>
-          <p className="text-on-surface-variant mt-1">{ok ? 'Te enviamos la confirmación por WhatsApp.' : a.depositStatus === 'PENDIENTE' ? 'Tu depósito está pendiente de pago.' : 'El negocio confirmará tu cita pronto.'}</p>
+          <p className="text-on-surface-variant mt-1">{ok ? 'Te enviamos la confirmación por WhatsApp.' : waiting ? (a.depositProofAt ? 'Recibimos tu comprobante. El negocio lo está revisando.' : 'Tu cupo está apartado mientras pagas el abono.') : expired ? 'El horario se liberó porque no se recibió el abono a tiempo.' : a.depositStatus === 'PENDIENTE' ? 'Tu depósito está pendiente de pago.' : 'El negocio confirmará tu cita pronto.'}</p>
         </div>
+        {waiting && (
+          <div className="card-raised mt-6 p-5 space-y-3 border border-gold/50">
+            {a.depositProofAt && <AutoRefresh seconds={30} />}
+            <div className="flex items-start gap-3">
+              <Icon name="account_balance" className="text-secondary text-[26px]" />
+              <div>
+                <p className="font-title-md">Paga el abono de <b className="tnum">{cop(a.depositAmount, true)}</b> por transferencia</p>
+                {a.depositDueAt && <p className="font-body-sm text-on-surface-variant">Tienes hasta las <b className="text-on-surface">{time12(hm(a.depositDueAt))}</b>{ymd(a.depositDueAt) !== ymd(new Date()) ? ` del ${fechaLarga(a.depositDueAt)}` : ' de hoy'}. Si no subes el comprobante antes, la cita se cancela y el horario queda libre.</p>}
+              </div>
+            </div>
+            <div className="rounded-xl bg-surface-container-low p-4 whitespace-pre-line font-body-md select-all">{a.business.transferInfo || 'El negocio te enviará los datos de la cuenta por WhatsApp.'}</div>
+            <p className="font-body-sm text-on-surface-variant">En el concepto o la descripción escribe tu código <b className="text-on-surface">{a.code}</b>.</p>
+            {a.depositProofAt && <p className="flex items-center gap-2 font-label-lg text-[#059669]"><Icon name="task_alt" className="text-[20px]" />Comprobante enviado. Te avisamos cuando lo confirmen. <a href={`/api/abono/${a.code}`} target="_blank" rel="noreferrer" className="text-secondary underline ml-auto font-label-md">Ver</a></p>}
+            {mine ? <ProofUpload code={a.code} has={!!a.depositProofAt} /> : <Link href={`/login?next=/cita/${a.code}`} className="btn-primary w-full">Inicia sesión para subir el comprobante</Link>}
+          </div>
+        )}
+        {expired && <div className="card mt-6 p-4 flex items-start gap-3 border border-danger/40"><Icon name="event_busy" className="text-danger text-[24px]" /><p className="font-body-md">Esta cita se canceló porque el abono no llegó dentro del plazo. Puedes <Link href={`/reservar/${a.business.slug}`} className="text-secondary font-semibold underline">reservar otro horario</Link>.</p></div>}
         {pos && (a.status === 'EN_SERVICIO'
           ? <div className="card mt-6 p-4 flex items-center gap-3 border border-[#059669]/40"><Icon name="content_cut" className="text-[#059669] text-[24px]" /><p className="font-label-lg">Ya te están atendiendo. ¡Disfruta tu servicio!</p></div>
           : <div className={`card mt-6 p-4 flex items-start gap-3 border ${pos.me.delay > 5 ? 'border-gold/60' : 'border-[#059669]/40'}`}>
@@ -52,7 +78,7 @@ export default async function Cita({ params }: { params: Promise<{ code: string 
             <Row icon="event" label="Fecha y hora" value={fechaLarga(a.start)} sub={time12(hm(a.start))} />
             <div className="border-t border-dashed border-parchment pt-3 space-y-1 tnum">
               <div className="flex justify-between"><span className="text-on-surface-variant">Total</span><b>{cop(a.total, true)}</b></div>
-              {a.depositAmount > 0 && <div className="flex justify-between"><span className="text-on-surface-variant">Depósito ({METHOD_LABEL[a.paymentMethod || ''] || a.paymentMethod})</span><span>{cop(a.depositAmount, true)} · {a.depositStatus === 'PAGADO' ? 'Pagado' : a.depositStatus === 'REEMBOLSADO' ? 'Reembolsado' : 'Pendiente'}</span></div>}
+              {a.depositAmount > 0 && <div className="flex justify-between"><span className="text-on-surface-variant">Depósito ({METHOD_LABEL[a.paymentMethod || ''] || a.paymentMethod})</span><span>{cop(a.depositAmount, true)} · {a.depositStatus === 'PAGADO' ? 'Pagado' : a.depositStatus === 'REEMBOLSADO' ? 'Reembolsado' : expired ? 'No pagado' : a.depositProofAt ? 'En revisión' : 'Pendiente'}</span></div>}
               <div className="flex justify-between"><span className="text-on-surface-variant">Saldo en el salón</span><span>{cop(a.total - (a.depositStatus === 'PAGADO' ? a.depositAmount : 0), true)}</span></div>
             </div>
           </div>

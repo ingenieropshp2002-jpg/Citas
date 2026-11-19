@@ -1,10 +1,13 @@
 'use server';
+import { isSuspended } from '@/lib/subscription';
 import { db } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
 import { getSlots, isFree, isOverlapError } from '@/lib/availability';
 import { depositRule } from '@/lib/asistencia';
 import { getUser } from '@/lib/auth';
-import { addDays, fromBogota, ymd } from '@/lib/format';
+import { addDays, cop, fechaCorta, fromBogota, hm, time12, ymd } from '@/lib/format';
+import { pushToBusiness } from '@/lib/push';
+import { depositDue } from '@/lib/abono';
 import { createCheckout } from '@/lib/payments';
 import { sendWhatsapp } from '@/lib/notify';
 import { revalidatePath } from 'next/cache';
@@ -45,6 +48,7 @@ async function taken(businessId: string, input: { date: string; time: string; st
 export async function createBooking(input: { businessId: string; serviceIds: string[]; staffId: string | null; date: string; time: string; method: string; phone?: string; coupon?: string; notes?: string }) {
   const user = await requireUser();
   const b = await db.business.findUniqueOrThrow({ where: { id: input.businessId } });
+  if (isSuspended(b)) return { error: 'Este negocio no está recibiendo reservas en este momento.' };
   const services = await db.service.findMany({ where: { id: { in: input.serviceIds }, businessId: b.id, active: true } });
   if (!services.length) return { error: 'Selecciona al menos un servicio.' };
   const dur = services.reduce((a, s) => a + s.durationMin, 0);
@@ -65,6 +69,8 @@ export async function createBooking(input: { businessId: string; serviceIds: str
   const existing = mine.find(c => c.userId === user.id) || mine[0] || null;
   const rule = await depositRule(b, start, mine);
   if (rule.required && !rule.optionalLocal && input.method === 'EN_LOCAL') return { error: rule.reason || 'Esta reserva necesita un anticipo. Elige Nequi, PSE o tarjeta.' };
+  const transfer = input.method === 'TRANSFERENCIA';
+  if (transfer && (!b.transferInfo.trim() || !rule.required)) return { error: 'Este negocio no recibe abonos por transferencia. Elige otro medio de pago.' };
   let discount = 0; let couponCode = '';
   if (input.coupon) { const c = await applyCoupon(b.id, input.coupon, total); if ('error' in c) return { error: c.error }; discount = c.discount!; total -= discount; couponCode = c.code!; }
   let customer = existing;
@@ -80,7 +86,7 @@ export async function createBooking(input: { businessId: string; serviceIds: str
     try {
       appt = await db.appointment.create({ data: {
         code, businessId: b.id, customerId: customer.id, staffId, start, end, total, depositAmount: deposit,
-        depositStatus: deposit ? 'PENDIENTE' : 'NO_APLICA', paymentMethod: input.method, notes: [input.notes, discount ? `Cupón ${input.coupon} (-${discount})` : ''].filter(Boolean).join(' · ') || null,
+        depositStatus: deposit ? 'PENDIENTE' : 'NO_APLICA', paymentMethod: input.method, depositDueAt: transfer && deposit ? depositDue(b.depositDeadlineMin, start) : null, notes: [input.notes, discount ? `Cupón ${input.coupon} (-${discount})` : ''].filter(Boolean).join(' · ') || null,
         status: 'PENDIENTE', services: { create: services.map(s => ({ serviceId: s.id, price: s.price, durationMin: s.durationMin })) }
       } });
       break;
@@ -88,12 +94,19 @@ export async function createBooking(input: { businessId: string; serviceIds: str
   }
   if (!appt) return await taken(b.id, input, dur);
   if (couponCode) await db.coupon.updateMany({ where: { businessId: b.id, code: couponCode }, data: { uses: { increment: 1 } } });
+  if (deposit > 0 && transfer) {
+    // Abono por transferencia: el cupo queda apartado hasta el plazo; el cliente sube el comprobante en /cita/[code].
+    await db.payment.create({ data: { businessId: b.id, appointmentId: appt.id, method: 'TRANSFERENCIA', amount: deposit, status: 'PENDIENTE', provider: 'MANUAL', providerRef: `ABONO-${code}` } });
+    await pushToBusiness(b.id, { title: '📅 Nueva reserva (abono pendiente)', body: `${customer.name} · ${input.date} ${input.time} · abono ${cop(deposit)} por transferencia`, url: '/panel/abonos', tag: `cita-${code}` }, appt.staffId);
+    return { redirect: `/cita/${code}` };
+  }
   if (deposit > 0) {
     const pay = await db.payment.create({ data: { businessId: b.id, appointmentId: appt.id, method: input.method, amount: deposit, status: 'PENDIENTE', provider: 'PENDIENTE' } });
     const co = await createCheckout({ reference: `${code}_${pay.id}`, amount: deposit, description: `Depósito cita ${code} - ${b.name}`, email: user.email, method: input.method, redirectUrl: `${appUrl()}/pago/retorno?ref=${code}_${pay.id}`, notificationUrl: `${appUrl()}/api/pagos/webhook` });
     await db.payment.update({ where: { id: pay.id }, data: { provider: co.provider } });
     return { redirect: co.url };
   }
+  await pushToBusiness(b.id, { title: '📅 Nueva reserva', body: `${customer.name} · ${input.date} ${input.time}`, url: '/panel/agenda', tag: `cita-${code}` }, appt.staffId);
   if (phone) await sendWhatsapp(phone, `Hola ${user.name}, recibimos tu solicitud de cita en ${b.name} (${code}) para el ${input.date} a las ${input.time}. Te confirmaremos pronto.`);
   return { redirect: `/cita/${code}` };
 }
@@ -121,6 +134,7 @@ export async function cancelMine(code: string) {
   const refundable = hoursLeft >= a.business.cancellationHours;
   await db.appointment.update({ where: { id: a.id }, data: { status: 'CANCELADA', depositStatus: a.depositStatus === 'PAGADO' ? (refundable ? 'REEMBOLSADO' : 'PAGADO') : a.depositStatus } });
   revalidatePath('/mis-citas');
+  await pushToBusiness(a.businessId, { title: '❌ Cita cancelada', body: `${a.customer.name} canceló su cita del ${fechaCorta(a.start)} a las ${time12(hm(a.start))}`, url: '/panel/agenda', tag: `cita-${a.code}` }, a.staffId);
   return { ok: true, refundable };
 }
 

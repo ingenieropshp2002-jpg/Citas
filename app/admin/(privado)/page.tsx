@@ -23,7 +23,7 @@ export default async function AdminHome() {
     <>
       <PageHeader eyebrow="Plataforma" title="Resumen" subtitle="Todo lo que pasa en la app, en un vistazo." />
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
-        <Stat label="Negocios" value={String(businesses.length)} icon="storefront" hint={`${st.filter(x => x === 'PRUEBA').length} en prueba · ${st.filter(x => x === 'VENCIDA').length} vencidos`} />
+        <Stat label="Negocios" value={String(businesses.length)} icon="storefront" hint={`${st.filter(x => x === 'PRUEBA').length} en prueba · ${st.filter(x => x === 'GRACIA').length} en gracia · ${st.filter(x => x === 'VENCIDA').length} suspendidos`} />
         <Stat label="Ingreso mensual por planes" value={cop(mrr)} icon="payments" tone="gold" hint="Negocios con pago al día" />
         <Stat label="Usuarios" value={String(users)} icon="group" hint={`${clients} clientes`} />
         <Stat label="Citas (30 días)" value={String(appts30)} icon="event_available" hint={`Ventas en negocios: ${cop(sales30._sum.total || 0)}`} />

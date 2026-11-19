@@ -23,7 +23,7 @@ export default async function Negocios({ searchParams }: { searchParams: Promise
       {eliminado && <p role="status" className="mb-4 p-3 rounded-lg bg-[#ECFDF5] text-[#065F46] font-label-md">✓ El negocio fue eliminado.</p>}
       <form className="flex flex-wrap gap-2 mb-3">
         <input name="q" defaultValue={q} placeholder="Buscar por nombre, enlace, ciudad o correo del dueño" className="input flex-1 min-w-[220px]" />
-        <select name="estado" defaultValue={estado} className="input !w-auto"><option value="">Todos</option><option value="PRUEBA">En prueba</option><option value="ACTIVA">Activos</option><option value="VENCIDA">Vencidos</option></select>
+        <select name="estado" defaultValue={estado} className="input !w-auto"><option value="">Todos</option><option value="PRUEBA">En prueba</option><option value="ACTIVA">Activos</option><option value="GRACIA">En gracia</option><option value="VENCIDA">Suspendidos</option></select>
         <button className="btn-ghost">Buscar</button>
       </form>
       <section className="card overflow-x-auto">

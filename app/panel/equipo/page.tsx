@@ -7,6 +7,8 @@ import { Icon } from '@/components/ui/Icon';
 import { HoursFields } from '@/components/panel/HoursFields';
 import { saveStaff } from '../_actions/catalog';
 import { cop, fromBogota, parseJson, ymd } from '@/lib/format';
+import Link from 'next/link';
+import { getSettings, planMaxStaff } from '@/lib/settings';
 
 export const metadata = { title: 'Equipo' };
 const PERMS = [['agenda', 'Agenda'], ['clientes', 'Clientes'], ['caja', 'Caja / POS'], ['inventario', 'Inventario'], ['servicios', 'Servicios'], ['equipo', 'Equipo'], ['facturacion', 'Facturación'], ['marketing', 'Marketing'], ['gastos', 'Gastos'], ['fidelizacion', 'Fidelización'], ['reportes', 'Reportes'], ['configuracion', 'Configuración (ve toda la agenda)']];
@@ -43,9 +45,14 @@ export default async function Equipo() {
   const { business: b } = await requireBusiness('equipo');
   const monthStart = fromBogota(ymd(new Date()).slice(0, 8) + '01');
   const staff = await db.staff.findMany({ where: { businessId: b.id }, include: { user: { select: { email: true } }, saleItems: { where: { sale: { status: 'PAGADA', createdAt: { gte: monthStart } } } }, _count: { select: { appointments: true } } }, orderBy: { name: 'asc' } });
+  const settings = await getSettings();
+  const max = planMaxStaff(settings.plans, b.plan); const activeN = staff.filter(s => s.active).length;
+  const full = max !== null && activeN >= max;
+  const planName = settings.plans.find(p => p.id === b.plan)?.name || b.plan;
   return (
     <>
-      <PageHeader eyebrow="Personas" title="Equipo" subtitle="Horarios, comisiones y permisos" actions={<Drawer title="Nuevo profesional" trigger={<><Icon name="person_add" className="text-[18px]" />Agregar profesional</>}><ActionForm action={saveStaff} resetOnSuccess><Fields businessHours={b.openingHours} /><button className="btn-primary w-full">Crear</button></ActionForm></Drawer>} />
+      <PageHeader eyebrow="Personas" title="Equipo" subtitle={`Horarios, comisiones y permisos · ${activeN}${max !== null ? `/${max}` : ''} profesionales activos (plan ${planName})`} actions={full ? <Link href="/panel/suscripcion" className="btn-primary"><Icon name="upgrade" className="text-[18px]" />Mejorar plan</Link> : <Drawer title="Nuevo profesional" trigger={<><Icon name="person_add" className="text-[18px]" />Agregar profesional</>}><ActionForm action={saveStaff} resetOnSuccess><Fields businessHours={b.openingHours} /><button className="btn-primary w-full">Crear</button></ActionForm></Drawer>} />
+      {full && <div className="card p-4 mb-4 flex flex-wrap items-center gap-3 bg-secondary-fixed/30"><Icon name="info" className="text-[20px]" /><p className="font-body-md flex-1 min-w-[220px]">{activeN > max! ? `Tu plan ${planName} permite ${max} ${max === 1 ? 'profesional activo' : 'profesionales activos'} y hoy tienes ${activeN}.` : `Llegaste al límite de tu plan ${planName}: ${max} ${max === 1 ? 'profesional activo' : 'profesionales activos'}.`} Para agregar o activar a alguien más, mejora tu plan.</p><Link href="/panel/suscripcion" className="btn-primary btn-sm">Mejorar plan</Link></div>}
       <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
         {staff.map(s => {
           const sales = s.saleItems.reduce((a, i) => a + i.base, 0); const com = s.saleItems.reduce((a, i) => a + i.commission, 0);

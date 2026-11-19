@@ -113,6 +113,8 @@ model Business {
   depositInPeak       Boolean   @default(false) // anticipo obligatorio en horas pico / temporada alta
   depositForNoShows   Boolean   @default(true) // anticipo obligatorio a quien incumple seguido
   noShowLimit         Int       @default(2) // incumplimientos (6 meses) para exigir anticipo
+  depositDeadlineMin  Int       @default(60) // minutos para pagar el abono por transferencia
+  transferInfo        String    @default("") // datos de la cuenta para el abono (banco, número, titular)
   createdAt           DateTime  @default(now())
 
   staff        Staff[]
@@ -253,6 +255,8 @@ model Appointment {
   clientConfirmedAt DateTime? // el cliente confirmó asistencia respondiendo por WhatsApp
   reminder1hSent    Boolean              @default(false)
   arrivedLateMin    Int? // minutos de retraso al llegar
+  depositDueAt      DateTime? // plazo para pagar el abono; vencido sin comprobante se libera el cupo
+  depositProofAt    DateTime? // el cliente subió el comprobante
   saleId            String?              @unique
   sale              Sale?                @relation(fields: [saleId], references: [id])
   createdAt         DateTime             @default(now())
@@ -614,4 +618,27 @@ model WalkIn {
   createdAt     DateTime  @default(now())
 
   @@index([businessId, createdAt])
+}
+
+/// Comprobante del abono (privado: lo ven el negocio y el cliente de la cita).
+model DepositProof {
+  id            String   @id @default(cuid())
+  appointmentId String   @unique
+  businessId    String
+  mime          String
+  size          Int
+  data          Bytes
+  createdAt     DateTime @default(now())
+}
+
+/// Suscripción Web Push de un teléfono o computador (dueño o profesional).
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }

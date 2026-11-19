@@ -1,6 +1,6 @@
 'use server';
 import { fromBogota } from '@/lib/format';
-import { getSettings } from '@/lib/settings';
+import { getSettings, planMaxStaff } from '@/lib/settings';
 import bcrypt from 'bcryptjs';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
@@ -60,6 +60,17 @@ export async function saveStaff(_: unknown, fd: FormData) {
     if (taken && taken.id !== id) return { error: 'Ese correo ya está vinculado a otro profesional.' };
     userId = u.id;
   }
+  if (data.active) {
+    // Límite de profesionales activos según el plan.
+    const max = planMaxStaff((await getSettings()).plans, business.plan);
+    if (max !== null) {
+      const prev = id ? await db.staff.findFirst({ where: { id, businessId: business.id }, select: { active: true } }) : null;
+      if (!prev?.active) {
+        const n = await db.staff.count({ where: { businessId: business.id, active: true } });
+        if (n >= max) return { error: `Tu plan permite ${max} ${max === 1 ? 'profesional activo' : 'profesionales activos'}. Desactiva a alguien o mejora tu plan en Suscripción para agregar más.`, upgrade: true };
+      }
+    }
+  }
   if (id) await db.staff.update({ where: { id, businessId: business.id }, data: { ...data, ...(userId ? { userId } : {}) } });
   else await db.staff.create({ data: { ...data, businessId: business.id, userId } });
   revalidatePath('/panel/equipo');
@@ -74,7 +85,7 @@ export async function saveSettings(_: unknown, fd: FormData) {
     name: String(fd.get('name')), tagline: String(fd.get('tagline') || ''), description: String(fd.get('description') || ''), category: String(fd.get('category')),
     city: String(fd.get('city')), zone: String(fd.get('zone') || ''), address: String(fd.get('address')), phone: String(fd.get('phone') || ''), whatsapp: String(fd.get('whatsapp') || ''), instagram: String(fd.get('instagram') || ''),
     lat: fd.get('lat') ? Number(fd.get('lat')) : null, lng: fd.get('lng') ? Number(fd.get('lng')) : null, images: JSON.stringify(images),
-    openingHours: hoursFrom(fd, 'h'), slotStepMin: int(fd.get('slotStepMin'), 15), cancellationHours: int(fd.get('cancellationHours'), 24), depositPercent: Math.min(100, int(fd.get('depositPercent'), 30)), requireDeposit: !!fd.get('requireDeposit'),
+    openingHours: hoursFrom(fd, 'h'), slotStepMin: int(fd.get('slotStepMin'), 15), cancellationHours: int(fd.get('cancellationHours'), 24), depositPercent: fd.get('depositPercentSel') === 'otro' ? Math.min(100, Math.max(0, int(fd.get('depositPercentOtro'), 30))) : fd.has('depositPercentSel') ? Math.min(100, Math.max(0, int(fd.get('depositPercentSel'), 0))) : Math.min(100, int(fd.get('depositPercent'), 30)), depositDeadlineMin: Math.min(240, Math.max(30, int(fd.get('depositDeadlineMin'), 60))), transferInfo: String(fd.get('transferInfo') || '').slice(0, 600).trim(), requireDeposit: !!fd.get('requireDeposit'),
     reminderHours: int(fd.get('reminderHours'), 24), notifyWhatsapp: !!fd.get('notifyWhatsapp'), notifyEmail: !!fd.get('notifyEmail'), autoConfirmRequest: !!fd.get('autoConfirmRequest'),
     reminderHourBefore: !!fd.get('reminderHourBefore'), releaseUnconfirmed: !!fd.get('releaseUnconfirmed'), releaseBeforeMin: Math.min(240, Math.max(10, int(fd.get('releaseBeforeMin'), 30))),
     lateToleranceMin: Math.min(60, Math.max(0, int(fd.get('lateToleranceMin'), 0))), depositInPeak: !!fd.get('depositInPeak'), depositForNoShows: !!fd.get('depositForNoShows'), noShowLimit: Math.min(10, Math.max(1, int(fd.get('noShowLimit'), 2))), waPhoneId: String(fd.get('waPhoneId') || '').trim() || null

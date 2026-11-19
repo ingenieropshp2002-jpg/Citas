@@ -1,4 +1,5 @@
 'use server';
+import { isSuspended } from '@/lib/subscription';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db';
@@ -6,7 +7,7 @@ import { createWalkIn, notifyUpcoming, queueStatus } from '@/lib/fila';
 
 export async function joinQueue(_: unknown, fd: FormData) {
   const b = await db.business.findUnique({ where: { slug: String(fd.get('slug') || '') } });
-  if (!b || !b.active) return { error: 'Negocio no encontrado.' };
+  if (!b || !b.active || isSuspended(b)) return { error: 'Negocio no encontrado.' };
   const st = queueStatus(b);
   if (!st.open) return { error: st.reason };
   const name = String(fd.get('name') || '').trim().slice(0, 60);

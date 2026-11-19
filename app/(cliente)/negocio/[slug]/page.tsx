@@ -1,3 +1,4 @@
+import { isSuspended } from '@/lib/subscription';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { db } from '@/lib/db';
@@ -29,7 +30,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 export default async function Negocio({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const b = await db.business.findUnique({ where: { slug }, include: { services: { where: { active: true }, orderBy: [{ popular: 'desc' }, { price: 'desc' }] }, staff: { where: { active: true } }, reviews: { orderBy: { createdAt: 'desc' }, take: 6 } } });
-  if (!b) notFound();
+  if (!b || isSuspended(b)) notFound();
   const imgs = parseJson<string[]>(b.images, []);
   const products = await db.product.findMany({ where: { businessId: b.id, active: true, showInShop: true, kind: { in: ['VENTA', 'AMBOS'] }, price: { gt: 0 } }, orderBy: [{ category: 'asc' }, { name: 'asc' }] });
   const cats = [...new Set(products.map(p => p.category))];

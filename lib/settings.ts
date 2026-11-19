@@ -2,7 +2,7 @@ import { cache } from 'react';
 import { db } from './db';
 
 // Ajustes de la plataforma que el superadmin edita desde /admin/ajustes (sin tocar código).
-export type Plan = { id: string; name: string; price: number; desc: string };
+export type Plan = { id: string; name: string; price: number; desc: string; maxStaff?: number }; // maxStaff 0 = ilimitado
 export type Settings = {
   appName: string; shortName: string; tagline: string; logoUrl: string;
   supportWhatsapp: string; supportEmail: string;
@@ -27,9 +27,9 @@ export const DEFAULT_SETTINGS: Settings = {
   registrationsOpen: true,
   trialDays: 14,
   plans: [
-    { id: 'BASICO', name: 'Básico', price: Number(process.env.PLAN_PRICE_BASICO || 49900), desc: '1 profesional, agenda, reservas online y recordatorios' },
-    { id: 'PRO', name: 'Pro', price: Number(process.env.PLAN_PRICE_PRO || 99900), desc: 'Hasta 8 profesionales, caja POS, inventario, gastos, fidelización y marketing' },
-    { id: 'PREMIUM', name: 'Premium', price: Number(process.env.PLAN_PRICE_PREMIUM || 189900), desc: 'Profesionales ilimitados, facturación electrónica y reportes avanzados' }
+    { id: 'BASICO', name: 'Básico', price: Number(process.env.PLAN_PRICE_BASICO || 49900), maxStaff: 1, desc: '1 profesional, agenda, reservas online y recordatorios' },
+    { id: 'PRO', name: 'Pro', price: Number(process.env.PLAN_PRICE_PRO || 99900), maxStaff: 8, desc: 'Hasta 8 profesionales, caja POS, inventario, gastos, fidelización y marketing' },
+    { id: 'PREMIUM', name: 'Premium', price: Number(process.env.PLAN_PRICE_PREMIUM || 189900), maxStaff: 0, desc: 'Profesionales ilimitados, facturación electrónica y reportes avanzados' }
   ]
 };
 
@@ -57,3 +57,10 @@ export async function saveSettings(patch: Partial<Settings>) {
 
 /** Inicial del nombre de la app (para el logo cuando no hay imagen). */
 export const initial = (name: string) => (name.trim()[0] || 'R').toUpperCase();
+
+/** Máximo de profesionales activos del plan (null = ilimitado). Si el plan guardado no trae el dato, usa el de fábrica. */
+export function planMaxStaff(plans: Plan[], planId: string): number | null {
+  const p = plans.find(x => x.id === planId); const d = DEFAULT_SETTINGS.plans.find(x => x.id === planId);
+  const n = p?.maxStaff ?? d?.maxStaff ?? 0;
+  return n > 0 ? n : null;
+}
