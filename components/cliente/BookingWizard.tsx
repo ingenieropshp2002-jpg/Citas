@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { cop, fechaCorta, fromBogota, time12, ymd } from '@/lib/format';
 import { Icon } from '@/components/ui/Icon';
 import { DateSlotPicker } from './DateSlotPicker';
+import { HeldSlots } from './HeldSlots';
 import { applyCoupon, createBooking, depositCheck } from '@/app/(cliente)/reservar/actions';
 
 type Svc = { id: string; name: string; description: string | null; durationMin: number; price: number; category: string; staffIds: string[] };
@@ -11,15 +12,15 @@ type Stf = { id: string; name: string; title: string; photo: string | null; rati
 const STEPS = ['Servicio', 'Profesional', 'Horario', 'Pago'];
 const BANKS = ['Bancolombia', 'Davivienda', 'Banco de Bogotá', 'BBVA', 'Banco de Occidente', 'Banco Popular', 'Scotiabank Colpatria', 'Nu Colombia', 'Banco Caja Social', 'Itaú'];
 
-export function BookingWizard({ business, services, staff, initialService, initialStaff, userPhone }: {
+export function BookingWizard({ business, services, staff, initialService, initialStaff, initialDate, userPhone }: {
   business: { id: string; name: string; depositPercent: number; requireDeposit: boolean; cancellationHours: number; image?: string; transfer?: boolean; deadlineMin?: number };
-  services: Svc[]; staff: Stf[]; initialService?: string; initialStaff?: string; userPhone: string;
+  services: Svc[]; staff: Stf[]; initialService?: string; initialStaff?: string; initialDate?: string; userPhone: string;
 }) {
   const router = useRouter();
   const [step, setStep] = useState(initialService ? (initialStaff ? 3 : 2) : 1);
   const [sel, setSel] = useState<string[]>(initialService ? [initialService] : []);
   const [staffId, setStaffId] = useState<string | null>(initialStaff || null);
-  const [date, setDate] = useState(ymd(new Date()));
+  const [date, setDate] = useState(initialDate && /^\d{4}-\d{2}-\d{2}$/.test(initialDate) && initialDate >= ymd(new Date()) ? initialDate : ymd(new Date()));
   const [time, setTime] = useState('');
   const [method, setMethod] = useState(business.transfer && business.requireDeposit ? 'TRANSFERENCIA' : 'NEQUI');
   const [phone, setPhone] = useState(userPhone);
@@ -132,6 +133,7 @@ export function BookingWizard({ business, services, staff, initialService, initi
           <span className="eyebrow">Paso 3 de 4</span>
           <h3 className="font-headline-sm text-headline-sm font-semibold">Elige fecha y hora</h3>
           <DateSlotPicker businessId={business.id} duration={duration} staffId={staffId} serviceIds={sel} date={date} time={time} onChange={(d, t) => { setDate(d); setTime(t); }} />
+          <HeldSlots businessId={business.id} date={date} staffId={staffId} serviceIds={sel} />
         </section>
       )}
 
@@ -166,7 +168,7 @@ export function BookingWizard({ business, services, staff, initialService, initi
                     <div className="flex items-center gap-3">{icon}<div><div className="font-label-lg text-label-lg font-bold flex items-center gap-1.5">{l}{badge && <span className="text-[10px] px-1.5 rounded bg-secondary-fixed text-on-secondary-fixed font-semibold">{badge}</span>}</div><span className="font-body-sm text-body-sm text-on-surface-variant">{d}</span></div></div>
                     <input type="radio" name="pm" className="accent-primary-container w-4 h-4" checked={method === v} onChange={() => setMethod(v as string)} />
                   </label>
-                  {method === 'TRANSFERENCIA' && v === 'TRANSFERENCIA' && <p className="mt-2 font-body-sm text-body-sm text-on-surface-variant">Al reservar verás los datos de la cuenta. Tienes {plazo} para transferir y subir el comprobante; mientras tanto el horario queda apartado para ti. El negocio confirma tu cita al recibirlo.</p>}
+                  {method === 'TRANSFERENCIA' && v === 'TRANSFERENCIA' && <p className="mt-2 font-body-sm text-body-sm text-on-surface-variant">Al reservar verás los datos de la cuenta. Tienes {plazo} (15 minutos si la cita es en menos de 3 horas) para transferir y subir el comprobante; mientras tanto el horario queda apartado para ti. El negocio confirma tu cita al recibirlo.</p>}
                   {method === 'NEQUI' && v === 'NEQUI' && (
                     <div className="mt-space-sm pt-space-xs"><label className="block font-label-sm text-label-sm text-on-surface-variant mb-1">Número de celular Nequi (+57)</label>
                       <div className="relative"><span className="absolute inset-y-0 left-0 pl-3 flex items-center font-label-md text-label-md text-on-surface-variant">+57</span><input className="w-full pl-12 pr-4 py-2.5 rounded-lg bg-surface outline-none focus:bg-surface-container-low" type="tel" inputMode="numeric" value={phone} onChange={e => setPhone(e.target.value)} placeholder="300 000 0000" /></div></div>

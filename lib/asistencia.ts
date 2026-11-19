@@ -4,6 +4,7 @@ import { db } from './db';
 import { fechaLarga, hm, time12, ymd, bogota } from './format';
 import { peakRules } from './fila';
 import { DEPOSIT_NOTE } from './abono';
+import { notifyFreed } from './espera';
 
 const appUrl = () => (process.env.APP_URL || 'http://localhost:3000').replace(/\/$/, '');
 export const confirmToken = (code: string) => createHmac('sha256', (process.env.AUTH_SECRET || 'dev-secret-change-me') + ':confirmar').update(code).digest('base64url').slice(0, 16);
@@ -30,7 +31,7 @@ export async function attendanceRecord(businessId: string, customerIds: string[]
   for (const r of rows) {
     const o = out.get(r.customerId)!; o.total++;
     if (r.status === 'NO_ASISTIO') o.noShows++;
-    else if (r.status === 'CANCELADA' && r.notes?.includes(RELEASED_NOTE)) o.released++;
+    else if (r.status === 'CANCELADA' && (r.notes?.includes(RELEASED_NOTE) || r.notes?.includes(DEPOSIT_NOTE))) o.released++; // no confirmar o no pagar el abono cuenta como falta
     if ((r.arrivedLateMin ?? 0) >= LATE_MIN) o.lates++;
     if ((r.status === 'NO_ASISTIO' || (r.arrivedLateMin ?? 0) >= LATE_MIN) && (!o.last || r.start > o.last)) o.last = r.start;
   }
@@ -69,16 +70,18 @@ export async function sweepAppointments(businessId: string, force = false) {
   let released = 0, noShows = 0;
   if (b.releaseUnconfirmed) {
     const list = await db.appointment.findMany({ where: { businessId, status: { in: ['PENDIENTE', 'CONFIRMADA'] }, clientConfirmedAt: null, source: { not: 'FILA' }, depositStatus: { not: 'PAGADO' },
-      OR: [{ reminderSent: true }, { reminder1hSent: true }], start: { gt: new Date(now), lte: new Date(now + b.releaseBeforeMin * 60000) } }, select: { id: true, notes: true } });
+      OR: [{ reminderSent: true }, { reminder1hSent: true }], start: { gt: new Date(now), lte: new Date(now + b.releaseBeforeMin * 60000) } }, select: { id: true, notes: true, businessId: true, staffId: true, start: true } });
     for (const a of list) await db.appointment.update({ where: { id: a.id }, data: { status: 'CANCELADA', notes: [a.notes, RELEASED_NOTE].filter(Boolean).join(' · ') } });
     released = list.length;
+    if (list.length) await notifyFreed(list, 'No confirmó: horario libre');
   }
   // Abono por transferencia vencido sin comprobante: se cancela y el horario queda libre.
   {
-    const list = await db.appointment.findMany({ where: { businessId, status: 'PENDIENTE', paymentMethod: 'TRANSFERENCIA', depositStatus: 'PENDIENTE', depositProofAt: null, depositDueAt: { lte: new Date(now) } }, select: { id: true, notes: true } });
+    const list = await db.appointment.findMany({ where: { businessId, status: 'PENDIENTE', paymentMethod: 'TRANSFERENCIA', depositStatus: 'PENDIENTE', depositProofAt: null, depositDueAt: { lte: new Date(now) } }, select: { id: true, notes: true, businessId: true, staffId: true, start: true } });
     for (const a of list) await db.appointment.update({ where: { id: a.id }, data: { status: 'CANCELADA', notes: [a.notes, DEPOSIT_NOTE].filter(Boolean).join(' · ') } });
     if (list.length) await db.payment.updateMany({ where: { appointmentId: { in: list.map(a => a.id) }, status: 'PENDIENTE' }, data: { status: 'RECHAZADO' } });
     released += list.length;
+    if (list.length) await notifyFreed(list, 'No pagó el abono: horario libre');
   }
   if (b.lateToleranceMin > 0) {
     const list = await db.appointment.findMany({ where: { businessId, status: { in: ['PENDIENTE', 'CONFIRMADA'] }, start: { lt: new Date(now - b.lateToleranceMin * 60000), gt: new Date(now - 24 * 3600e3) } }, select: { id: true, notes: true } });

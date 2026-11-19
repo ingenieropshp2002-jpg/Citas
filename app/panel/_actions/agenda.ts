@@ -7,6 +7,7 @@ import { fromBogota } from '@/lib/format';
 import { consumeSupplies } from '@/lib/inventory';
 import { sendWhatsapp } from '@/lib/notify';
 import { sendReminders } from '@/lib/automations';
+import { notifyFreed } from '@/lib/espera';
 import { newCode } from '@/app/(cliente)/reservar/actions';
 
 export async function createAppointmentPanel(_: unknown, fd: FormData) {
@@ -56,6 +57,7 @@ export async function setAppointmentStatus(id: string, status: string) {
     // Al completar, descuenta los insumos configurados (solo una vez)
     if (status === 'COMPLETADA' && a.status !== 'COMPLETADA') await consumeSupplies(tx, business.id, a.services.map(s => s.serviceId), a.code);
   }); } catch (e) { if (isOverlapError(e)) return { error: 'No se puede reactivar: ese horario ya lo tiene otra cita.' }; throw e; }
+  if (status === 'CANCELADA' && a.status !== 'CANCELADA' && a.start > new Date()) await notifyFreed([a], null);
   revalidatePath('/panel/agenda'); revalidatePath('/panel');
   return { ok: true };
 }

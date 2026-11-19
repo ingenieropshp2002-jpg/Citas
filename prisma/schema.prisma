@@ -642,3 +642,17 @@ model PushSubscription {
 
   @@index([userId])
 }
+
+/// Lista de espera: "Avísame si se libera" un horario apartado (abono pendiente) por otra persona.
+model SlotWatch {
+  id         String    @id @default(cuid())
+  businessId String
+  staffId    String
+  start      DateTime
+  userId     String
+  serviceIds String    @default("[]")
+  notifiedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@unique([staffId, start, userId], map: "SlotWatch_staff_start_user")
+}

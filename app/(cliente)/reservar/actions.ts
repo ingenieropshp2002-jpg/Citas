@@ -8,6 +8,7 @@ import { getUser } from '@/lib/auth';
 import { addDays, cop, fechaCorta, fromBogota, hm, time12, ymd } from '@/lib/format';
 import { pushToBusiness } from '@/lib/push';
 import { depositDue } from '@/lib/abono';
+import { notifyFreed } from '@/lib/espera';
 import { createCheckout } from '@/lib/payments';
 import { sendWhatsapp } from '@/lib/notify';
 import { revalidatePath } from 'next/cache';
@@ -134,6 +135,7 @@ export async function cancelMine(code: string) {
   const refundable = hoursLeft >= a.business.cancellationHours;
   await db.appointment.update({ where: { id: a.id }, data: { status: 'CANCELADA', depositStatus: a.depositStatus === 'PAGADO' ? (refundable ? 'REEMBOLSADO' : 'PAGADO') : a.depositStatus } });
   revalidatePath('/mis-citas');
+  await notifyFreed([a], null);
   await pushToBusiness(a.businessId, { title: '❌ Cita cancelada', body: `${a.customer.name} canceló su cita del ${fechaCorta(a.start)} a las ${time12(hm(a.start))}`, url: '/panel/agenda', tag: `cita-${a.code}` }, a.staffId);
   return { ok: true, refundable };
 }

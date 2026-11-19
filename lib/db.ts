@@ -35,9 +35,25 @@ class RequestScopedPool extends pg.Pool {
   async end() { /* cada pool por petición se descarta con la petición */ }
 }
 
+// Prisma junta en un solo lote los findUnique que llegan en el mismo instante, aunque vengan de peticiones
+// distintas. En Workers eso deja una petición esperando una respuesta que se resuelve en otra y el runtime la
+// cancela ("code had hung"). Por eso findUnique se ejecuta como findFirst (mismo resultado, sin lotes).
+const flat = (where: Record<string, unknown> = {}) => {
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(where)) {
+    if (k.includes('_') && v && typeof v === 'object' && !Array.isArray(v) && !(v instanceof Date) && Object.keys(v).join('_') === k) Object.assign(out, v);
+    else out[k] = v;
+  }
+  return out;
+};
 function make() {
   const adapter = new PrismaPg(new RequestScopedPool(config), { schema });
-  return new PrismaClient({ adapter });
+  const base = new PrismaClient({ adapter });
+  const delegate = (model: string) => (base as any)[model[0].toLowerCase() + model.slice(1)];
+  return base.$extends({ query: { $allModels: {
+    findUnique({ model, args }) { return delegate(model).findFirst({ ...args, where: flat(args.where as any) }); },
+    findUniqueOrThrow({ model, args }) { return delegate(model).findFirstOrThrow({ ...args, where: flat(args.where as any) }); }
+  } } }) as unknown as PrismaClient;
 }
 const g = globalThis as unknown as { prisma?: PrismaClient };
 export const db: PrismaClient = (g.prisma ??= make());

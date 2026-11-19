@@ -5,8 +5,12 @@ export const PROOF_MAX = 5 * 1024 * 1024;
 export const DEPOSIT_NOTE = 'Cupo liberado: no pagó el abono a tiempo';
 export const DEADLINES = [30, 60, 90, 120, 180, 240];
 
-/** Plazo para pagar: N minutos desde ahora, sin pasar de la hora de la cita. */
-export const depositDue = (minutes: number, start: Date, now = new Date()) => new Date(Math.min(now.getTime() + minutes * 60000, start.getTime()));
+/** Plazo para pagar: N minutos desde ahora, sin pasar de la hora de la cita. Si la cita es en 3 horas o menos, solo 15 minutos. */
+export const SHORT_DEADLINE_MIN = 15;
+export function depositDue(minutes: number, start: Date, now = new Date()) {
+  const soon = start.getTime() - now.getTime() <= 3 * 3600e3;
+  return new Date(Math.min(now.getTime() + (soon ? Math.min(minutes, SHORT_DEADLINE_MIN) : minutes) * 60000, start.getTime()));
+}
 
 /** Tipo real del archivo según sus primeros bytes (no se confía en el nombre ni en lo que diga el navegador). */
 export function sniffMime(b: Uint8Array): string | null {
