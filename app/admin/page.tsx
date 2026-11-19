@@ -9,10 +9,13 @@ import { Empty } from '@/components/ui/Empty';
 import { addDays, cop, DIAS_CORTOS, fechaLarga, fromBogota, hm, minutesOf, parseJson, time12, ymd } from '@/lib/format';
 import { lowStock } from '@/lib/inventory';
 import { workRange } from '@/lib/availability';
+import { onboardingSteps, readOnboarding } from '@/lib/onboarding';
+import { subscriptionState } from '@/lib/subscription';
+import { Guide } from './Guide';
 
 export const metadata = { title: 'Dashboard' };
-export default async function Dashboard({ searchParams }: { searchParams: Promise<{ sinpermiso?: string }> }) {
-  const { business: b, user } = await requireBusiness();
+export default async function Dashboard({ searchParams }: { searchParams: Promise<{ sinpermiso?: string; bienvenida?: string }> }) {
+  const { business: b, user, perms } = await requireBusiness();
   await sweepAppointments(b.id);
   const sp = await searchParams;
   const today = ymd(new Date());
@@ -26,6 +29,8 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
     lowStock(b.id),
     db.sale.findMany({ where: { businessId: b.id, status: 'PAGADA', createdAt: { gte: fromBogota(weekStart), lt: dayEnd } }, select: { total: true, tip: true, createdAt: true } })
   ]);
+  const guide = perms === 'ALL' && !readOnboarding(b.onboarding).hidden ? await onboardingSteps(b) : null;
+  const sub = subscriptionState(b);
   const revenue = sales.reduce((a, s) => a + s.total - s.tip, 0);
   const capacity = staff.reduce((a, s) => { const r = workRange(b.openingHours, s.workHours, s.daysOff, today); return a + (r ? r[1] - r[0] : 0); }, 0);
   const booked = appts.filter(a => a.status !== 'CANCELADA').reduce((a, x) => a + (x.end.getTime() - x.start.getTime()) / 60000, 0);
@@ -40,6 +45,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       {sp.sinpermiso && <div className="mb-4 p-3 rounded-xl bg-[#FFF1F2] text-danger font-label-md">No tienes permiso para ese módulo. Pide acceso al administrador.</div>}
       <PageHeader eyebrow={fechaLarga(new Date())} title={`Hola, ${user.name.split(' ')[0]}`} subtitle="Así va tu negocio hoy."
         actions={<><Link href="/admin/caja" className="btn-outline btn-sm"><Icon name="point_of_sale" className="text-[18px]" />Cobrar</Link><Link href="/admin/agenda?nueva=1" className="btn-primary btn-sm"><Icon name="add" className="text-[18px]" />Nueva cita</Link></>} />
+      {guide && guide.done < guide.steps.length && <Guide steps={guide.steps} welcome={!!sp.bienvenida} trialLeft={sub.state === 'PRUEBA' ? sub.daysLeft : null} />}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4">
         <Stat label="Ingresos de hoy" value={cop(revenue)} icon="payments" tone="gold" hint={`${sales.length} ventas`} />
         <Stat label="Citas de hoy" value={String(appts.filter(a => a.status !== 'CANCELADA').length)} icon="event_available" hint={`${upcoming.length} por atender`} />

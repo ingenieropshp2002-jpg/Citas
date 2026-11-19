@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { db } from '@/lib/db';
 import { requireBusiness, requireUser } from '@/lib/auth';
+import { markOnboarding } from '@/lib/onboarding';
 
 const int = (v: FormDataEntryValue | null, d = 0) => { const n = Number(String(v ?? '').replace(/[^\d.-]/g, '')); return Number.isFinite(n) ? Math.round(n) : d; };
 const hoursFrom = (fd: FormData, prefix: string) => {
@@ -90,6 +91,7 @@ export async function saveSettings(_: unknown, fd: FormData) {
     reminderHourBefore: !!fd.get('reminderHourBefore'), releaseUnconfirmed: !!fd.get('releaseUnconfirmed'), releaseBeforeMin: Math.min(240, Math.max(10, int(fd.get('releaseBeforeMin'), 30))),
     lateToleranceMin: Math.min(60, Math.max(0, int(fd.get('lateToleranceMin'), 0))), depositInPeak: !!fd.get('depositInPeak'), depositForNoShows: !!fd.get('depositForNoShows'), noShowLimit: Math.min(10, Math.max(1, int(fd.get('noShowLimit'), 2))), waPhoneId: String(fd.get('waPhoneId') || '').trim() || null
   } });
+  await markOnboarding(business.id, { done: 'horario' });
   revalidatePath('/admin/configuracion');
   return { ok: true };
 }
@@ -107,5 +109,5 @@ export async function createBusiness(_: unknown, fd: FormData) {
   await db.staff.create({ data: { businessId: b.id, name: user.name, title: 'Propietario', userId: null } });
   await db.user.update({ where: { id: user.id }, data: { role: 'OWNER' } });
   await db.dianConfig.create({ data: { businessId: b.id } });
-  redirect('/admin/configuracion?nuevo=1');
+  redirect('/admin?bienvenida=1');
 }

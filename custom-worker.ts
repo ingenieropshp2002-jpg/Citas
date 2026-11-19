@@ -7,7 +7,7 @@ import handler from './.open-next/worker.js';
 const TTL_MS = 60_000;
 const MAX_ENTRIES = 80;
 const cache = new Map<string, { at: number; status: number; headers: [string, string][]; body: ArrayBuffer }>();
-const PUBLIC = [/^\/$/, /^\/buscar$/, /^\/negocio\/[^/]+$/];
+const PUBLIC = [/^\/$/, /^\/buscar$/, /^\/negocios$/, /^\/negocio\/[^/]+$/];
 const VARY = ['rsc', 'next-router-state-tree', 'next-router-prefetch', 'next-router-segment-prefetch', 'next-url'];
 
 function cacheKey(req: Request) {

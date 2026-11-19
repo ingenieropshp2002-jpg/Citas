@@ -21,7 +21,7 @@ export async function ClientHeader({ title, back = false }: { title?: string; ba
         <nav className="hidden md:flex items-center gap-6 font-label-lg text-label-lg text-on-surface-variant">
           <Link href="/buscar" className="hover:text-primary">Explorar</Link>
           <Link href="/mis-citas" className="hover:text-primary">Mis citas</Link>
-          <Link href="/admin" className="hover:text-primary">Para negocios</Link>
+          <Link href="/negocios" className="hover:text-primary">Para negocios</Link>
         </nav>
         <div className="flex items-center gap-1">
           <ThemeToggle />

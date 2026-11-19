@@ -74,6 +74,7 @@ model Business {
   plan                String    @default("PRO") // BASICO | PRO | PREMIUM
   active              Boolean   @default(true)
   featured            Boolean   @default(false) // destacado en el buscador (lo marca el superadmin)
+  onboarding          String    @default("{}") // guía de primeros pasos: { done: string[], hidden: boolean }
   ownerId             String
   parentId            String? // sede principal (si esta es una sede adicional)
   owner               User      @relation("owner", fields: [ownerId], references: [id])
