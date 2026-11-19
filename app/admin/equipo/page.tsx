@@ -23,7 +23,8 @@ function Fields({ s, businessHours }: { s?: S; businessHours: string }) {
       <div className="grid grid-cols-2 gap-3">
         <label className="col-span-2"><span className="label">Nombre *</span><input name="name" defaultValue={s?.name} className="input" required /></label>
         <label><span className="label">Cargo</span><input name="title" defaultValue={s?.title || ''} className="input" placeholder="Master Stylist" /></label>
-        <label><span className="label">Comisión (%)</span><input name="commissionPct" type="number" min={0} max={100} defaultValue={s?.commissionPct ?? 40} className="input" /></label>
+        <label><span className="label">Comisión servicios (%)</span><input name="commissionPct" type="number" min={0} max={100} defaultValue={s?.commissionPct ?? 40} className="input" /></label>
+        <label><span className="label">Comisión productos (%)</span><input name="productCommissionPct" type="number" min={0} max={100} defaultValue={s?.productCommissionPct ?? 10} className="input" /></label>
         <label><span className="label">Color en agenda</span><input name="color" type="color" defaultValue={s?.color || '#0d2538'} className="input !p-1" /></label>
         <label><span className="label">Foto (URL)</span><input name="photo" defaultValue={s?.photo || ''} className="input" /></label>
       </div>
@@ -51,7 +52,7 @@ export default async function Equipo() {
   const planName = settings.plans.find(p => p.id === b.plan)?.name || b.plan;
   return (
     <>
-      <PageHeader eyebrow="Personas" title="Equipo" subtitle={`Horarios, comisiones y permisos · ${activeN}${max !== null ? `/${max}` : ''} profesionales activos (plan ${planName})`} actions={full ? <Link href="/admin/suscripcion" className="btn-primary"><Icon name="upgrade" className="text-[18px]" />Mejorar plan</Link> : <Drawer title="Nuevo profesional" trigger={<><Icon name="person_add" className="text-[18px]" />Agregar profesional</>}><ActionForm action={saveStaff} resetOnSuccess><Fields businessHours={b.openingHours} /><button className="btn-primary w-full">Crear</button></ActionForm></Drawer>} />
+      <PageHeader eyebrow="Personas" title="Equipo" subtitle={`Horarios, comisiones y permisos · ${activeN}${max !== null ? `/${max}` : ''} profesionales activos (plan ${planName})`} actions={<><Link href="/admin/equipo/comisiones" className="btn-outline"><Icon name="payments" className="text-[18px]" />Comisiones y liquidación</Link>{full ? <Link href="/admin/suscripcion" className="btn-primary"><Icon name="upgrade" className="text-[18px]" />Mejorar plan</Link> : <Drawer title="Nuevo profesional" trigger={<><Icon name="person_add" className="text-[18px]" />Agregar profesional</>}><ActionForm action={saveStaff} resetOnSuccess><Fields businessHours={b.openingHours} /><button className="btn-primary w-full">Crear</button></ActionForm></Drawer>}</>} />
       {full && <div className="card p-4 mb-4 flex flex-wrap items-center gap-3 bg-secondary-fixed/30"><Icon name="info" className="text-[20px]" /><p className="font-body-md flex-1 min-w-[220px]">{activeN > max! ? `Tu plan ${planName} permite ${max} ${max === 1 ? 'profesional activo' : 'profesionales activos'} y hoy tienes ${activeN}.` : `Llegaste al límite de tu plan ${planName}: ${max} ${max === 1 ? 'profesional activo' : 'profesionales activos'}.`} Para agregar o activar a alguien más, mejora tu plan.</p><Link href="/admin/suscripcion" className="btn-primary btn-sm">Mejorar plan</Link></div>}
       <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
         {staff.map(s => {

@@ -30,7 +30,7 @@ export async function saveCustomer(_: unknown, fd: FormData) {
 export async function saveService(_: unknown, fd: FormData) {
   const { business } = await requireBusiness('servicios');
   const id = String(fd.get('id') || '');
-  const data = { name: String(fd.get('name')).trim(), description: String(fd.get('description') || ''), category: String(fd.get('category') || 'General'), tag: String(fd.get('tag') || '') || null, durationMin: int(fd.get('durationMin'), 30), price: int(fd.get('price')), taxRate: int(fd.get('taxRate'), 19), popular: !!fd.get('popular'), active: !!fd.get('active') };
+  const data = { name: String(fd.get('name')).trim(), description: String(fd.get('description') || ''), category: String(fd.get('category') || 'General'), tag: String(fd.get('tag') || '') || null, durationMin: int(fd.get('durationMin'), 30), price: int(fd.get('price')), taxRate: int(fd.get('taxRate'), 19), commissionPct: String(fd.get('commissionPct') ?? '').trim() === '' ? null : Math.min(100, Math.max(0, int(fd.get('commissionPct'), 0))), popular: !!fd.get('popular'), active: !!fd.get('active') };
   if (!data.name || data.durationMin <= 0) return { error: 'Nombre y duración son obligatorios.' };
   const staffIds = fd.getAll('staffIds').map(String);
   const supplies = fd.getAll('supplyProduct').map((p, i) => ({ productId: String(p), quantity: Number(fd.getAll('supplyQty')[i]) })).filter(s => s.productId && s.quantity > 0);
@@ -49,7 +49,7 @@ export async function saveService(_: unknown, fd: FormData) {
 export async function saveStaff(_: unknown, fd: FormData) {
   const { business } = await requireBusiness('equipo');
   const id = String(fd.get('id') || '');
-  const data = { name: String(fd.get('name')).trim(), title: String(fd.get('title') || 'Profesional'), photo: String(fd.get('photo') || '') || null, color: String(fd.get('color') || '#0d2538'), commissionPct: int(fd.get('commissionPct'), 40), permissions: JSON.stringify(fd.getAll('permissions').map(String)), workHours: fd.get('customHours') ? hoursFrom(fd, 'w') : '{}', daysOff: JSON.stringify(String(fd.get('daysOff') || '').split(',').map(s => s.trim()).filter(s => /^\d{4}-\d{2}-\d{2}$/.test(s))), active: !!fd.get('active') };
+  const data = { name: String(fd.get('name')).trim(), title: String(fd.get('title') || 'Profesional'), photo: String(fd.get('photo') || '') || null, color: String(fd.get('color') || '#0d2538'), commissionPct: Math.min(100, Math.max(0, int(fd.get('commissionPct'), 40))), productCommissionPct: Math.min(100, Math.max(0, int(fd.get('productCommissionPct'), 10))), permissions: JSON.stringify(fd.getAll('permissions').map(String)), workHours: fd.get('customHours') ? hoursFrom(fd, 'w') : '{}', daysOff: JSON.stringify(String(fd.get('daysOff') || '').split(',').map(s => s.trim()).filter(s => /^\d{4}-\d{2}-\d{2}$/.test(s))), active: !!fd.get('active') };
   if (!data.name) return { error: 'El nombre es obligatorio.' };
   const email = String(fd.get('loginEmail') || '').toLowerCase().trim(); const pass = String(fd.get('loginPassword') || '');
   let userId: string | undefined;

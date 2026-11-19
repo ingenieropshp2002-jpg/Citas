@@ -151,6 +151,7 @@ model Staff {
   photo         String?
   color         String         @default("#0d2538")
   commissionPct Int            @default(40)
+  productCommissionPct Int     @default(10) // % de comisión por productos que vende
   permissions   String         @default("[\"agenda\"]") // JSON: agenda, clientes, caja, inventario, reportes, configuracion
   workHours     String         @default("{}") // JSON igual a openingHours
   daysOff       String         @default("[]") // JSON: ["2025-12-24"]
@@ -175,6 +176,7 @@ model Service {
   durationMin         Int
   price               Int // COP, IVA incluido
   taxRate             Int                  @default(19) // % IVA: 19, 5, 0
+  commissionPct       Int? // % de comisión propio de este servicio (vacío = el del profesional)
   popular             Boolean              @default(false)
   active              Boolean              @default(true)
   staff               ServiceStaff[]
@@ -430,6 +432,7 @@ model SaleItem {
   taxAmount   Int
   total       Int
   commission  Int      @default(0)
+  payoutId    String? // liquidación en la que se pagó esta comisión
 }
 
 model Payment {
@@ -669,4 +672,27 @@ model WaLog {
   createdAt  DateTime @default(now())
 
   @@index([createdAt])
+}
+
+/// Liquidación de comisiones de un profesional (lo que se le pagó por un período).
+model CommissionPayout {
+  id                 String   @id @default(cuid())
+  businessId         String
+  staffId            String
+  staffName          String
+  fromDate           String
+  toDate             String
+  servicesCount      Int      @default(0)
+  servicesBase       Int      @default(0)
+  servicesCommission Int      @default(0)
+  productsCommission Int      @default(0)
+  tips               Int      @default(0)
+  adjustment         Int      @default(0) // + bonos / − anticipos o descuentos
+  total              Int
+  method             String   @default("EFECTIVO")
+  notes              String?
+  createdBy          String?
+  createdAt          DateTime @default(now())
+
+  @@index([businessId, createdAt])
 }

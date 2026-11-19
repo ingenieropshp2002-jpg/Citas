@@ -29,6 +29,7 @@ function Fields({ s, staff, products, categories }: { s?: Svc; staff: { id: stri
         <label><span className="label">Etiqueta</span><input name="tag" defaultValue={s?.tag || ''} className="input" placeholder="Top Sell" /></label>
         <label><span className="label">Duración (min) *</span><input name="durationMin" type="number" min={5} step={5} defaultValue={s?.durationMin || 30} className="input" required /></label>
         <label><span className="label">Precio COP (IVA incl.) *</span><input name="price" type="number" min={0} step={500} defaultValue={s?.price} className="input" required /></label>
+        <label><span className="label">Comisión propia (%)</span><input name="commissionPct" type="number" min={0} max={100} defaultValue={s?.commissionPct ?? ''} className="input" placeholder="La del profesional" /></label>
         <label><span className="label">IVA</span><select name="taxRate" defaultValue={s?.taxRate ?? 19} className="input"><option value={19}>19%</option><option value={5}>5%</option><option value={0}>0% / Excluido</option></select></label>
       </div>
       <label className="block"><span className="label">Descripción</span><textarea name="description" defaultValue={s?.description || ''} className="input" rows={2} /></label>

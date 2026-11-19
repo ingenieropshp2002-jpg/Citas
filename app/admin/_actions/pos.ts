@@ -52,13 +52,14 @@ export async function checkout(input: CheckoutInput) {
       const staff = it.staffId ? await db.staff.findFirst({ where: { id: it.staffId, businessId: business.id } }) : null;
       const unitPrice = it.unitPrice > 0 ? int(it.unitPrice) : s.price; // permite precio ajustado (p. ej. cabello largo)
       const c = computeLine({ unitPrice, quantity: qty, discount: int(it.discount), taxRate: s.taxRate });
-      lines.push({ kind: 'SERVICIO', serviceId: s.id, staffId: staff?.id, description: s.name, code: 'S-' + s.id.slice(-6).toUpperCase(), unit: 'E48', quantity: qty, unitPrice, discount: int(it.discount), taxRate: s.taxRate, ...c, commission: staff ? Math.round(c.base * staff.commissionPct / 100) : 0 });
+      lines.push({ kind: 'SERVICIO', serviceId: s.id, staffId: staff?.id, description: s.name, code: 'S-' + s.id.slice(-6).toUpperCase(), unit: 'E48', quantity: qty, unitPrice, discount: int(it.discount), taxRate: s.taxRate, ...c, commission: staff ? Math.round(c.base * (s.commissionPct ?? staff.commissionPct) / 100) : 0 });
     } else {
       const p = await db.product.findFirst({ where: { id: it.id, businessId: business.id } });
       if (!p) return { error: 'Producto no encontrado' };
       if (p.stock < qty) return { error: `Stock insuficiente de ${p.name} (disponible: ${p.stock}).` };
       const c = computeLine({ unitPrice: p.price, quantity: qty, discount: int(it.discount), taxRate: p.taxRate });
-      lines.push({ kind: 'PRODUCTO', productId: p.id, staffId: it.staffId || null, description: p.name, code: p.sku, unit: p.unit === 'UND' ? '94' : p.unit, quantity: qty, unitPrice: p.price, discount: int(it.discount), taxRate: p.taxRate, ...c, commission: 0 });
+      const seller = it.staffId ? await db.staff.findFirst({ where: { id: it.staffId, businessId: business.id }, select: { id: true, productCommissionPct: true } }) : null;
+      lines.push({ kind: 'PRODUCTO', productId: p.id, staffId: seller?.id || null, description: p.name, code: p.sku, unit: p.unit === 'UND' ? '94' : p.unit, quantity: qty, unitPrice: p.price, discount: int(it.discount), taxRate: p.taxRate, ...c, commission: seller ? Math.round(c.base * seller.productCommissionPct / 100) : 0 });
     }
   }
   // Cupón: se reparte como descuento proporcional en las líneas (afecta la base del IVA)
@@ -69,7 +70,7 @@ export async function checkout(input: CheckoutInput) {
     const gross = lines.reduce((a, l) => a + l.total, 0);
     const disc = cp.type === 'PORCENTAJE' ? Math.round(gross * cp.value / 100) : Math.min(cp.value, gross);
     let left = disc;
-    lines.forEach((l, i) => { const d = i === lines.length - 1 ? left : Math.round(disc * l.total / gross); left -= d; const c = computeLine({ unitPrice: l.unitPrice, quantity: l.quantity, discount: l.discount + d, taxRate: l.taxRate }); Object.assign(l, { discount: l.discount + d, ...c }); });
+    lines.forEach((l, i) => { const d = i === lines.length - 1 ? left : Math.round(disc * l.total / gross); left -= d; const c = computeLine({ unitPrice: l.unitPrice, quantity: l.quantity, discount: l.discount + d, taxRate: l.taxRate }); Object.assign(l, { discount: l.discount + d, ...c, commission: l.base > 0 ? Math.round(l.commission * c.base / l.base) : 0 }); });
     couponCode = cp.code;
   }
   const sum = summarize(lines);
