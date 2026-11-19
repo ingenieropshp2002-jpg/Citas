@@ -80,6 +80,7 @@ export async function depositRule(b: { id: string; requireDeposit: boolean; depo
 }
 
 const lastSweep = new Map<string, number>();
+const lastReviews = new Map<string, number>();
 /** Libera cupos sin confirmar y marca "no llegó" cuando pasa la tolerancia. Se ejecuta al consultar la agenda y por cron. */
 export async function sweepAppointments(businessId: string, force = false) {
   const now = Date.now();
@@ -107,6 +108,11 @@ export async function sweepAppointments(businessId: string, force = false) {
     const list = await db.appointment.findMany({ where: { businessId, status: { in: ['PENDIENTE', 'CONFIRMADA'] }, start: { lt: new Date(now - b.lateToleranceMin * 60000), gt: new Date(now - 24 * 3600e3) } }, select: { id: true, notes: true } });
     for (const a of list) await db.appointment.update({ where: { id: a.id }, data: { status: 'NO_ASISTIO', notes: [a.notes, NOSHOW_NOTE].filter(Boolean).join(' · ') } });
     noShows = list.length;
+  }
+  // Pedidos de reseña: también aquí, para que salgan aunque no haya cron (máx. cada 5 minutos por negocio).
+  if (now - (lastReviews.get(businessId) || 0) > 5 * 60_000) {
+    lastReviews.set(businessId, now);
+    try { await (await import('./resenas')).sendReviewRequests(businessId); } catch (e) { console.error('resenas', e); }
   }
   return { released, noShows };
 }

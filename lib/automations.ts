@@ -54,6 +54,7 @@ export async function runAutomations(businessId: string) {
   await sweepAppointments(businessId, true);
   const reminders = await sendReminders(businessId);
   const birthdays = await sendBirthdays(businessId);
+  const reviews = await (await import('./resenas')).sendReviewRequests(businessId);
   const subscription = await refreshSubscription(businessId);
-  return { reminders, birthdays, subscription };
+  return { reminders, birthdays, reviews, subscription };
 }

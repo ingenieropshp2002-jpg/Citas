@@ -98,6 +98,9 @@ model Business {
   pointsPerThousand   Int       @default(1) // puntos por cada $1.000 pagados
   inactiveDays        Int       @default(60)
   birthdayEnabled     Boolean   @default(true)
+  reviewEnabled       Boolean   @default(true) // pedir reseña sola después de cada cita
+  googleReviewUrl     String? // enlace "Pedir reseñas" del Perfil de Empresa de Google
+  reviewDelayHours    Int       @default(2)
   birthdayMessage     String    @default("¡Feliz cumpleaños, {nombre}! 🎉 En {negocio} te regalamos un detalle en tu próxima visita. Reserva aquí: {link}")
   birthdayCoupon      String?
   // Fila virtual (clientes sin cita) y horas pico solo con cita
@@ -141,27 +144,27 @@ model Business {
 }
 
 model Staff {
-  id            String         @id @default(cuid())
-  businessId    String
-  business      Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  userId        String?        @unique
-  user          User?          @relation(fields: [userId], references: [id])
-  name          String
-  title         String
-  photo         String?
-  color         String         @default("#0d2538")
-  commissionPct Int            @default(40)
-  productCommissionPct Int     @default(10) // % de comisión por productos que vende
-  permissions   String         @default("[\"agenda\"]") // JSON: agenda, clientes, caja, inventario, reportes, configuracion
-  workHours     String         @default("{}") // JSON igual a openingHours
-  daysOff       String         @default("[]") // JSON: ["2025-12-24"]
-  rating        Float          @default(5)
-  active        Boolean        @default(true)
-  services      ServiceStaff[]
-  appointments  Appointment[]
-  blocked       BlockedTime[]
-  saleItems     SaleItem[]
-  reviews       Review[]
+  id                   String         @id @default(cuid())
+  businessId           String
+  business             Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  userId               String?        @unique
+  user                 User?          @relation(fields: [userId], references: [id])
+  name                 String
+  title                String
+  photo                String?
+  color                String         @default("#0d2538")
+  commissionPct        Int            @default(40)
+  productCommissionPct Int            @default(10) // % de comisión por productos que vende
+  permissions          String         @default("[\"agenda\"]") // JSON: agenda, clientes, caja, inventario, reportes, configuracion
+  workHours            String         @default("{}") // JSON igual a openingHours
+  daysOff              String         @default("[]") // JSON: ["2025-12-24"]
+  rating               Float          @default(5)
+  active               Boolean        @default(true)
+  services             ServiceStaff[]
+  appointments         Appointment[]
+  blocked              BlockedTime[]
+  saleItems            SaleItem[]
+  reviews              Review[]
 }
 
 model Service {
@@ -267,6 +270,8 @@ model Appointment {
   payments          Payment[]
   review            Review?
 
+  reviewRequestedAt DateTime? // cuándo se le pidió la reseña
+
   @@index([businessId, start])
 }
 
@@ -292,47 +297,48 @@ model BlockedTime {
 }
 
 model Review {
-  id            String       @id @default(cuid())
-  businessId    String
-  business      Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  appointmentId String?      @unique
-  appointment   Appointment? @relation(fields: [appointmentId], references: [id])
-  userId        String?
-  user          User?        @relation(fields: [userId], references: [id])
-  staffId       String?
-  staff         Staff?       @relation(fields: [staffId], references: [id])
-  authorName    String
-  rating        Int
-  comment       String
-  serviceName   String?
-  createdAt     DateTime     @default(now())
+  id              String       @id @default(cuid())
+  businessId      String
+  business        Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  appointmentId   String?      @unique
+  appointment     Appointment? @relation(fields: [appointmentId], references: [id])
+  userId          String?
+  user            User?        @relation(fields: [userId], references: [id])
+  staffId         String?
+  staff           Staff?       @relation(fields: [staffId], references: [id])
+  authorName      String
+  rating          Int
+  comment         String
+  serviceName     String?
+  googleClickedAt DateTime? // abrió el enlace para publicarla en Google
+  createdAt       DateTime     @default(now())
 }
 
 // ───────────── Inventario ─────────────
 model Product {
-  id         String          @id @default(cuid())
-  businessId String
-  business   Business        @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  sku        String
-  barcode    String?
-  name       String
-  brand      String?
-  category   String
-  kind       String          @default("VENTA") // VENTA | INSUMO | AMBOS
-  unit       String          @default("UND") // UND, ML, GR (código UNECE en factura: 94 / MLT / GRM)
-  cost       Int             @default(0) // costo promedio ponderado
-  price      Int             @default(0) // precio venta IVA incluido
-  taxRate    Int             @default(19)
-  stock      Float           @default(0)
-  minStock   Float           @default(0)
-  active     Boolean         @default(true)
+  id          String          @id @default(cuid())
+  businessId  String
+  business    Business        @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  sku         String
+  barcode     String?
+  name        String
+  brand       String?
+  category    String
+  kind        String          @default("VENTA") // VENTA | INSUMO | AMBOS
+  unit        String          @default("UND") // UND, ML, GR (código UNECE en factura: 94 / MLT / GRM)
+  cost        Int             @default(0) // costo promedio ponderado
+  price       Int             @default(0) // precio venta IVA incluido
+  taxRate     Int             @default(19)
+  stock       Float           @default(0)
+  minStock    Float           @default(0)
+  active      Boolean         @default(true)
   description String?
-  image      String? // URL o imagen comprimida (data URL)
-  showInShop Boolean         @default(true) // visible en la página pública del negocio
-  createdAt  DateTime        @default(now())
-  movements  StockMovement[]
-  supplies   ServiceSupply[]
-  saleItems  SaleItem[]
+  image       String? // URL o imagen comprimida (data URL)
+  showInShop  Boolean         @default(true) // visible en la página pública del negocio
+  createdAt   DateTime        @default(now())
+  movements   StockMovement[]
+  supplies    ServiceSupply[]
+  saleItems   SaleItem[]
 
   @@unique([businessId, sku])
 }

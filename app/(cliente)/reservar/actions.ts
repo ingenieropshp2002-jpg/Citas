@@ -161,13 +161,7 @@ export async function leaveReview(code: string, rating: number, comment: string)
   if (!a || a.customer.userId !== user.id) return { error: 'Cita no encontrada' };
   if (a.status !== 'COMPLETADA') return { error: 'Solo puedes reseñar citas completadas.' };
   if (a.review) return { error: 'Ya dejaste una reseña para esta cita.' };
-  const r = Math.min(5, Math.max(1, Math.round(rating)));
-  await db.review.create({ data: { businessId: a.businessId, appointmentId: a.id, userId: user.id, staffId: a.staffId, authorName: user.name, rating: r, comment: comment.slice(0, 1000), serviceName: a.services[0]?.service.name } });
-  const agg = await db.review.aggregate({ where: { businessId: a.businessId }, _avg: { rating: true }, _count: true });
-  const biz = await db.business.findUniqueOrThrow({ where: { id: a.businessId } });
-  // Mantiene el histórico (reviewCount puede incluir reseñas importadas)
-  await db.business.update({ where: { id: a.businessId }, data: { reviewCount: biz.reviewCount + 1, rating: Math.round(((biz.rating * biz.reviewCount + r) / (biz.reviewCount + 1)) * 10) / 10 } });
-  void agg;
+  await (await import('@/lib/resenas')).saveReview(a, { rating, comment, authorName: user.name, userId: user.id });
   revalidatePath('/mis-citas');
   return { ok: true };
 }
