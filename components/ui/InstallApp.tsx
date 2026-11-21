@@ -33,7 +33,7 @@ export function InstallApp({ name = 'Registro Citas', variant = 'button', icon }
   return (
     <>
       {variant === 'header'
-        ? <button type="button" onClick={click} aria-label="Instalar app" className="h-9 px-2.5 min-[380px]:px-3 rounded-full bg-gold text-primary-container font-label-md text-label-md font-bold flex items-center gap-1 shadow-sm hover:brightness-105 active:scale-95 transition"><Icon name="download" className="text-[18px]" /><span className="hidden min-[380px]:inline">Instalar</span></button>
+        ? <button type="button" onClick={click} aria-label="Instalar app" className="h-9 w-9 min-[430px]:w-auto justify-center min-[430px]:px-3 rounded-full bg-gold text-primary-container font-label-md text-label-md font-bold flex items-center gap-1 shadow-sm hover:brightness-105 active:scale-95 transition"><Icon name="download" className="text-[18px]" /><span className="hidden min-[430px]:inline">Instalar</span></button>
         : variant === 'banner'
         ? <div className="card-raised p-4 flex items-center gap-3 border border-secondary/40">{icon && <img src={icon} alt="" className="w-14 h-14 rounded-2xl shrink-0" />}<div className="flex-1 min-w-0"><p className="font-title-md text-title-md">Instala la app de {name}</p><p className="font-body-sm text-on-surface-variant">Reserva y mira tus citas con un toque, desde tu pantalla de inicio.</p></div><button type="button" onClick={click} className="btn-primary btn-sm shrink-0"><Icon name="install_mobile" className="text-[18px]" />Instalar</button></div>
         : variant === 'tile'

@@ -1,15 +1,19 @@
 import { notFound } from 'next/navigation';
 import { db } from '@/lib/db';
-import { requireUser } from '@/lib/auth';
+import { getUser } from '@/lib/auth';
+import { redirect } from 'next/navigation';
+import { cleanCel, deviceCel } from '@/lib/celular';
 import { ShopHeader } from '@/components/cliente/Header';
 import { parseJson } from '@/lib/format';
 import { Reschedule } from '@/components/cliente/Reschedule';
 import { fechaLarga, hm, time12 } from '@/lib/format';
 export default async function Reprogramar({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
-  const user = await requireUser(`/mis-citas/${code}/reprogramar`);
+  const [user, cel] = await Promise.all([getUser(), deviceCel()]);
+  if (!user && !cel) redirect(`/login?next=${encodeURIComponent(`/mis-citas/${code}/reprogramar`)}`);
   const a = await db.appointment.findUnique({ where: { code }, include: { customer: true, staff: true, business: true } });
-  if (!a || a.customer.userId !== user.id) notFound();
+  // Su cuenta o el celular verificado en este dispositivo (reservas sin cuenta).
+  if (!a || !((user && a.customer.userId === user.id) || (cel && a.customer.phone && cleanCel(a.customer.phone) === cel))) notFound();
   return (
     <>
       <ShopHeader shop={{ slug: a.business.slug, name: a.business.name, logo: a.business.logo || parseJson<string[]>(a.business.images, [])[0] || null }} title="Reprogramar" back />

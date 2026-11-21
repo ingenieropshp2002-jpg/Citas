@@ -1,4 +1,5 @@
 'use client';
+import { AppointmentActions } from '@/components/cliente/AppointmentActions';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
@@ -26,7 +27,7 @@ export function PhoneLookup({ loginHref, expired }: { loginHref: string; expired
         <button className="btn-gold w-full h-11" disabled={pending}>{pending ? 'Revisando…' : 'Ver mis citas'}</button>
         <p className="font-body-sm text-on-surface-variant flex items-start gap-1.5"><Icon name="lock" className="text-[16px] text-secondary mt-0.5" />Así nadie puede ver tus citas solo con tu número. Este dispositivo queda recordado 7 días.</p>
       </form>
-      <p className="mt-5 text-center font-body-sm text-on-surface-variant">¿Quieres reprogramar, cancelar o ver tu historial? <Link href={loginHref} className="text-secondary font-semibold">Ingresa a tu cuenta</Link></p>
+      <p className="mt-5 text-center font-body-sm text-on-surface-variant">¿Quieres ver tu historial de citas? <Link href={loginHref} className="text-secondary font-semibold">Ingresa a tu cuenta</Link></p>
     </div>
   );
 }
@@ -47,11 +48,14 @@ export function PhoneAppointments({ phone, list, loginHref }: { phone: string; l
       ) : (
         <div className="space-y-3 mt-3">
           {list.map(a => { const d = new Date(a.start); return (
-            <Link key={a.code} href={`/cita/${a.code}`} className="card p-4 block hover:shadow-raised transition">
-              <div className="flex items-center justify-between gap-2"><span className="font-label-md text-label-md text-secondary truncate">{a.business}</span><StatusBadge status={a.status} /></div>
-              <p className="font-title-md text-title-md truncate">{a.services}</p>
-              <p className="font-body-sm text-on-surface-variant flex flex-wrap gap-x-3"><span className="flex items-center gap-1"><Icon name="event" className="text-[14px]" />{fechaLarga(d)} · {time12(hm(d))}</span>{a.staff && <span className="flex items-center gap-1"><Icon name="person" className="text-[14px]" />{a.staff}</span>}</p>
-            </Link>
+            <div key={a.code} className="card p-4">
+              <Link href={`/cita/${a.code}`} className="block">
+                <div className="flex items-center justify-between gap-2"><span className="font-label-md text-label-md text-secondary truncate">{a.business}</span><StatusBadge status={a.status} /></div>
+                <p className="font-title-md text-title-md truncate">{a.services}</p>
+                <p className="font-body-sm text-on-surface-variant flex flex-wrap gap-x-3"><span className="flex items-center gap-1"><Icon name="event" className="text-[14px]" />{fechaLarga(d)} · {time12(hm(d))}</span>{a.staff && <span className="flex items-center gap-1"><Icon name="person" className="text-[14px]" />{a.staff}</span>}</p>
+              </Link>
+              {a.status !== 'EN_SERVICIO' && d.getTime() > Date.now() && <AppointmentActions code={a.code} slug={a.slug} upcoming canReview={false} repeatQuery="" policyHours={a.policyHours} />}
+            </div>
           ); })}
         </div>
       )}
@@ -65,7 +69,7 @@ export function PhoneAppointments({ phone, list, loginHref }: { phone: string; l
         </div>
         {msg && <p className="mt-2 font-label-md text-success">{msg}</p>}
       </div>
-      <p className="mt-5 text-center font-body-sm text-on-surface-variant">¿Quieres reprogramar, cancelar o ver tu historial? <Link href={loginHref} className="text-secondary font-semibold">Ingresa a tu cuenta</Link></p>
+      <p className="mt-5 text-center font-body-sm text-on-surface-variant">¿Quieres ver tu historial de citas? <Link href={loginHref} className="text-secondary font-semibold">Ingresa a tu cuenta</Link></p>
     </div>
   );
 }

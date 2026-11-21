@@ -15,18 +15,22 @@ import { Guide } from './Guide';
 
 export const metadata = { title: 'Dashboard' };
 export default async function Dashboard({ searchParams }: { searchParams: Promise<{ sinpermiso?: string; bienvenida?: string }> }) {
-  const { business: b, user, perms } = await requireBusiness();
+  const { business: b, user, perms, staffId: me } = await requireBusiness();
+  const can = (p: string) => perms === 'ALL' || perms.includes(p as never);
+  // El rol Profesional ve solo lo suyo: sus citas de hoy, sin dinero del negocio ni inventario.
+  const mine = !can('agenda_todos') && !can('configuracion') && me ? me : null;
+  const money = can('reportes');
   await sweepAppointments(b.id);
   const sp = await searchParams;
   const today = ymd(new Date());
   const dayStart = fromBogota(today); const dayEnd = fromBogota(addDays(today, 1));
   const weekStart = addDays(today, -6);
   const [appts, sales, newCustomers, staff, low, weekSales] = await Promise.all([
-    db.appointment.findMany({ where: { businessId: b.id, start: { gte: dayStart, lt: dayEnd } }, include: { customer: true, staff: true, services: { include: { service: true } } }, orderBy: { start: 'asc' } }),
+    db.appointment.findMany({ where: { businessId: b.id, ...(mine ? { staffId: mine } : {}), start: { gte: dayStart, lt: dayEnd } }, include: { customer: true, staff: true, services: { include: { service: true } } }, orderBy: { start: 'asc' } }),
     db.sale.findMany({ where: { businessId: b.id, status: 'PAGADA', createdAt: { gte: dayStart, lt: dayEnd } } }),
     db.customer.count({ where: { businessId: b.id, createdAt: { gte: fromBogota(addDays(today, -30)) } } }),
-    db.staff.findMany({ where: { businessId: b.id, active: true } }),
-    lowStock(b.id),
+    db.staff.findMany({ where: { businessId: b.id, active: true, ...(mine ? { id: mine } : {}) } }),
+    can('inventario') ? lowStock(b.id) : Promise.resolve([] as Awaited<ReturnType<typeof lowStock>>),
     db.sale.findMany({ where: { businessId: b.id, status: 'PAGADA', createdAt: { gte: fromBogota(weekStart), lt: dayEnd } }, select: { total: true, tip: true, createdAt: true } })
   ]);
   const guide = perms === 'ALL' && !readOnboarding(b.onboarding).hidden ? await onboardingSteps(b) : null;
@@ -43,17 +47,17 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   return (
     <>
       {sp.sinpermiso && <div className="mb-4 p-3 rounded-xl bg-[#FFF1F2] text-danger font-label-md">No tienes permiso para ese módulo. Pide acceso al administrador.</div>}
-      <PageHeader eyebrow={fechaLarga(new Date())} title={`Hola, ${user.name.split(' ')[0]}`} subtitle="Así va tu negocio hoy."
-        actions={<><Link href="/admin/caja" className="btn-outline btn-sm"><Icon name="point_of_sale" className="text-[18px]" />Cobrar</Link><Link href="/admin/agenda?nueva=1" className="btn-primary btn-sm"><Icon name="add" className="text-[18px]" />Nueva cita</Link></>} />
+      <PageHeader eyebrow={fechaLarga(new Date())} title={`Hola, ${user.name.split(' ')[0]}`} subtitle={mine ? 'Así va tu día.' : 'Así va tu negocio hoy.'}
+        actions={<>{can('caja') && <Link href="/admin/caja" className="btn-outline btn-sm"><Icon name="point_of_sale" className="text-[18px]" />Cobrar</Link>}<Link href="/admin/agenda?nueva=1" className="btn-primary btn-sm"><Icon name="add" className="text-[18px]" />Nueva cita</Link></>} />
       {guide && guide.done < guide.steps.length && <Guide steps={guide.steps} welcome={!!sp.bienvenida} trialLeft={sub.state === 'PRUEBA' ? sub.daysLeft : null} />}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4">
-        <Stat label="Ingresos de hoy" value={cop(revenue)} icon="payments" tone="gold" hint={`${sales.length} ventas`} />
-        <Stat label="Citas de hoy" value={String(appts.filter(a => a.status !== 'CANCELADA').length)} icon="event_available" hint={`${upcoming.length} por atender`} />
+        {money && <Stat label="Ingresos de hoy" value={cop(revenue)} icon="payments" tone="gold" hint={`${sales.length} ventas`} />}
+        <Stat label={mine ? 'Mis citas de hoy' : 'Citas de hoy'} value={String(appts.filter(a => a.status !== 'CANCELADA').length)} icon="event_available" hint={`${upcoming.length} por atender`} />
         <Stat label="Ocupación" value={`${occupancy}%`} icon="donut_large" hint={`${Math.round(booked / 60)} h de ${Math.round(capacity / 60)} h`} />
-        <Stat label="Clientes nuevos" value={String(newCustomers)} icon="person_add" hint="Últimos 30 días" />
+        {!mine && <Stat label="Clientes nuevos" value={String(newCustomers)} icon="person_add" hint="Últimos 30 días" />}
       </div>
       <div className="grid xl:grid-cols-3 gap-4 mt-4">
-        <section className="card p-5 xl:col-span-2">
+        {money && <section className="card p-5 xl:col-span-2">
           <div className="flex items-center justify-between"><h2 className="h-section">Ventas de la semana</h2><span className="font-title-md text-title-md tnum">{cop(perDay.reduce((a, x) => a + x, 0))}</span></div>
           <div className="mt-6 h-56 flex items-end gap-2 md:gap-4" role="img" aria-label="Gráfica de ventas de los últimos 7 días">
             {days.map((d, i) => (
@@ -64,9 +68,9 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
               </div>
             ))}
           </div>
-        </section>
-        <section className="card p-5">
-          <div className="flex items-center justify-between mb-3"><h2 className="h-section">Próximas citas</h2><Link href="/admin/agenda" className="font-label-md text-secondary">Agenda</Link></div>
+        </section>}
+        <section className={`card p-5 ${money ? '' : 'xl:col-span-3'}`}>
+          <div className="flex items-center justify-between mb-3"><h2 className="h-section">{mine ? 'Mis próximas citas' : 'Próximas citas'}</h2><Link href="/admin/agenda" className="font-label-md text-secondary">Agenda</Link></div>
           {upcoming.length === 0 ? <Empty icon="event_available" title="Sin citas pendientes" text="Comparte tu link de reservas para llenar la agenda." /> : (
             <ul className="space-y-3">
               {upcoming.slice(0, 6).map(a => (

@@ -266,7 +266,7 @@ export function BookingWizard({ business, services, staff, initialService, initi
             className="w-full py-3.5 px-4 rounded-lg bg-primary-container text-white dark:text-on-primary-container font-label-lg text-label-lg font-bold flex items-center justify-center gap-2 active:scale-[0.985] transition-transform shadow-md disabled:opacity-50">
             {step === 4 && <Icon name="lock" className="text-[18px] text-secondary-fixed" />}<span>{pending ? 'Procesando…' : ctaLabel}</span>
           </button>
-          <div className="flex items-center justify-center gap-1 mt-2 text-on-surface-variant text-[11px] font-label-sm"><Icon name="verified" className="text-[13px] text-secondary" /><span>Transacción 100% segura y encriptada · pasarela vigilada</span></div>
+          {step === 4 && method !== 'EN_LOCAL' && <div className="flex items-center justify-center gap-1 mt-2 text-on-surface-variant text-[11px] font-label-sm"><Icon name="verified" className="text-[13px] text-secondary" /><span>Pago seguro y encriptado</span></div>}
         </div>
       </div>
     </div>
