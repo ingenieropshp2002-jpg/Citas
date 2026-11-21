@@ -72,6 +72,8 @@ export async function saveStaff(_: unknown, fd: FormData) {
       }
     }
   }
+  // Sin secretaria: quien recibe acceso sin rol queda como Profesional (solo su agenda y sus clientes).
+  if (userId && data.permissions === '[]' && (business.notifyTo === 'PROFESIONAL' || business.notifyTo === 'AMBOS')) data.permissions = JSON.stringify(['agenda', 'clientes']);
   if (id) await db.staff.update({ where: { id, businessId: business.id }, data: { ...data, ...(userId ? { userId } : {}) } });
   else await db.staff.create({ data: { ...data, businessId: business.id, userId } });
   revalidatePath('/admin/equipo');
@@ -112,4 +114,20 @@ export async function createBusiness(_: unknown, fd: FormData) {
   await db.user.update({ where: { id: user.id }, data: { role: 'OWNER' } });
   await db.dianConfig.create({ data: { businessId: b.id } });
   redirect('/admin?bienvenida=1');
+}
+
+// ───── Modo sin secretaria ─────
+/** Deja todo listo para un negocio sin recepción: avisos al profesional y rol Profesional a quien tenga acceso sin rol. */
+export async function modoSinSecretaria(fd: FormData) {
+  const { business } = await requireBusiness('configuracion');
+  const on = fd.get('on') === '1';
+  await db.business.update({ where: { id: business.id }, data: { notifyTo: on ? 'PROFESIONAL' : 'RECEPCION' } });
+  if (on) {
+    const staff = await db.staff.findMany({ where: { businessId: business.id, userId: { not: null } }, select: { id: true, permissions: true } });
+    for (const s of staff) {
+      let p: string[] = []; try { p = JSON.parse(s.permissions || '[]'); } catch {}
+      if (!p.length) await db.staff.update({ where: { id: s.id }, data: { permissions: JSON.stringify(['agenda', 'clientes']) } });
+    }
+  }
+  revalidatePath('/admin/configuracion');
 }

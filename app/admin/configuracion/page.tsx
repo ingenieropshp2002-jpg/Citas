@@ -7,6 +7,7 @@ import { Icon } from '@/components/ui/Icon';
 import { saveSettings } from '../_actions/catalog';
 import { parseJson } from '@/lib/format';
 import { CopyLink } from './CopyLink';
+import { SinSecretaria } from './SinSecretaria';
 import { waReady, waLink } from '@/lib/notify';
 import Link from 'next/link';
 
@@ -21,6 +22,7 @@ export default async function Configuracion({ searchParams }: { searchParams: Pr
     <>
       <PageHeader eyebrow="Ajustes" title="Configuración" />
       {sp.sede && <div className="mb-4 p-4 rounded-xl bg-secondary-fixed/40">¡Sede creada! Ya la estás administrando. Revisa sus datos, agrega su equipo y comparte su link de reservas. Cambias de sede desde el menú.</div>}
+      <SinSecretaria businessId={b.id} notifyTo={b.notifyTo || 'RECEPCION'} />
       {nuevo && <div className="mb-4 p-4 rounded-xl bg-secondary-fixed/40">¡Tu negocio fue creado! Completa los datos, agrega servicios y profesionales, y comparte tu link de reservas.</div>}
       <section className="card-raised p-5 mb-4 grid md:grid-cols-[1fr_auto] gap-4 items-center">
         <div>
