@@ -23,5 +23,6 @@ export async function GET(req: NextRequest) {
   const waitlistExpired = await (await import('@/lib/espera')).expireWaitlist().catch(() => 0);
   const gcal = await (await import('@/lib/gcal')).syncAllGcal().catch(e => { console.error('[cron gcal]', e); return 0; });
   const charged = await (await import('@/lib/billing')).chargeDueSubscriptions().catch(e => { console.error('[cron cobro]', e); return 0; });
-  return NextResponse.json({ ok: true, ...out, waitlistExpired, gcal, charged });
+  const resumenes = await (await import('@/lib/avisos')).resumenesDelDia().catch(e => { console.error('[cron resumen]', e); return 0; });
+  return NextResponse.json({ ok: true, ...out, waitlistExpired, gcal, charged, resumenes });
 }

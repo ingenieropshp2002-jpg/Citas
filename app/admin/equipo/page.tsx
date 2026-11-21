@@ -24,6 +24,7 @@ function Fields({ s, businessHours }: { s?: S; businessHours: string }) {
       <div className="grid grid-cols-2 gap-3">
         <label className="col-span-2"><span className="label">Nombre *</span><input name="name" defaultValue={s?.name} className="input" required /></label>
         <label><span className="label">Cargo</span><input name="title" defaultValue={s?.title || ''} className="input" placeholder="Master Stylist" /></label>
+        <label><span className="label">WhatsApp (avisos y resumen del día)</span><input name="whatsapp" defaultValue={s?.whatsapp || ''} className="input" inputMode="numeric" placeholder="300 123 4567" /></label>
         <label><span className="label">Comisión servicios (%)</span><input name="commissionPct" type="number" min={0} max={100} defaultValue={s?.commissionPct ?? 40} className="input" /></label>
         <label><span className="label">Comisión productos (%)</span><input name="productCommissionPct" type="number" min={0} max={100} defaultValue={s?.productCommissionPct ?? 10} className="input" /></label>
         <label><span className="label">Color en agenda</span><input name="color" type="color" defaultValue={s?.color || '#0d2538'} className="input !p-1" /></label>

@@ -80,6 +80,18 @@ export default async function Configuracion({ searchParams }: { searchParams: Pr
             <label className="flex items-center gap-2"><input type="checkbox" name="notifyEmail" defaultChecked={b.notifyEmail} className="accent-primary-container" />Enviar factura y confirmaciones por correo</label>
             <label className="block"><span className="label">Recordatorio (horas antes)</span><input name="reminderHours" type="number" min={1} defaultValue={b.reminderHours} className="input" /></label>
             <label className="flex items-center gap-2"><input type="checkbox" name="autoConfirmRequest" defaultChecked={b.autoConfirmRequest} className="accent-primary-container" />Pedir al cliente que confirme respondiendo 1 (o 2 para reprogramar)</label>
+            <div className="rounded-xl border border-parchment p-3 space-y-2">
+              <p className="font-label-lg">Avisos de citas nuevas, canceladas o movidas</p>
+              <label className="block"><span className="label">¿A quién le llegan por WhatsApp?</span>
+                <select name="notifyTo" defaultValue={b.notifyTo || 'RECEPCION'} className="input">
+                  <option value="RECEPCION">A la recepción (recomendado)</option>
+                  <option value="PROFESIONAL">Al profesional de la cita</option>
+                  <option value="AMBOS">A la recepción y al profesional</option>
+                  <option value="NADIE">A nadie (solo notificaciones de la app)</option>
+                </select></label>
+              <label className="block"><span className="label">WhatsApp de la recepción</span><input name="receptionWhatsapp" defaultValue={b.receptionWhatsapp || ''} className="input" inputMode="numeric" placeholder="300 123 4567" /></label>
+              <p className="font-body-sm text-on-surface-variant">El WhatsApp de cada profesional se pone en <Link href="/admin/equipo" className="text-secondary font-semibold">Equipo</Link>. Si eliges al profesional, también recibe cada mañana el resumen de sus citas del día.</p>
+            </div>
             <label className="block"><span className="label">ID del número de WhatsApp del negocio (opcional)</span><input name="waPhoneId" defaultValue={b.waPhoneId || ''} className="input" placeholder="Phone number ID de Meta" /></label>
             <p className="font-body-sm text-on-surface-variant">{(await waReady()) ? '✓ WhatsApp automático activo: confirmaciones y recordatorios salen solos.' : 'WhatsApp automático aún no está activo en la plataforma: mientras tanto envía los mensajes con los botones de WhatsApp (en Recordatorios). Si tienes tu propio número de WhatsApp Business, escribe su ID abajo.'}</p>
           </Sec>

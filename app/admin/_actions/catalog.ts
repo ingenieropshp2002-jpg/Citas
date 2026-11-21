@@ -50,7 +50,7 @@ export async function saveService(_: unknown, fd: FormData) {
 export async function saveStaff(_: unknown, fd: FormData) {
   const { business } = await requireBusiness('equipo');
   const id = String(fd.get('id') || '');
-  const data = { name: String(fd.get('name')).trim(), title: String(fd.get('title') || 'Profesional'), photo: String(fd.get('photo') || '') || null, color: String(fd.get('color') || '#0d2538'), commissionPct: Math.min(100, Math.max(0, int(fd.get('commissionPct'), 40))), productCommissionPct: Math.min(100, Math.max(0, int(fd.get('productCommissionPct'), 10))), permissions: JSON.stringify(fd.getAll('permissions').map(String)), workHours: fd.get('customHours') ? hoursFrom(fd, 'w') : '{}', daysOff: JSON.stringify(String(fd.get('daysOff') || '').split(',').map(s => s.trim()).filter(s => /^\d{4}-\d{2}-\d{2}$/.test(s))), active: !!fd.get('active') };
+  const data = { name: String(fd.get('name')).trim(), title: String(fd.get('title') || 'Profesional'), whatsapp: String(fd.get('whatsapp') || '').replace(/\D/g, '').replace(/^57(?=\d{10}$)/, '') || null, photo: String(fd.get('photo') || '') || null, color: String(fd.get('color') || '#0d2538'), commissionPct: Math.min(100, Math.max(0, int(fd.get('commissionPct'), 40))), productCommissionPct: Math.min(100, Math.max(0, int(fd.get('productCommissionPct'), 10))), permissions: JSON.stringify(fd.getAll('permissions').map(String)), workHours: fd.get('customHours') ? hoursFrom(fd, 'w') : '{}', daysOff: JSON.stringify(String(fd.get('daysOff') || '').split(',').map(s => s.trim()).filter(s => /^\d{4}-\d{2}-\d{2}$/.test(s))), active: !!fd.get('active') };
   if (!data.name) return { error: 'El nombre es obligatorio.' };
   const email = String(fd.get('loginEmail') || '').toLowerCase().trim(); const pass = String(fd.get('loginPassword') || '');
   let userId: string | undefined;
@@ -89,7 +89,9 @@ export async function saveSettings(_: unknown, fd: FormData) {
     openingHours: hoursFrom(fd, 'h'), slotStepMin: int(fd.get('slotStepMin'), 15), cancellationHours: int(fd.get('cancellationHours'), 24), depositPercent: fd.get('depositPercentSel') === 'otro' ? Math.min(100, Math.max(0, int(fd.get('depositPercentOtro'), 30))) : fd.has('depositPercentSel') ? Math.min(100, Math.max(0, int(fd.get('depositPercentSel'), 0))) : Math.min(100, int(fd.get('depositPercent'), 30)), depositDeadlineMin: Math.min(240, Math.max(30, int(fd.get('depositDeadlineMin'), 60))), transferInfo: String(fd.get('transferInfo') || '').slice(0, 600).trim(), requireDeposit: !!fd.get('requireDeposit'),
     reminderHours: int(fd.get('reminderHours'), 24), notifyWhatsapp: !!fd.get('notifyWhatsapp'), notifyEmail: !!fd.get('notifyEmail'), autoConfirmRequest: !!fd.get('autoConfirmRequest'),
     reminderHourBefore: !!fd.get('reminderHourBefore'), releaseUnconfirmed: !!fd.get('releaseUnconfirmed'), releaseBeforeMin: Math.min(240, Math.max(10, int(fd.get('releaseBeforeMin'), 30))),
-    lateToleranceMin: Math.min(60, Math.max(0, int(fd.get('lateToleranceMin'), 0))), depositInPeak: !!fd.get('depositInPeak'), depositForNoShows: !!fd.get('depositForNoShows'), noShowLimit: Math.min(10, Math.max(1, int(fd.get('noShowLimit'), 2))), waPhoneId: String(fd.get('waPhoneId') || '').trim() || null
+    lateToleranceMin: Math.min(60, Math.max(0, int(fd.get('lateToleranceMin'), 0))), depositInPeak: !!fd.get('depositInPeak'), depositForNoShows: !!fd.get('depositForNoShows'), noShowLimit: Math.min(10, Math.max(1, int(fd.get('noShowLimit'), 2))), waPhoneId: String(fd.get('waPhoneId') || '').trim(),
+    notifyTo: ['RECEPCION', 'PROFESIONAL', 'AMBOS', 'NADIE'].includes(String(fd.get('notifyTo'))) ? String(fd.get('notifyTo')) : 'RECEPCION',
+    receptionWhatsapp: String(fd.get('receptionWhatsapp') || '').replace(/\D/g, '').replace(/^57(?=\d{10}$)/, '') || null || null
   } });
   await markOnboarding(business.id, { done: 'horario' });
   revalidatePath('/admin/configuracion');
