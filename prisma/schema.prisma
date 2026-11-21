@@ -79,6 +79,9 @@ model Business {
   active              Boolean     @default(true)
   featured            Boolean     @default(false) // destacado en el buscador (lo marca el superadmin)
   waitEntries         WaitEntry[]
+  waChats             WaChat[]
+  aiAssistant         Boolean     @default(false) // el asistente con IA responde y agenda por WhatsApp
+  aiNotes             String? // datos extra que el asistente puede contar (parqueadero, políticas, etc.)
   autoRenew           Boolean     @default(false) // renovación automática de la suscripción
   billingPeriod       String      @default("MENSUAL") // MENSUAL | ANUAL
   billingProvider     String? // WOMPI | MERCADOPAGO | SIMULADO
@@ -693,6 +696,29 @@ model SlotWatch {
 }
 
 /// Registro de mensajes de WhatsApp (enviados, con error o en modo de prueba).
+model WaChat {
+  id         String    @id @default(cuid())
+  businessId String
+  business   Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  phone      String // últimos 10 dígitos
+  name       String?
+  messages   String    @default("[]") // historial en texto [{role, content}]
+  msgIds     String    @default("[]") // ids de WhatsApp ya procesados (Meta reintenta)
+  day        String    @default("")
+  dayCount   Int       @default(0)
+  turns      Int       @default(0)
+  bookings   Int       @default(0)
+  inTokens   Int       @default(0)
+  outTokens  Int       @default(0)
+  humanUntil DateTime? // una persona del equipo tomó la conversación
+  lastError  String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @default(now()) @updatedAt
+
+  @@unique([businessId, phone])
+  @@index([phone, updatedAt])
+}
+
 model WaLog {
   id         String   @id @default(cuid())
   businessId String?

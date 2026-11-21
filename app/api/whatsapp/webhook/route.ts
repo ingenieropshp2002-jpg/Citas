@@ -34,19 +34,43 @@ export async function POST(req: NextRequest) {
   for (const entry of body.entry || []) for (const ch of entry.changes || []) {
     const v = ch.value || {}; const phoneId: string | undefined = v.metadata?.phone_number_id;
     for (const m of v.messages || []) {
-      try { await handle(m.from as string, (m.text?.body || m.button?.text || m.interactive?.button_reply?.title || '').trim(), phoneId); } catch (e) { console.error('[WhatsApp webhook]', e); }
+      try { await handle(m.from as string, (m.text?.body || m.button?.text || m.interactive?.button_reply?.title || '').trim(), phoneId, m.id as string | undefined); } catch (e) { console.error('[WhatsApp webhook]', e); }
     }
   }
   return NextResponse.json({ ok: true });
 }
 
-async function handle(from: string, text: string, phoneId?: string) {
+/** Corre el asistente después de responder 200 a Meta (si se puede), para no hacerla esperar. */
+async function later(p: () => Promise<unknown>) {
+  try { const { getCloudflareContext } = await import('@opennextjs/cloudflare'); getCloudflareContext().ctx.waitUntil(p().catch(e => console.error('[asistente]', e))); }
+  catch { await p().catch(e => console.error('[asistente]', e)); }
+}
+
+async function handle(from: string, text: string, phoneId?: string, msgId?: string) {
+  if (!text) return;
   const phone = last10(from);
   const customers = await db.customer.findMany({ where: { phone: { endsWith: phone } }, include: { business: true }, orderBy: { lastVisit: 'desc' } });
-  // El negocio: el dueño del número de WhatsApp que recibió el mensaje, o el último donde estuvo el cliente
-  const business = (phoneId && await db.business.findFirst({ where: { waPhoneId: phoneId } })) || customers[0]?.business || null;
+  // El negocio: el dueño del número de WhatsApp que recibió el mensaje; si es el número compartido de la plataforma,
+  // el que nombra el mensaje (enlace de reserva), el último con el que habló o el último donde estuvo el cliente.
+  const ai = await import('@/lib/asistente');
+  const business = (phoneId && await db.business.findFirst({ where: { waPhoneId: phoneId } })) || await ai.businessFromText(text) || await ai.recentChatBusiness(phone) || customers[0]?.business || null;
   const opts = { phoneId: business?.waPhoneId || phoneId };
-  const t = text.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const t = text.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+  // Asistente con IA: si el negocio lo activó, responde todo lo que no sea una respuesta corta a un recordatorio.
+  const useAi = !!business?.aiAssistant && await (await import('@/lib/ia')).iaReady();
+  if (useAi) {
+    const talking = await db.waChat.findFirst({ where: { businessId: business!.id, phone, updatedAt: { gt: new Date(Date.now() - 30 * 60000) } }, select: { id: true } });
+    const command = !talking && /^(1|2|si|confirmo|confirmar|ok|cancelo|cancelar|reprogramar)[.! ]*$/.test(t);
+    if (!command) {
+      const b = business!;
+      await later(async () => {
+        await ai.typing(msgId, opts.phoneId);
+        const r = await ai.chat(b.id, from, text, { msgId });
+        if (r.reply) await sendWhatsapp(from, r.reply, { ...opts, businessId: b.id });
+      });
+      return;
+    }
+  }
   const ids = customers.filter(c => !business || c.businessId === business.id).map(c => c.id);
   const next = ids.length ? await db.appointment.findFirst({ where: { customerId: { in: ids }, status: { in: ['PENDIENTE', 'CONFIRMADA'] }, start: { gt: new Date() } }, orderBy: { start: 'asc' }, include: { business: true } }) : null;
 
