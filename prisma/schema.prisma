@@ -19,6 +19,7 @@ model User {
   phone         String?     @unique
   passwordHash  String?
   googleId      String?     @unique
+  appleId       String?     @unique
   role          String      @default("CLIENT") // CLIENT | OWNER | STAFF | ADMIN
   superAdmin    Boolean     @default(false) // controla toda la plataforma desde /admin
   blocked       Boolean     @default(false) // no puede ingresar

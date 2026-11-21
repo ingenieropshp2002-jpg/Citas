@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { cop, CATEGORY_LABEL } from '@/lib/format';
 import { Icon } from '@/components/ui/Icon';
+import { FavButton } from './Favorites';
 
 type Card = {
   slug: string; name: string; category: string; zone: string | null; city: string; rating: number; reviewCount: number; imgs: string[]; from: number; distance: number | null; tagline: string | null;
@@ -14,7 +15,8 @@ export function BusinessCard({ b }: { b: Card }) {
           {b.imgs[0] && <img src={b.imgs[0]} alt={b.name} loading="lazy" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />}
           <div className="absolute inset-0 bg-gradient-to-t from-primary-container/60 via-transparent" />
           <span className="absolute top-3 left-3 px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-container font-label-sm text-label-sm uppercase tracking-wider">{CATEGORY_LABEL[b.category]}</span>
-          {b.featured && <span className="absolute top-3 right-3 flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary-container/90 text-secondary-fixed font-label-sm text-label-sm"><Icon name="workspace_premium" fill className="text-[14px]" />Destacado</span>}
+          <span className="absolute top-2.5 right-2.5 z-10"><FavButton variant="icon" fav={{ slug: b.slug, name: b.name, img: b.imgs[0] || null, place: `${b.zone ? `${b.zone}, ` : ''}${b.city}`, category: b.category }} /></span>
+          {b.featured && <span className="absolute top-3 right-14 flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary-container/90 text-secondary-fixed font-label-sm text-label-sm"><Icon name="workspace_premium" fill className="text-[14px]" />Destacado</span>}
           <span className="absolute bottom-3 left-3 flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-container-lowest/90 backdrop-blur text-on-surface font-label-md text-label-md">
             {b.reviewCount ? <><Icon name="star" fill className="text-[16px] text-gold" />{b.rating.toFixed(1)} <span className="text-on-surface-variant font-normal">({b.reviewCount})</span></> : <><Icon name="new_releases" className="text-[16px] text-secondary" />Nuevo</>}
           </span>

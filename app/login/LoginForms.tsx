@@ -5,7 +5,7 @@ import { Icon } from '@/components/ui/Icon';
 import { PasswordInput } from '@/components/ui/PasswordInput';
 import { loginEmail, sendOtp, verifyOtp } from './actions';
 
-export function LoginForms({ next, google, phone: phoneOn }: { next: string; google: boolean; phone: boolean }) {
+export function LoginForms({ next, google, apple = false, phone: phoneOn }: { next: string; google: boolean; apple?: boolean; phone: boolean }) {
   const [tab, setTab] = useState<'phone' | 'email'>('email');
   const [phone, setPhone] = useState(''); const [sent, setSent] = useState(false); const [code, setCode] = useState(''); const [name, setName] = useState(''); const [needName, setNeedName] = useState(false);
   const [msg, setMsg] = useState(''); const [dev, setDev] = useState(''); const [p, start] = useTransition();
@@ -39,9 +39,10 @@ export function LoginForms({ next, google, phone: phoneOn }: { next: string; goo
           <p className="text-center font-body-sm text-on-surface-variant">¿No tienes cuenta? <Link className="text-secondary font-bold" href={`/registro?next=${encodeURIComponent(next)}`}>Regístrate</Link></p>
         </form>
       )}
-      {google && <div className="flex items-center gap-3 my-5 text-on-surface-variant font-label-md"><span className="flex-1 h-px bg-parchment" />o<span className="flex-1 h-px bg-parchment" /></div>}
+      {(google || apple) && <div className="flex items-center gap-3 my-5 text-on-surface-variant font-label-md"><span className="flex-1 h-px bg-parchment" />o<span className="flex-1 h-px bg-parchment" /></div>}
       {google ? <a href={`/api/auth/google?next=${encodeURIComponent(next)}`} className="btn-ghost w-full border border-parchment"><img alt="" src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" />Continuar con Google</a>
         : null}
+      {apple && <a href={`/api/auth/apple?next=${encodeURIComponent(next)}`} className={`w-full h-11 rounded-lg bg-black text-white font-label-lg flex items-center justify-center gap-2 ${google ? 'mt-2' : ''}`}><svg aria-hidden viewBox="0 0 814 1000" className="w-4 h-4 fill-current"><path d="M788 341c-6 4-108 62-108 190 0 148 130 200 134 202-1 3-21 72-69 142-43 62-88 124-156 124s-86-40-165-40c-77 0-104 41-166 41s-106-57-156-127C44 791 0 671 0 557c0-183 119-280 236-280 62 0 114 41 153 41 37 0 95-43 166-43 27 0 124 2 188 66zM554 159c29-35 50-83 50-131 0-7-1-14-2-19-48 2-104 32-138 71-27 30-52 78-52 127 0 7 1 15 2 17 3 1 8 1 13 1 43 0 97-29 127-66z"/></svg>Continuar con Apple</a>}
     </div>
   );
 }

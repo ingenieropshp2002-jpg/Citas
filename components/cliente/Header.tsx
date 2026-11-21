@@ -20,6 +20,7 @@ export async function ClientHeader({ title, back = false }: { title?: string; ba
         </div>
         <nav className="hidden md:flex items-center gap-6 font-label-lg text-label-lg text-on-surface-variant">
           <Link href="/buscar" className="hover:text-primary">Explorar</Link>
+          <Link href="/favoritos" className="hover:text-primary">Favoritos</Link>
           <Link href="/mis-citas" className="hover:text-primary">Mis citas</Link>
           <Link href="/negocios" className="hover:text-primary">Para negocios</Link>
         </nav>
