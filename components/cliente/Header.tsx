@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { InstallApp } from '@/components/ui/InstallApp';
 import { UserChip } from './UserChip';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { BackButton } from './BackButton';
@@ -25,6 +26,7 @@ export async function ClientHeader({ title, back = false }: { title?: string; ba
           <Link href="/negocios" className="hover:text-primary">Para negocios</Link>
         </nav>
         <div className="flex items-center gap-1">
+          <InstallApp variant="header" />
           <ThemeToggle />
           <UserChip href="/perfil" label="Mi perfil" loginHref="/login" />
         </div>
@@ -60,6 +62,7 @@ export async function ShopHeader({ shop, title, back = false }: { shop: { slug: 
           <Link href={citas} className="hover:text-primary">Mis citas</Link>
         </nav>
         <div className="flex items-center gap-1">
+          <InstallApp variant="header" name={shop.name} />
           <ThemeToggle />
           <UserChip href={citas} label="Mis citas" loginHref={`/login?next=${encodeURIComponent(home)}`} />
         </div>

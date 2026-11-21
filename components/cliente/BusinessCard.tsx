@@ -27,7 +27,6 @@ export function BusinessCard({ b }: { b: Card }) {
           <p className="flex items-center gap-1 text-on-surface-variant font-body-sm text-body-sm mt-0.5"><Icon name="location_on" className="text-[16px] text-secondary" />{b.zone ? `${b.zone}, ` : ''}{b.city}{b.distance != null && ` · ${b.distance.toFixed(1)} km`}</p>
           <div className="flex items-baseline justify-between gap-2 mt-3">
             <span className="font-label-md text-label-md text-on-surface-variant truncate">{b.hasPlans ? <span className="inline-flex items-center gap-1 text-secondary"><Icon name="redeem" className="text-[15px]" />Paquetes y membresías</span> : b.tagline}</span>
-            <span className="font-label-md text-label-md text-on-surface-variant shrink-0">Desde <b className="font-title-md text-title-md text-primary-container dark:text-primary tnum">{cop(b.from)}</b></span>
           </div>
         </div>
       </Link>
