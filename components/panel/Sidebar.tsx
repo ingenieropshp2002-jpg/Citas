@@ -24,7 +24,7 @@ export function Sidebar({ business, user, perms, lowStock, sedes = [] }: { sedes
       {items.map(([href, icon, label]) => {
         const on = href === '/admin' ? p === '/admin' : p.startsWith(href);
         return (
-          <Link key={href} href={href} onClick={() => setOpen(false)} className={`flex items-center gap-3 h-10 shrink-0 px-3 rounded-xl font-label-lg text-label-lg transition ${on ? 'bg-white/10 text-white' : 'text-white/65 hover:text-white hover:bg-white/5'}`}>
+          <Link key={href} href={href} prefetch={false} onClick={() => setOpen(false)} className={`flex items-center gap-3 h-10 shrink-0 px-3 rounded-xl font-label-lg text-label-lg transition ${on ? 'bg-white/10 text-white' : 'text-white/65 hover:text-white hover:bg-white/5'}`}>
             <Icon name={icon} fill={on} className={`text-[20px] ${on ? 'text-secondary-fixed' : ''}`} />{label}
             {href === '/admin/inventario' && lowStock > 0 && <span className="ml-auto px-1.5 rounded-full bg-danger text-white text-[11px] font-bold">{lowStock}</span>}
           </Link>

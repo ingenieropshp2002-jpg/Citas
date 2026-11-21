@@ -1,6 +1,8 @@
 import './globals.css';
 import type { Metadata, Viewport } from 'next';
 import { PwaRegister } from '@/components/ui/PwaRegister';
+import { Feedback } from '@/components/ui/Feedback';
+import { Suspense } from 'react';
 import { getSettings } from '@/lib/settings';
 import { getImpersonator, getUser } from '@/lib/auth';
 import { stopImpersonationAction } from '@/app/superadmin/actions';
@@ -33,13 +35,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         {/* eslint-disable-next-line @next/next/no-page-custom-font */}
         <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500&display=swap" rel="stylesheet" />
         {/* eslint-disable-next-line @next/next/no-page-custom-font */}
-        <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0..1,0&display=block" rel="stylesheet" />
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className="bg-surface font-sans text-body-md text-on-surface min-h-screen antialiased">
         {admin && as && <form action={stopImpersonationAction} className="fixed bottom-24 md:bottom-4 left-1/2 -translate-x-1/2 z-[90] flex items-center gap-3 pl-4 pr-1.5 py-1.5 rounded-full bg-[#7c2d12] text-white shadow-raised font-label-md text-label-md"><span>Viendo como <b>{as.name}</b></span><button className="h-8 px-3 rounded-full bg-white text-[#7c2d12] font-bold">Volver a superadmin</button></form>}
         {s.announcement && <div className="relative z-[60] bg-secondary-fixed text-on-secondary-fixed px-margin py-2 text-center font-label-md text-label-md">{s.announcement}</div>}
-        {children}<PwaRegister /></body>
+        <Suspense fallback={null}><Feedback /></Suspense>{children}<PwaRegister /></body>
     </html>
   );
 }

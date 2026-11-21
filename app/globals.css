@@ -57,3 +57,11 @@ body { overscroll-behavior: none; font-feature-settings: 'tnum' 0; }
 /* Evita que tarjetas y tablas ensanchen la pantalla en el celular */
 .grid > *, .card { min-width: 0; }
 .card:has(.table) { overflow-x: auto; }
+
+/* Respuesta inmediata al tocar (components/ui/Feedback.tsx) */
+.route-bar { position: fixed; top: 0; left: 0; height: 3px; width: 0; z-index: 200; background: #c9a24b; box-shadow: 0 0 8px rgba(201,162,75,.6); opacity: 0; transition: opacity .2s; pointer-events: none; }
+.route-bar-on { opacity: 1; animation: route-bar 8s cubic-bezier(.1,.7,.2,1) forwards; }
+@keyframes route-bar { 0% { width: 0 } 10% { width: 35% } 40% { width: 70% } 100% { width: 92% } }
+[data-pending], form[aria-busy="true"] button:not([type="button"]) { position: relative; pointer-events: none; opacity: .75; }
+[data-pending]::after, form[aria-busy="true"] button:not([type="button"])::after { content: ''; width: 14px; height: 14px; margin-left: 8px; border-radius: 9999px; border: 2px solid currentColor; border-right-color: transparent; display: inline-block; vertical-align: -2px; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg) } }
