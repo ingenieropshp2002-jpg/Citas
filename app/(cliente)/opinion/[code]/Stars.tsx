@@ -7,9 +7,9 @@ const WORDS = ['', 'Mala', 'Regular', 'Buena', 'Muy buena', '¡Excelente!'];
 
 export function Stars({ code, t, google, done: initialDone, business }: { code: string; t: string; google: string | null; done: boolean; business: string }) {
   const [rating, setRating] = useState(0); const [hover, setHover] = useState(0);
-  const [comment, setComment] = useState(''); const [err, setErr] = useState('');
+  const [comment, setComment] = useState(''); const [nps, setNps] = useState<number | null>(null); const [err, setErr] = useState('');
   const [done, setDone] = useState(initialDone); const [pending, start] = useTransition();
-  const send = () => start(async () => { setErr(''); const r = await submitOpinion(code, t, rating, comment); if (r.error) setErr(r.error); else setDone(true); });
+  const send = () => start(async () => { setErr(''); const r = await submitOpinion(code, t, rating, comment, nps); if (r.error) setErr(r.error); else setDone(true); });
   if (done) return (
     <div className="card p-6 text-center">
       <div className="w-14 h-14 rounded-full bg-[#ECFDF5] text-[#065F46] flex items-center justify-center mx-auto"><Icon name="favorite" /></div>
@@ -32,9 +32,18 @@ export function Stars({ code, t, google, done: initialDone, business }: { code: 
         ))}
       </div>
       <p className="text-center font-label-lg h-6 mt-1">{WORDS[shown]}</p>
+      <fieldset className="mt-4">
+        <legend className="font-label-lg text-center w-full">¿Qué tan probable es que recomiendes {business} a un amigo?</legend>
+        <div className="grid grid-cols-11 gap-1 mt-2">
+          {Array.from({ length: 11 }, (_, n) => (
+            <button key={n} type="button" aria-pressed={nps === n} aria-label={`${n} de 10`} onClick={() => setNps(n)} className={`h-10 rounded-lg font-label-lg tnum border transition-colors ${nps === n ? (n >= 9 ? 'bg-[#059669] border-[#059669] text-white' : n >= 7 ? 'bg-secondary border-secondary text-white' : 'bg-danger border-danger text-white') : 'border-parchment hover:bg-surface-container-low'}`}>{n}</button>
+          ))}
+        </div>
+        <div className="flex justify-between font-body-sm text-on-surface-variant mt-1"><span>Nada probable</span><span>Muy probable</span></div>
+      </fieldset>
       <label className="block mt-3"><span className="label">Cuéntanos más (opcional)</span><textarea value={comment} onChange={e => setComment(e.target.value)} rows={3} maxLength={1000} className="input" placeholder="¿Qué te gustó? ¿Qué podemos mejorar?" /></label>
       {err && <p role="alert" className="mt-2 text-danger font-label-md">{err}</p>}
-      <button disabled={!rating || pending} onClick={send} className="btn-primary w-full mt-4">{pending ? 'Enviando…' : 'Enviar'}</button>
+      <button disabled={!rating || nps === null || pending} onClick={send} className="btn-primary w-full mt-4">{pending ? 'Enviando…' : 'Enviar'}</button>
     </div>
   );
 }

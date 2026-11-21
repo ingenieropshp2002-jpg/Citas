@@ -39,11 +39,25 @@ export async function sendReviewRequests(businessId: string) {
 }
 
 /** Guarda la calificación y actualiza el promedio del negocio. */
-export async function saveReview(a: { id: string; businessId: string; staffId: string; services: { service: { name: string } }[] }, o: { rating: number; comment: string; authorName: string; userId?: string | null }) {
+export async function saveReview(a: { id: string; businessId: string; staffId: string; services: { service: { name: string } }[] }, o: { rating: number; comment: string; authorName: string; userId?: string | null; nps?: number | null }) {
   const r = Math.min(5, Math.max(1, Math.round(o.rating)));
-  const rev = await db.review.create({ data: { businessId: a.businessId, appointmentId: a.id, userId: o.userId || null, staffId: a.staffId, authorName: o.authorName, rating: r, comment: o.comment.slice(0, 1000), serviceName: a.services[0]?.service.name } });
+  const nps = typeof o.nps === 'number' && o.nps >= 0 && o.nps <= 10 ? Math.round(o.nps) : null;
+  const rev = await db.review.create({ data: { businessId: a.businessId, appointmentId: a.id, userId: o.userId || null, staffId: a.staffId, authorName: o.authorName, rating: r, nps, comment: o.comment.slice(0, 1000), serviceName: a.services[0]?.service.name } });
+  // Cliente insatisfecho: se avisa al dueño enseguida para que lo llame antes de que lo cuente por ahí.
+  if (r <= 2 || (nps !== null && nps <= 6)) {
+    const { pushToBusiness } = await import('./push');
+    await pushToBusiness(a.businessId, { title: '⚠️ Un cliente quedó inconforme', body: `${o.authorName}: ${r} ★${nps !== null ? ` · recomendaría ${nps}/10` : ''}${o.comment ? ` · «${o.comment.slice(0, 80)}»` : ''}`, url: '/admin/resenas', tag: `resena-${a.id}` }).catch(() => null);
+  }
   const biz = await db.business.findFirstOrThrow({ where: { id: a.businessId }, select: { rating: true, reviewCount: true } });
   // Mantiene el histórico (reviewCount puede incluir reseñas importadas)
   await db.business.update({ where: { id: a.businessId }, data: { reviewCount: biz.reviewCount + 1, rating: Math.round(((biz.rating * biz.reviewCount + r) / (biz.reviewCount + 1)) * 10) / 10 } });
   return rev;
+}
+
+/** NPS: % de promotores (9-10) menos % de detractores (0-6). */
+export function npsOf(list: (number | null)[]) {
+  const v = list.filter((n): n is number => typeof n === 'number');
+  if (!v.length) return { score: null as number | null, n: 0, pro: 0, pas: 0, det: 0 };
+  const pro = v.filter(n => n >= 9).length, det = v.filter(n => n <= 6).length;
+  return { score: Math.round(((pro - det) / v.length) * 100), n: v.length, pro, pas: v.length - pro - det, det };
 }

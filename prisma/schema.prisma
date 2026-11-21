@@ -339,7 +339,10 @@ model Review {
   comment         String
   serviceName     String?
   googleClickedAt DateTime? // abrió el enlace para publicarla en Google
+  nps             Int? // 0 a 10: ¿qué tan probable es que nos recomiende?
   createdAt       DateTime     @default(now())
+
+  @@index([businessId, createdAt])
 }
 
 // ───────────── Inventario ─────────────

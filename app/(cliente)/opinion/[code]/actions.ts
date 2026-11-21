@@ -6,13 +6,14 @@ import { reviewToken, saveReview } from '@/lib/resenas';
 const okToken = (code: string, t: string) => { const a = Buffer.from(reviewToken(code)); const b = Buffer.from(String(t || '')); return a.length === b.length && timingSafeEqual(a, b); };
 
 /** Calificación desde el enlace que le llegó al cliente (sin iniciar sesión). */
-export async function submitOpinion(code: string, t: string, rating: number, comment: string) {
+export async function submitOpinion(code: string, t: string, rating: number, comment: string, nps: number | null = null) {
   if (!okToken(code, t)) return { error: 'Enlace no válido.' };
   const a = await db.appointment.findFirst({ where: { code }, include: { customer: true, services: { include: { service: true } }, review: true } });
   if (!a || a.status !== 'COMPLETADA') return { error: 'Cita no encontrada.' };
   if (a.review) return { ok: true };
   if (!(rating >= 1 && rating <= 5)) return { error: 'Elige de 1 a 5 estrellas.' };
-  await saveReview(a, { rating, comment: String(comment || '').trim(), authorName: a.customer.name, userId: a.customer.userId });
+  if (nps !== null && !(Number.isInteger(nps) && nps >= 0 && nps <= 10)) return { error: 'Elige un número del 0 al 10.' };
+  await saveReview(a, { rating, nps, comment: String(comment || '').trim(), authorName: a.customer.name, userId: a.customer.userId });
   return { ok: true };
 }
 
