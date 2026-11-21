@@ -3,6 +3,7 @@
 import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 import { db } from './db';
+import { codeVariants } from './codigo';
 
 const KEY = () => new TextEncoder().encode(`${process.env.AUTH_SECRET || 'dev-secret-change-me'}:celular`);
 const COOKIE = 'rc_cel';
@@ -45,10 +46,8 @@ export async function checkCode(raw: string, codeRaw: string): Promise<{ phone: 
   if (!/^3\d{9}$/.test(phone)) return { error: 'Escribe un celular colombiano de 10 dígitos que empiece por 3.' };
   const row = await db.phoneLink.findUnique({ where: { phone } });
   if (row?.lockedUntil && row.lockedUntil > new Date()) return { error: `Demasiados intentos. Vuelve a intentar en ${Math.ceil((row.lockedUntil.getTime() - Date.now()) / 60000)} minutos.` };
-  let code = codeRaw.toUpperCase().replace(/[^A-Z0-9]/g, '');
-  if (code.length === 6) code = `RC${code}`;
-  code = code.replace(/^RC/, 'RC-');
-  const a = code.length === 9 ? await db.appointment.findUnique({ where: { code }, select: { customer: { select: { phone: true } } } }) : null;
+  const codes = codeVariants(codeRaw);
+  const a = codes.length ? await db.appointment.findFirst({ where: { code: { in: codes } }, select: { customer: { select: { phone: true } } } }) : null;
   if (a && cleanCel(a.customer.phone || '') === phone) {
     if (row?.fails) await db.phoneLink.update({ where: { phone }, data: { fails: 0, lockedUntil: null } });
     return { phone };
