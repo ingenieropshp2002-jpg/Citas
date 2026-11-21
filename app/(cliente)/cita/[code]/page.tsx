@@ -13,6 +13,7 @@ import { DEPOSIT_NOTE } from '@/lib/abono';
 import { policyLines } from '@/lib/asistencia';
 import { ProofUpload } from './ProofUpload';
 import { AutoRefresh } from '@/components/ui/AutoRefresh';
+import { cleanCel, personalLink } from '@/lib/celular';
 
 export const metadata = { title: 'Cita confirmada' };
 const g = (d: Date) => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
@@ -30,6 +31,9 @@ export default async function Cita({ params }: { params: Promise<{ code: string 
   const owner = waiting ? await db.customer.findUnique({ where: { id: a.customerId }, select: { userId: true } }) : null;
   const mine = !!owner && (!owner.userId || owner.userId === user?.id); // sin cuenta: con el código basta
   // El día de la cita: ¿va a tiempo o hay personas antes? (citas del mismo profesional y fila en sus huecos)
+  // Reserva sin cuenta: enlace personal para ver todas sus citas sin escribir nada.
+  const cust = await db.customer.findUnique({ where: { id: a.customerId }, select: { userId: true, phone: true } });
+  const guestLink = cust && !cust.userId && /^3\d{9}$/.test(cleanCel(cust.phone || '')) ? await personalLink(cleanCel(cust.phone || '')) : null;
   const today = ymd(a.start) === ymd(new Date()) && ['PENDIENTE', 'CONFIRMADA', 'EN_SERVICIO'].includes(a.status);
   const plan = today ? await attentionPlan(a.business) : null;
   const pos = plan ? aheadOf(plan, a.id, true) : null;
@@ -96,8 +100,9 @@ export default async function Cita({ params }: { params: Promise<{ code: string 
           <a href={`/api/cita/${a.code}/ics`} className="btn-outline"><Icon name="download" className="text-[18px]" />Añadir (.ics)</a>
           <a href={waLink('', msg)} target="_blank" rel="noopener noreferrer" className="btn col-span-2 bg-[#25D366] text-white"><Icon name="share" className="text-[18px]" />Compartir por WhatsApp</a>
           <Link href={`/negocio/${a.business.slug}`} className="btn-outline col-span-2">Volver a {a.business.name}</Link>
-          <Link href={`/mis-citas?negocio=${a.business.slug}`} className="btn-primary col-span-2">Ver mis citas</Link>
+          {guestLink ? <a href={guestLink} className="btn-primary col-span-2">Ver todas mis citas</a> : <Link href={`/mis-citas?negocio=${a.business.slug}`} className="btn-primary col-span-2">Ver mis citas</Link>}
         </div>
+        {guestLink && <p className="mt-3 text-center font-body-sm text-on-surface-variant">Reservaste sin cuenta: guarda el código <b className="text-on-surface">{a.code}</b>. Con él y tu celular ves tus citas en Mis citas, desde cualquier dispositivo.</p>}
       </main>
     </>
   );

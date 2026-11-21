@@ -875,3 +875,12 @@ model WaitEntry {
   @@index([businessId, status, dateFrom], map: "WaitEntry_business_status_idx")
   @@index([userId, status], map: "WaitEntry_user_idx")
 }
+
+/// Mis citas sin cuenta: versión del enlace personal (subirla lo anula) e intentos fallidos por celular
+model PhoneLink {
+  phone       String    @id
+  version     Int       @default(0)
+  fails       Int       @default(0)
+  lockedUntil DateTime?
+  updatedAt   DateTime  @default(now()) @updatedAt
+}
