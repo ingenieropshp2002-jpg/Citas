@@ -11,7 +11,7 @@ if (typeof window !== 'undefined') {
 }
 
 /** Botón "Instalar app": usa el aviso nativo (Android/Chrome/Edge) o muestra los pasos en iPhone. */
-export function InstallApp({ name = 'Registro Citas', variant = 'button', icon }: { name?: string; variant?: 'button' | 'tile' | 'banner'; icon?: string }) {
+export function InstallApp({ name = 'Registro Citas', variant = 'button', icon }: { name?: string; variant?: 'button' | 'tile' | 'banner' | 'header'; icon?: string }) {
   const [, force] = useState(0);
   const [installed, setInstalled] = useState(false);
   const [ios, setIos] = useState(false);
@@ -32,7 +32,9 @@ export function InstallApp({ name = 'Registro Citas', variant = 'button', icon }
   const label = 'Instalar app';
   return (
     <>
-      {variant === 'banner'
+      {variant === 'header'
+        ? <button type="button" onClick={click} aria-label="Instalar app" className="h-9 px-2.5 min-[380px]:px-3 rounded-full bg-gold text-primary-container font-label-md text-label-md font-bold flex items-center gap-1 shadow-sm hover:brightness-105 active:scale-95 transition"><Icon name="download" className="text-[18px]" /><span className="hidden min-[380px]:inline">Instalar</span></button>
+        : variant === 'banner'
         ? <div className="card-raised p-4 flex items-center gap-3 border border-secondary/40">{icon && <img src={icon} alt="" className="w-14 h-14 rounded-2xl shrink-0" />}<div className="flex-1 min-w-0"><p className="font-title-md text-title-md">Instala la app de {name}</p><p className="font-body-sm text-on-surface-variant">Reserva y mira tus citas con un toque, desde tu pantalla de inicio.</p></div><button type="button" onClick={click} className="btn-primary btn-sm shrink-0"><Icon name="install_mobile" className="text-[18px]" />Instalar</button></div>
         : variant === 'tile'
         ? <button type="button" onClick={click} className="flex flex-col items-center justify-center p-space-sm bg-surface-container-low hover:bg-surface-container active:scale-95 rounded-xl transition-all shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"><Icon name="install_mobile" className="text-[22px] text-secondary mb-1" /><span className="font-label-md text-label-md text-primary font-bold">{label}</span></button>
