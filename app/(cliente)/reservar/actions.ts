@@ -14,6 +14,15 @@ import { sendWhatsapp } from '@/lib/notify';
 import { revalidatePath } from 'next/cache';
 import { uniqueCode } from '@/lib/codigo';
 import { avisarNegocio } from '@/lib/avisos';
+import { cleanCel, deviceCel } from '@/lib/celular';
+
+/** Dueño de la cita: su cuenta, o el celular que se verificó en este dispositivo (reservas sin cuenta). */
+async function canManage(c: { userId: string | null; phone: string | null }) {
+  const user = await getUser();
+  if (user && c.userId === user.id) return true;
+  const cel = await deviceCel();
+  return !!cel && !!c.phone && cleanCel(c.phone) === cel;
+}
 
 const appUrl = () => process.env.APP_URL || 'http://localhost:3000';
 /** Código de 6 caracteres, único en toda la plataforma (ver lib/codigo.ts). */
@@ -138,9 +147,8 @@ export async function settlePayment(reference: string, approved: boolean, provid
 }
 
 export async function cancelMine(code: string) {
-  const user = await requireUser();
   const a = await db.appointment.findUnique({ where: { code }, include: { customer: true, business: true } });
-  if (!a || a.customer.userId !== user.id) return { error: 'Cita no encontrada' };
+  if (!a || !(await canManage(a.customer))) return { error: 'Cita no encontrada' };
   if (['CANCELADA', 'COMPLETADA', 'NO_ASISTIO'].includes(a.status)) return { error: 'Esta cita ya no se puede cancelar.' };
   const hoursLeft = (a.start.getTime() - Date.now()) / 3600000;
   const refundable = hoursLeft >= a.business.cancellationHours;
@@ -153,9 +161,8 @@ export async function cancelMine(code: string) {
 }
 
 export async function rescheduleMine(code: string, date: string, time: string) {
-  const user = await requireUser();
   const a = await db.appointment.findUnique({ where: { code }, include: { customer: true, business: true } });
-  if (!a || a.customer.userId !== user.id) return { error: 'Cita no encontrada' };
+  if (!a || !(await canManage(a.customer))) return { error: 'Cita no encontrada' };
   if (!['PENDIENTE', 'CONFIRMADA'].includes(a.status)) return { error: 'Esta cita ya no se puede reprogramar.' };
   if ((a.start.getTime() - Date.now()) / 3600000 < a.business.cancellationHours) return { error: `Solo puedes reprogramar con ${a.business.cancellationHours} h de anticipación. Comunícate con el negocio.` };
   const dur = a.end.getTime() - a.start.getTime();

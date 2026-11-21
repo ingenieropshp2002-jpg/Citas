@@ -12,9 +12,11 @@ import { CustomerFields } from './fields';
 
 export const metadata = { title: 'Clientes' };
 export default async function Clientes({ searchParams }: { searchParams: Promise<{ q?: string; tag?: string }> }) {
-  const { business: b } = await requireBusiness('clientes');
+  const { business: b, perms, staffId } = await requireBusiness('clientes');
+  // El rol Profesional ve solo a sus clientes (los que ha atendido o tienen cita con él).
+  const mine = perms !== 'ALL' && !perms.includes('agenda_todos') && !perms.includes('configuracion') && staffId ? staffId : null;
   const { q = '', tag = '' } = await searchParams;
-  let list = await db.customer.findMany({ where: { businessId: b.id }, orderBy: { lastVisit: { sort: 'desc', nulls: 'last' } } });
+  let list = await db.customer.findMany({ where: { businessId: b.id, ...(mine ? { appointments: { some: { staffId: mine } } } : {}) }, orderBy: { lastVisit: { sort: 'desc', nulls: 'last' } } });
   const tags = [...new Set(list.flatMap(c => parseJson<string[]>(c.tags, [])))];
   if (q) { const n = q.toLowerCase(); list = list.filter(c => c.name.toLowerCase().includes(n) || (c.phone || '').includes(n) || (c.email || '').toLowerCase().includes(n) || (c.docNumber || '').includes(n)); }
   if (tag) list = list.filter(c => parseJson<string[]>(c.tags, []).includes(tag));
