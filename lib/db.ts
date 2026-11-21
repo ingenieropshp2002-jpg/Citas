@@ -20,11 +20,17 @@ function requestKey(): object | null {
     return ctx?.ctx ?? null;
   } catch { return null; }
 }
+/** Conexión de Hyperdrive (base nueva), si el Worker la tiene. */
+export function hyperdriveUrl(): string | null {
+  try { return (globalThis as any)[Symbol.for('__cloudflare-context__')]?.env?.HYPERDRIVE?.connectionString || null; } catch { return null; }
+}
+/** true cuando la app ya trabaja sobre la base nueva (variable DB_HYPERDRIVE=1 en wrangler.jsonc). */
+export const usingHyperdrive = () => process.env.DB_HYPERDRIVE === '1' && !!hyperdriveUrl();
 function currentPool() {
   const key = requestKey();
   if (!key) return (shared ??= new pg.Pool(config));
   let p = perRequest.get(key);
-  if (!p) { p = new pg.Pool(config); perRequest.set(key, p); }
+  if (!p) { p = new pg.Pool(usingHyperdrive() ? { ...config, connectionString: hyperdriveUrl()! } : config); perRequest.set(key, p); }
   return p;
 }
 

@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Icon } from '@/components/ui/Icon';
-const ITEMS = [['/superadmin', 'dashboard', 'Resumen'], ['/superadmin/negocios', 'storefront', 'Negocios'], ['/superadmin/usuarios', 'group', 'Usuarios'], ['/superadmin/whatsapp', 'chat', 'WhatsApp'], ['/superadmin/pagos', 'payments', 'Pagos'], ['/superadmin/ia', 'smart_toy', 'Asistente IA'], ['/superadmin/ajustes', 'tune', 'Ajustes de la app'], ['/admin/seguridad', 'shield_lock', 'Mi seguridad (2 pasos)']] as const;
+const ITEMS = [['/superadmin', 'dashboard', 'Resumen'], ['/superadmin/negocios', 'storefront', 'Negocios'], ['/superadmin/usuarios', 'group', 'Usuarios'], ['/superadmin/whatsapp', 'chat', 'WhatsApp'], ['/superadmin/pagos', 'payments', 'Pagos'], ['/superadmin/ia', 'smart_toy', 'Asistente IA'], ['/superadmin/ajustes', 'tune', 'Ajustes de la app'], ['/superadmin/base-de-datos', 'database', 'Base de datos'], ['/admin/seguridad', 'shield_lock', 'Mi seguridad (2 pasos)']] as const;
 export function AdminNav() {
   const p = usePathname();
   return (
