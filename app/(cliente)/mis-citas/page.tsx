@@ -2,7 +2,8 @@ import { LeaveWait } from './LeaveWait';
 import { WINDOWS } from '@/lib/espera';
 import Link from 'next/link';
 import { db } from '@/lib/db';
-import { requireUser } from '@/lib/auth';
+import { getUser } from '@/lib/auth';
+import { PhoneLookup } from './PhoneLookup';
 import { ClientHeader, ShopHeader } from '@/components/cliente/Header';
 import { getShop } from '@/lib/shop';
 import { AppointmentActions } from '@/components/cliente/AppointmentActions';
@@ -16,7 +17,16 @@ export default async function MisCitas({ searchParams }: { searchParams: Promise
   const sp = await searchParams;
   const shop = await getShop(sp.negocio);
   const q = shop ? `negocio=${shop.slug}` : '';
-  const user = await requireUser(`/mis-citas${q ? '?' + q : ''}`);
+  const user = await getUser();
+  if (!user) return (
+    <>
+      {shop ? <ShopHeader shop={shop} title="Mis citas" /> : <ClientHeader title="Mis citas" />}
+      <main className="pt-20 pb-24 px-margin max-w-xl mx-auto">
+        <h1 className="font-headline-lg-mobile text-headline-lg-mobile text-primary-container dark:text-primary">Mis citas</h1>
+        <PhoneLookup negocio={shop?.slug} loginHref={`/login?next=${encodeURIComponent(`/mis-citas${q ? '?' + q : ''}`)}`} />
+      </main>
+    </>
+  );
   const tab = sp.tab === 'pasadas' ? 'pasadas' : 'proximas';
   const now = new Date();
   const all = await db.appointment.findMany({ where: { customer: { userId: user.id }, ...(shop ? { business: { slug: shop.slug } } : {}) }, include: { business: true, staff: true, services: { include: { service: true } }, review: true }, orderBy: { start: tab === 'proximas' ? 'asc' : 'desc' } });

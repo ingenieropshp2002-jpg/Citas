@@ -11,6 +11,8 @@ import { Icon } from '@/components/ui/Icon';
 import { bogota, cop, DIAS, parseJson, time12 } from '@/lib/format';
 import { waLink } from '@/lib/notify';
 import { queueStatus } from '@/lib/fila';
+import { FavButton, ShareButton } from '@/components/cliente/Favorites';
+import { TodaySlots } from '@/components/cliente/TodaySlots';
 
 export async function generateViewport({ params }: { params: Promise<{ slug: string }> }) {
   const b = await db.business.findFirst({ where: { slug: (await params).slug }, select: { appColor: true } });
@@ -44,6 +46,8 @@ export default async function Negocio({ params, searchParams }: { params: Promis
   const nowMin = now.h * 60 + now.min;
   const open = today && nowMin >= Number(today[0].slice(0, 2)) * 60 + Number(today[0].slice(3)) && nowMin < Number(today[1].slice(0, 2)) * 60 + Number(today[1].slice(3));
   const groups: [string, string[]][] = [['Lunes a viernes', ['1', '2', '3', '4', '5']], ['Sábados', ['6']], ['Domingos y festivos', ['0']]];
+  const ig = (b.instagram || '').trim().replace(/^@/, '').replace(/^https?:\/\/(www\.)?instagram\.com\//, '').replace(/[/?#].*$/, '');
+  const minDur = b.services.length ? Math.min(...b.services.map(s => s.durationMin)) : 30;
   const mapQ = b.lat && b.lng ? `${b.lat},${b.lng}` : encodeURIComponent(b.address);
   return (
     <>
@@ -103,12 +107,16 @@ export default async function Negocio({ params, searchParams }: { params: Promis
             <div className="flex-1 min-w-[180px]"><p className="font-label-lg">¿Ya estás en el local?</p><p className="font-body-sm text-on-surface-variant">Fila abierta hoy, solo para quienes están aquí sin cita.</p></div>
             <Link href={`/negocio/${b.slug}/fila`} className="btn-ghost btn-sm">Únete a la fila</Link>
           </div>}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-space-sm mt-space-md max-w-2xl">
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-space-sm mt-space-md max-w-2xl">
             {b.phone && <a className="flex flex-col items-center justify-center p-space-sm bg-surface-container-low hover:bg-surface-container active:scale-95 rounded-xl transition-all shadow-sm" href={`tel:+57${b.phone}`}><Icon name="call" className="text-[22px] text-primary mb-1" /><span className="font-label-md text-label-md text-primary font-bold">Llamar</span></a>}
             <a className="flex flex-col items-center justify-center p-space-sm bg-surface-container-low hover:bg-surface-container active:scale-95 rounded-xl transition-all shadow-sm" target="_blank" rel="noopener noreferrer" href={`https://www.google.com/maps/dir/?api=1&destination=${mapQ}`}><Icon name="near_me" className="text-[22px] text-secondary mb-1" /><span className="font-label-md text-label-md text-primary font-bold">Cómo llegar</span></a>
             {b.whatsapp && <a className="flex flex-col items-center justify-center p-space-sm bg-surface-container-low hover:bg-surface-container active:scale-95 rounded-xl transition-all shadow-sm" href={waLink(b.whatsapp, `Hola ${b.name}, quiero reservar una cita.`)} target="_blank" rel="noopener noreferrer"><Icon name="chat" className="text-[22px] text-[#059669] mb-1" /><span className="font-label-md text-label-md text-[#065f46] dark:text-[#6ee7b7] font-bold">WhatsApp</span></a>}
+            {ig && <a className="flex flex-col items-center justify-center p-space-sm bg-surface-container-low hover:bg-surface-container active:scale-95 rounded-xl transition-all shadow-sm" href={`https://instagram.com/${ig}`} target="_blank" rel="noopener noreferrer"><Icon name="photo_camera" className="text-[22px] text-secondary mb-1" /><span className="font-label-md text-label-md text-primary font-bold">Instagram</span></a>}
+            <ShareButton title={b.name} text={b.tagline ? `${b.name}: ${b.tagline}. Reserva aquí:` : `Reserva en ${b.name}:`} />
+            <FavButton fav={{ slug: b.slug, name: b.name, img: imgs[0] || null, place: `${b.zone ? `${b.zone}, ` : ''}${b.city}`, category: b.category }} />
             <InstallApp variant="tile" name={b.name} />
           </div>
+          {b.services.length > 0 && <TodaySlots businessId={b.id} slug={b.slug} duration={minDur} />}
         </section>
 
         <ShopTabs tabs={[{ id: 'servicios', label: 'Servicios' }, ...(b.staff.length ? [{ id: 'equipo', label: 'Profesionales' }] : []), ...(products.length ? [{ id: 'productos', label: `Productos (${products.length})` }] : []), ...(b.reviews.length ? [{ id: 'resenas', label: `Reseñas (${b.reviewCount})` }] : []), { id: 'sede', label: 'Horarios y sede' }]} />
