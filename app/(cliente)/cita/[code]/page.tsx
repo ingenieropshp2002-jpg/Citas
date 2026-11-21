@@ -27,7 +27,8 @@ export default async function Cita({ params }: { params: Promise<{ code: string 
   const waiting = abono && a.depositStatus === 'PENDIENTE' && a.status === 'PENDIENTE';
   const expired = abono && a.status === 'CANCELADA' && !!a.notes?.includes(DEPOSIT_NOTE);
   const user = waiting ? await getUser() : null;
-  const mine = !!user && !!(await db.customer.findFirst({ where: { id: a.customerId, userId: user.id }, select: { id: true } }));
+  const owner = waiting ? await db.customer.findUnique({ where: { id: a.customerId }, select: { userId: true } }) : null;
+  const mine = !!owner && (!owner.userId || owner.userId === user?.id); // sin cuenta: con el código basta
   // El día de la cita: ¿va a tiempo o hay personas antes? (citas del mismo profesional y fila en sus huecos)
   const today = ymd(a.start) === ymd(new Date()) && ['PENDIENTE', 'CONFIRMADA', 'EN_SERVICIO'].includes(a.status);
   const plan = today ? await attentionPlan(a.business) : null;
