@@ -46,8 +46,15 @@ async function taken(businessId: string, input: { date: string; time: string; st
   return { error: `Otra persona acaba de reservar este horario${st ? ` con ${st.name.split(' ')[0]}` : ''}.`, taken: true, alternatives: await nextFree(businessId, input.date, input.time, dur, input.staffId, input.serviceIds) };
 }
 
-export async function createBooking(input: { businessId: string; serviceIds: string[]; staffId: string | null; date: string; time: string; method: string; phone?: string; coupon?: string; notes?: string }) {
-  const user = await requireUser();
+export async function createBooking(input: { businessId: string; serviceIds: string[]; staffId: string | null; date: string; time: string; method: string; phone?: string; coupon?: string; notes?: string; guestName?: string }) {
+  // La cuenta es opcional: sin sesión basta con el nombre y el WhatsApp.
+  const user = await getUser();
+  const guestName = (input.guestName || '').trim().replace(/\s+/g, ' ').slice(0, 80);
+  if (!user) {
+    if (guestName.length < 2) return { error: 'Escribe tu nombre.' };
+    if (!/^3\d{9}$/.test((input.phone || '').replace(/\D/g, '').replace(/^57(?=\d{10}$)/, ''))) return { error: 'Escribe tu WhatsApp: 10 dígitos que empiecen por 3.' };
+  }
+  const who = { name: user?.name || guestName, email: user?.email || null };
   const b = await db.business.findUniqueOrThrow({ where: { id: input.businessId } });
   if (isSuspended(b)) return { error: 'Este negocio no está recibiendo reservas en este momento.' };
   const services = await db.service.findMany({ where: { id: { in: input.serviceIds }, businessId: b.id, active: true } });
@@ -65,9 +72,9 @@ export async function createBooking(input: { businessId: string; serviceIds: str
   const free: string[] = [];
   for (const id of candidates) if (await isFree(b.id, id, start, end)) free.push(id);
   if (!free.length) return await taken(b.id, input, dur);
-  const phone = (input.phone || user.phone || '').replace(/\D/g, '');
-  const mine = await db.customer.findMany({ where: { businessId: b.id, OR: [{ userId: user.id }, ...(phone ? [{ phone }] : [])] } });
-  const existing = mine.find(c => c.userId === user.id) || mine[0] || null;
+  const phone = (input.phone || user?.phone || '').replace(/\D/g, '').replace(/^57(?=\d{10}$)/, '');
+  const mine = await db.customer.findMany({ where: { businessId: b.id, OR: [...(user ? [{ userId: user.id }] : []), ...(phone ? [{ phone }] : [])] } });
+  const existing = (user && mine.find(c => c.userId === user.id)) || mine[0] || null;
   const rule = await depositRule(b, start, mine);
   if (rule.required && !rule.optionalLocal && input.method === 'EN_LOCAL') return { error: rule.reason || 'Esta reserva necesita un anticipo. Elige Nequi, PSE o tarjeta.' };
   const transfer = input.method === 'TRANSFERENCIA';
@@ -75,8 +82,8 @@ export async function createBooking(input: { businessId: string; serviceIds: str
   let discount = 0; let couponCode = '';
   if (input.coupon) { const c = await applyCoupon(b.id, input.coupon, total); if ('error' in c) return { error: c.error }; discount = c.discount!; total -= discount; couponCode = c.code!; }
   let customer = existing;
-  if (!customer) customer = await db.customer.create({ data: { businessId: b.id, userId: user.id, name: user.name, phone, email: user.email, tags: '["Nuevo"]' } });
-  else if (!customer.userId) await db.customer.update({ where: { id: customer.id }, data: { userId: user.id } });
+  if (!customer) customer = await db.customer.create({ data: { businessId: b.id, userId: user?.id ?? null, name: who.name, phone, email: who.email, tags: '["Nuevo"]' } });
+  else if (user && !customer.userId) await db.customer.update({ where: { id: customer.id }, data: { userId: user.id } });
   const online = input.method !== 'EN_LOCAL';
   const deposit = online && rule.required ? Math.max(1000, Math.round((total * b.depositPercent) / 100 / 100) * 100) : 0;
   const code = await newCode();
@@ -95,7 +102,7 @@ export async function createBooking(input: { businessId: string; serviceIds: str
   }
   if (!appt) return await taken(b.id, input, dur);
   // Ya consiguió cita: sale de la lista de espera de este negocio.
-  await db.waitEntry.updateMany({ where: { businessId: b.id, userId: user.id, status: 'ACTIVA' }, data: { status: 'RESERVADA' } });
+  if (user) await db.waitEntry.updateMany({ where: { businessId: b.id, userId: user.id, status: 'ACTIVA' }, data: { status: 'RESERVADA' } });
   if (couponCode) await db.coupon.updateMany({ where: { businessId: b.id, code: couponCode }, data: { uses: { increment: 1 } } });
   if (deposit > 0 && transfer) {
     // Abono por transferencia: el cupo queda apartado hasta el plazo; el cliente sube el comprobante en /cita/[code].
@@ -105,12 +112,12 @@ export async function createBooking(input: { businessId: string; serviceIds: str
   }
   if (deposit > 0) {
     const pay = await db.payment.create({ data: { businessId: b.id, appointmentId: appt.id, method: input.method, amount: deposit, status: 'PENDIENTE', provider: 'PENDIENTE' } });
-    const co = await createCheckout({ reference: `${code}_${pay.id}`, amount: deposit, description: `Depósito cita ${code} - ${b.name}`, email: user.email, method: input.method, redirectUrl: `${appUrl()}/pago/retorno?ref=${code}_${pay.id}`, notificationUrl: `${appUrl()}/api/pagos/webhook` });
+    const co = await createCheckout({ reference: `${code}_${pay.id}`, amount: deposit, description: `Depósito cita ${code} - ${b.name}`, email: who.email, method: input.method, redirectUrl: `${appUrl()}/pago/retorno?ref=${code}_${pay.id}`, notificationUrl: `${appUrl()}/api/pagos/webhook` });
     await db.payment.update({ where: { id: pay.id }, data: { provider: co.provider } });
     return { redirect: co.url };
   }
   await pushToBusiness(b.id, { title: '📅 Nueva reserva', body: `${customer.name} · ${input.date} ${input.time}`, url: '/admin/agenda', tag: `cita-${code}` }, appt.staffId);
-  if (phone) await sendWhatsapp(phone, `Hola ${user.name}, recibimos tu solicitud de cita en ${b.name} (${code}) para el ${fechaCorta(start)} a las ${time12(input.time)}. Te confirmaremos pronto.`, { phoneId: b.waPhoneId, businessId: b.id, template: { kind: 'CONFIRMACION', params: [user.name.split(' ')[0], b.name, `${fechaCorta(start)} a las ${time12(input.time)}`, 'reservada', `${appUrl()}/cita/${code}`] } });
+  if (phone) await sendWhatsapp(phone, `Hola ${who.name.split(' ')[0]}, recibimos tu solicitud de cita en ${b.name} (${code}) para el ${fechaCorta(start)} a las ${time12(input.time)}. Te confirmaremos pronto.`, { phoneId: b.waPhoneId, businessId: b.id, template: { kind: 'CONFIRMACION', params: [who.name.split(' ')[0], b.name, `${fechaCorta(start)} a las ${time12(input.time)}`, 'reservada', `${appUrl()}/cita/${code}`] } });
   return { redirect: `/cita/${code}` };
 }
 
@@ -176,7 +183,8 @@ export async function depositCheck(businessId: string, date: string, time: strin
   if (!b) return { required: false, mandatory: false, reason: '', faltas: 0, limite: 0 };
   const user = await getUser();
   const p = (phone || user?.phone || '').replace(/\D/g, '');
-  const mine = user ? await db.customer.findMany({ where: { businessId, OR: [{ userId: user.id }, ...(p ? [{ phone: p }] : [])] } }) : [];
+  const p10 = p.replace(/^57(?=\d{10}$)/, '');
+  const mine = user || /^3\d{9}$/.test(p10) ? await db.customer.findMany({ where: { businessId, OR: [...(user ? [{ userId: user.id }] : []), ...(p10 ? [{ phone: p10 }] : [])] } }) : [];
   const r = await depositRule(b, date && time ? fromBogota(date, time) : null, mine);
   const faltas = mine.length ? await customerStrikes(businessId, mine.map(c => c.id)) : 0;
   return { required: r.required, mandatory: r.required && !r.optionalLocal, reason: r.reason, faltas, limite: b.depositForNoShows && b.depositPercent > 0 ? b.noShowLimit : 0 };

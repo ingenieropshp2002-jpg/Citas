@@ -13,9 +13,9 @@ type Stf = { id: string; name: string; title: string; photo: string | null; rati
 const STEPS = ['Servicio', 'Profesional', 'Horario', 'Pago'];
 const BANKS = ['Bancolombia', 'Davivienda', 'Banco de Bogotá', 'BBVA', 'Banco de Occidente', 'Banco Popular', 'Scotiabank Colpatria', 'Nu Colombia', 'Banco Caja Social', 'Itaú'];
 
-export function BookingWizard({ business, services, staff, initialService, initialStaff, initialDate, userPhone }: {
+export function BookingWizard({ business, services, staff, initialService, initialStaff, initialDate, userPhone, guest = false, loginHref = '/login' }: {
   business: { id: string; name: string; depositPercent: number; requireDeposit: boolean; cancellationHours: number; image?: string; transfer?: boolean; deadlineMin?: number; policy?: string[] };
-  services: Svc[]; staff: Stf[]; initialService?: string; initialStaff?: string; initialDate?: string; userPhone: string;
+  services: Svc[]; staff: Stf[]; initialService?: string; initialStaff?: string; initialDate?: string; userPhone: string; guest?: boolean; loginHref?: string;
 }) {
   const router = useRouter();
   const [step, setStep] = useState(initialService ? (initialStaff ? 3 : 2) : 1);
@@ -31,6 +31,8 @@ export function BookingWizard({ business, services, staff, initialService, initi
   const [bank, setBank] = useState(BANKS[0]);
   const [coupon, setCoupon] = useState(''); const [discount, setDiscount] = useState(0); const [couponMsg, setCouponMsg] = useState('');
   const [notes, setNotes] = useState('');
+  const [guestName, setGuestName] = useState('');
+  const guestOk = !guest || (guestName.trim().length >= 2 && /^3\d{9}$/.test(phone.replace(/\D/g, '').replace(/^57(?=\d{10}$)/, '')));
   const [error, setError] = useState(''); const [alts, setAlts] = useState<{ date: string; time: string }[]>([]); const [taken, setTaken] = useState(false); const [pending, start] = useTransition();
 
   const chosen = services.filter(s => sel.includes(s.id));
@@ -52,12 +54,12 @@ export function BookingWizard({ business, services, staff, initialService, initi
       setToday(m);
     }).catch(() => setToday({}));
   }, [step, sel, duration, business.id]);
-  const canNext = step === 1 ? sel.length > 0 : step === 2 ? true : step === 3 ? !!time : true;
+  const canNext = step === 1 ? sel.length > 0 : step === 2 ? true : step === 3 ? !!time : guestOk;
 
   const confirm = (at?: { date: string; time: string }) => start(async () => {
     setError(''); setAlts([]); setTaken(false);
     if (at) { setDate(at.date); setTime(at.time); }
-    const r = await createBooking({ businessId: business.id, serviceIds: sel, staffId: bookStaff, date: at?.date ?? date, time: at?.time ?? time, method, phone, coupon: discount ? coupon : undefined, notes: [notes, method === 'PSE' ? `Banco: ${bank}` : ''].filter(Boolean).join(' · ') });
+    const r = await createBooking({ businessId: business.id, serviceIds: sel, staffId: bookStaff, date: at?.date ?? date, time: at?.time ?? time, method, phone, coupon: discount ? coupon : undefined, notes: [notes, method === 'PSE' ? `Banco: ${bank}` : ''].filter(Boolean).join(' · '), guestName: guest ? guestName : undefined });
     if ('error' in r && r.error) { setError(r.error); setAlts(('alternatives' in r && r.alternatives) || []); setTaken('taken' in r && !!r.taken); return; }
     if ('redirect' in r && r.redirect) { if (r.redirect.startsWith('http')) window.location.href = r.redirect; else router.push(r.redirect); }
   });
@@ -158,6 +160,16 @@ export function BookingWizard({ business, services, staff, initialService, initi
         <>
           <section className="px-margin mt-space-md">
             <span className="eyebrow">Paso 4 de 4</span>
+            {guest && (
+              <div className="mb-space-md rounded-xl bg-surface-container-lowest p-space-md shadow-sm border border-gold/40">
+                <p className="font-title-md text-title-md flex items-center gap-2"><Icon name="badge" className="text-secondary text-[20px]" />Tus datos</p>
+                <p className="font-body-sm text-on-surface-variant mt-0.5">No necesitas cuenta. Te enviamos la confirmación por WhatsApp.</p>
+                <label className="block mt-3"><span className="label">Tu nombre</span><input className="input h-11" autoComplete="name" placeholder="Ej. Laura Gómez" value={guestName} onChange={e => setGuestName(e.target.value)} /></label>
+                <label className="block mt-2"><span className="label">WhatsApp</span>
+                  <div className="relative"><span className="absolute inset-y-0 left-0 pl-3 flex items-center font-label-md text-on-surface-variant">+57</span><input className="input h-11 pl-12" type="tel" inputMode="numeric" autoComplete="tel-national" placeholder="300 123 4567" value={phone} onChange={e => setPhone(e.target.value)} /></div></label>
+                <p className="mt-2 font-body-sm text-on-surface-variant">¿Ya tienes cuenta? <a href={loginHref} className="text-secondary font-semibold">Ingresa</a> y tus datos se llenan solos.</p>
+              </div>
+            )}
             <h3 className="font-headline-sm text-headline-sm font-semibold mb-space-xs">Garantía &amp; Pago</h3>
             {!!business.policy?.length && (
               <details className="mb-space-sm rounded-xl border border-parchment bg-surface-container-lowest p-space-sm group" open={!!rule.faltas}>

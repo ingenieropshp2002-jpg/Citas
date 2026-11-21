@@ -25,9 +25,11 @@ export async function GET(_: Request, { params }: { params: Promise<{ code: stri
 /** Subir el comprobante (JPG, PNG, WEBP o PDF, hasta 5 MB). */
 export async function POST(req: Request, { params }: { params: Promise<{ code: string }> }) {
   const user = await getUser();
-  if (!user) return json({ error: 'Inicia sesión para subir el comprobante.' }, 401);
   const a = await find((await params).code);
-  if (!a || (await proofAccess(user.id, a)) !== 'CLIENTE') return json({ error: 'Cita no encontrada.' }, 404);
+  // Reserva sin cuenta: con el código de la cita basta para subir el comprobante.
+  const guest = !!a && !a.customer.userId;
+  if (!guest && !user) return json({ error: 'Inicia sesión para subir el comprobante.' }, 401);
+  if (!a || (!guest && (await proofAccess(user!.id, a)) !== 'CLIENTE')) return json({ error: 'Cita no encontrada.' }, 404);
   if (a.paymentMethod !== 'TRANSFERENCIA' || a.depositStatus !== 'PENDIENTE' || a.status !== 'PENDIENTE') return json({ error: 'Esta cita ya no espera un comprobante.' }, 409);
   if (Number(req.headers.get('content-length') || 0) > PROOF_MAX + 64 * 1024) return json({ error: 'El archivo pesa más de 5 MB.' }, 413);
   const file = (await req.formData().catch(() => null))?.get('file');
