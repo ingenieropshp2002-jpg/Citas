@@ -2,6 +2,7 @@
 // Usa Claude (Anthropic). El historial se guarda solo como texto (mensajes del cliente y respuestas finales), así cada
 // mensaje nuevo arma una conversación limpia y los pasos internos (herramientas) no se mezclan entre mensajes.
 import Anthropic from '@anthropic-ai/sdk';
+import { codeVariants } from './codigo';
 import { db } from './db';
 import { getIa } from './ia';
 import { getSlots, isFree, isOverlapError } from './availability';
@@ -47,7 +48,7 @@ const TOOLS: Anthropic.Beta.BetaTool[] = [
   { name: 'mis_citas', ...STRICT, description: 'Lista las próximas citas de este cliente en el negocio (con su código).',
     input_schema: { type: 'object', additionalProperties: false, required: [], properties: {} } },
   { name: 'cancelar_cita', ...STRICT, description: 'Cancela una cita del cliente. Confirma con el cliente antes de llamarla.',
-    input_schema: { type: 'object', additionalProperties: false, required: ['codigo'], properties: { codigo: { type: 'string', description: 'Código de la cita, por ejemplo RC-ABC123.' } } } },
+    input_schema: { type: 'object', additionalProperties: false, required: ['codigo'], properties: { codigo: { type: 'string', description: 'Código de la cita, 6 caracteres, por ejemplo 7K2M9P (las citas viejas pueden tener RC- delante).' } } } },
   { name: 'mover_cita', ...STRICT, description: 'Cambia una cita del cliente a otro día u hora (mismo profesional y servicios). Antes busca el horario con buscar_horarios y confirma con el cliente.',
     input_schema: { type: 'object', additionalProperties: false, required: ['codigo', 'fecha', 'hora'], properties: { codigo: { type: 'string' }, fecha: { type: 'string', description: 'AAAA-MM-DD' }, hora: { type: 'string', description: 'HH:MM (24 h)' } } } },
   { name: 'pasar_a_persona', ...STRICT, description: 'Avisa al equipo del negocio para que una persona atienda al cliente. Úsala si el cliente lo pide, está molesto, tiene una queja, pregunta algo que no está en la información del negocio o algo que no puedes resolver.',
@@ -98,7 +99,7 @@ async function myCustomers(businessId: string, phone: string) {
 async function myAppointment(b: Biz, phone: string, code: string) {
   const ids = (await myCustomers(b.id, phone)).map(c => c.id);
   if (!ids.length) return null;
-  return db.appointment.findFirst({ where: { businessId: b.id, code: code.trim().toUpperCase(), customerId: { in: ids } }, include: { customer: true, staff: true, services: { include: { service: true } } } });
+  return db.appointment.findFirst({ where: { businessId: b.id, code: { in: codeVariants(code) }, customerId: { in: ids } }, include: { customer: true, staff: true, services: { include: { service: true } } } });
 }
 
 const when = (d: Date) => `${fechaLarga(d)} a las ${time12(hm(d))}`;

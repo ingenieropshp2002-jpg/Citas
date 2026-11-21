@@ -16,12 +16,12 @@ export function PhoneLookup({ loginHref, expired }: { loginHref: string; expired
     <div className="mt-4">
       <form onSubmit={e => { e.preventDefault(); start(async () => { setError(''); const r = await entrarConCodigo(phone, code); if ('error' in r) setError(r.error); else router.refresh(); }); }} className="card p-space-md space-y-3">
         <div><p className="font-title-md text-title-md">Consulta tus citas sin cuenta</p>
-          <p className="font-body-sm text-on-surface-variant mt-0.5">Escribe el celular con el que reservaste y el código de cualquiera de tus citas (por ejemplo RC-7K2M9P). Lo encuentras en la confirmación que te llegó.</p></div>
+          <p className="font-body-sm text-on-surface-variant mt-0.5">Escribe el celular con el que reservaste y el código de cualquiera de tus citas (por ejemplo 7K2M9P). Lo encuentras en la confirmación que te llegó.</p></div>
         <label className="block"><span className="label">Celular</span>
           <div className="relative"><span className="absolute inset-y-0 left-0 pl-3 flex items-center font-label-md text-on-surface-variant">+57</span>
             <input className="input pl-12 h-11" type="tel" inputMode="numeric" autoComplete="tel-national" placeholder="300 123 4567" value={phone} onChange={e => setPhone(e.target.value)} required /></div></label>
         <label className="block"><span className="label">Código de una cita</span>
-          <input className="input h-11 uppercase tracking-wider" autoComplete="off" placeholder="RC-XXXXXX" value={code} onChange={e => setCode(e.target.value)} required /></label>
+          <input className="input h-11 uppercase tracking-wider" autoComplete="off" placeholder="7K2M9P" maxLength={9} value={code} onChange={e => setCode(e.target.value)} required /></label>
         {error && <p role="alert" className="font-label-md text-danger">{error}</p>}
         <button className="btn-gold w-full h-11" disabled={pending}>{pending ? 'Revisando…' : 'Ver mis citas'}</button>
         <p className="font-body-sm text-on-surface-variant flex items-start gap-1.5"><Icon name="lock" className="text-[16px] text-secondary mt-0.5" />Así nadie puede ver tus citas solo con tu número. Este dispositivo queda recordado 7 días.</p>

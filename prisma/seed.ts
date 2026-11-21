@@ -114,7 +114,7 @@ async function main() {
       const past = d < 0 || (d === 0 && end < today);
       const status = past ? ((k + d) % 11 === 0 ? 'NO_ASISTIO' : (k + d) % 13 === 0 ? 'CANCELADA' : 'COMPLETADA') : (k % 4 === 0 ? 'PENDIENTE' : 'CONFIRMADA');
       const dep = Math.round(s.price * 0.33 / 1000) * 1000;
-      const appt = await db.appointment.create({ data: { code: `RC-${code++}`, businessId: b.id, customerId: cust.id, staffId: st.id, start, end, status, total: s.price, depositAmount: dep, depositStatus: 'PAGADO', paymentMethod: ['NEQUI', 'PSE', 'TARJETA'][k % 3], source: k % 3 ? 'ONLINE' : 'PANEL', services: { create: { serviceId: s.id, price: s.price, durationMin: s.durationMin } } } });
+      const appt = await db.appointment.create({ data: { code: `D${String(code++).padStart(5, '0')}`, businessId: b.id, customerId: cust.id, staffId: st.id, start, end, status, total: s.price, depositAmount: dep, depositStatus: 'PAGADO', paymentMethod: ['NEQUI', 'PSE', 'TARJETA'][k % 3], source: k % 3 ? 'ONLINE' : 'PANEL', services: { create: { serviceId: s.id, price: s.price, durationMin: s.durationMin } } } });
       if (status === 'COMPLETADA') {
         const { base, tax } = splitTax(s.price, 19);
         const withProduct = k % 4 === 1;

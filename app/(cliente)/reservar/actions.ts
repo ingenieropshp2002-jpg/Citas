@@ -12,12 +12,11 @@ import { notifyFreed } from '@/lib/espera';
 import { createCheckout } from '@/lib/payments';
 import { sendWhatsapp } from '@/lib/notify';
 import { revalidatePath } from 'next/cache';
+import { uniqueCode } from '@/lib/codigo';
 
 const appUrl = () => process.env.APP_URL || 'http://localhost:3000';
-export async function newCode() {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  return 'RC-' + Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-}
+/** Código de 6 caracteres, único en toda la plataforma (ver lib/codigo.ts). */
+export async function newCode() { return uniqueCode(); }
 
 export async function applyCoupon(businessId: string, code: string, total: number) {
   const c = await db.coupon.findFirst({ where: { businessId, code: code.trim().toUpperCase(), active: true } });
