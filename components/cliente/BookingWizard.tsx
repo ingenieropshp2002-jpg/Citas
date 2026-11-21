@@ -21,6 +21,9 @@ export function BookingWizard({ business, services, staff, initialService, initi
   const [step, setStep] = useState(initialService ? (initialStaff ? 3 : 2) : 1);
   const [sel, setSel] = useState<string[]>(initialService ? [initialService] : []);
   const [staffId, setStaffId] = useState<string | null>(initialStaff || null);
+  // Con "Cualquiera", el cliente puede tocar la hora de un profesional en concreto
+  const [pickStaff, setPickStaff] = useState<string | null>(null);
+  const [today, setToday] = useState<Record<string, string[]> | null>(null);
   const [date, setDate] = useState(initialDate && /^\d{4}-\d{2}-\d{2}$/.test(initialDate) && initialDate >= ymd(new Date()) ? initialDate : ymd(new Date()));
   const [time, setTime] = useState('');
   const [method, setMethod] = useState(business.transfer && business.requireDeposit ? 'TRANSFERENCIA' : 'NEQUI');
@@ -38,13 +41,23 @@ export function BookingWizard({ business, services, staff, initialService, initi
   useEffect(() => { if (step === 4 && date && time) depositCheck(business.id, date, time, phone).then(r => { setRule(r); if (r.mandatory) setMethod(m => (m === 'EN_LOCAL' ? (business.transfer ? 'TRANSFERENCIA' : 'NEQUI') : m)); else if (!r.required) setMethod(m => (m === 'TRANSFERENCIA' ? 'EN_LOCAL' : m)); else if (business.transfer) setMethod(m => (m === 'NEQUI' ? 'TRANSFERENCIA' : m)); }); }, [step, date, time, business.id, phone]);
   const deposit = method !== 'EN_LOCAL' && rule.required ? Math.max(1000, Math.round(total * business.depositPercent / 100 / 100) * 100) : 0;
   const eligibleStaff = useMemo(() => staff.filter(st => chosen.every(s => s.staffIds.includes(st.id))), [staff, chosen]);
-  const stf = staff.find(s => s.id === staffId);
+  const bookStaff = staffId || pickStaff;
+  const stf = staff.find(s => s.id === bookStaff);
+  // Horas libres de hoy de cada profesional (paso 2)
+  useEffect(() => {
+    if (step !== 2 || !sel.length) return;
+    setToday(null);
+    fetch(`/api/disponibilidad?b=${business.id}&dur=${duration}&staff=&servicios=${sel.join(',')}&fecha=${ymd(new Date())}`).then(r => r.json()).then(d => {
+      const m: Record<string, string[]> = {}; for (const s of (d.slots || []) as { time: string; staffIds: string[] }[]) for (const id of s.staffIds) (m[id] ||= []).push(s.time);
+      setToday(m);
+    }).catch(() => setToday({}));
+  }, [step, sel, duration, business.id]);
   const canNext = step === 1 ? sel.length > 0 : step === 2 ? true : step === 3 ? !!time : true;
 
   const confirm = (at?: { date: string; time: string }) => start(async () => {
     setError(''); setAlts([]); setTaken(false);
     if (at) { setDate(at.date); setTime(at.time); }
-    const r = await createBooking({ businessId: business.id, serviceIds: sel, staffId, date: at?.date ?? date, time: at?.time ?? time, method, phone, coupon: discount ? coupon : undefined, notes: [notes, method === 'PSE' ? `Banco: ${bank}` : ''].filter(Boolean).join(' · ') });
+    const r = await createBooking({ businessId: business.id, serviceIds: sel, staffId: bookStaff, date: at?.date ?? date, time: at?.time ?? time, method, phone, coupon: discount ? coupon : undefined, notes: [notes, method === 'PSE' ? `Banco: ${bank}` : ''].filter(Boolean).join(' · ') });
     if ('error' in r && r.error) { setError(r.error); setAlts(('alternatives' in r && r.alternatives) || []); setTaken('taken' in r && !!r.taken); return; }
     if ('redirect' in r && r.redirect) { if (r.redirect.startsWith('http')) window.location.href = r.redirect; else router.push(r.redirect); }
   });
@@ -113,15 +126,16 @@ export function BookingWizard({ business, services, staff, initialService, initi
           <span className="eyebrow">Paso 2 de 4</span>
           <h3 className="font-headline-sm text-headline-sm font-semibold mb-space-sm">Elige tu profesional</h3>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-space-sm">
-            <button type="button" onClick={() => { setStaffId(null); setTime(''); setStep(3); }} className={`card p-space-md flex flex-col items-center text-center ${staffId === null ? 'border-gold/60 shadow-raised' : ''}`}>
+            <button type="button" onClick={() => { setStaffId(null); setPickStaff(null); setTime(''); setStep(3); }} className={`card p-space-md flex flex-col items-center text-center ${staffId === null ? 'border-gold/60 shadow-raised' : ''}`}>
               <span className="w-16 h-16 rounded-full bg-secondary-fixed/50 flex items-center justify-center"><Icon name="groups" className="text-secondary text-[30px]" /></span>
-              <p className="mt-2 font-title-md text-title-md">Cualquiera</p><p className="font-body-sm text-body-sm text-on-surface-variant">Más horarios disponibles</p>
+              <p className="mt-2 font-title-md text-title-md">Cualquiera</p><p className="font-body-sm text-body-sm text-on-surface-variant">Ver las horas libres de todos</p>
             </button>
             {eligibleStaff.map(s => (
-              <button type="button" key={s.id} onClick={() => { setStaffId(s.id); setTime(''); setStep(3); }} className={`card p-space-md flex flex-col items-center text-center ${staffId === s.id ? 'border-gold/60 shadow-raised' : ''}`}>
+              <button type="button" key={s.id} onClick={() => { setStaffId(s.id); setPickStaff(null); setTime(''); setStep(3); }} className={`card p-space-md flex flex-col items-center text-center ${staffId === s.id ? 'border-gold/60 shadow-raised' : ''}`}>
                 <div className="w-16 h-16 rounded-full p-[2px] bg-gradient-to-tr from-gold to-secondary-fixed">{s.photo ? <img src={s.photo} alt="" className="w-full h-full rounded-full object-cover" /> : <span className="w-full h-full rounded-full bg-primary-container text-white flex items-center justify-center">{s.name[0]}</span>}</div>
                 <p className="mt-2 font-title-md text-title-md">{s.name}</p><p className="font-body-sm text-body-sm text-on-surface-variant">{s.title}</p>
                 <span className="mt-1 flex items-center gap-0.5 font-label-md text-label-md"><Icon name="star" fill className="text-[14px] text-gold" />{s.rating.toFixed(1)}</span>
+                <span className={`mt-1.5 font-label-sm text-label-sm ${today?.[s.id]?.length ? 'text-success' : 'text-on-surface-variant'}`}>{today === null ? '\u00a0' : today[s.id]?.length ? `Hoy desde ${time12(today[s.id][0])}` : 'Sin horas hoy'}</span>
               </button>
             ))}
           </div>
@@ -134,6 +148,7 @@ export function BookingWizard({ business, services, staff, initialService, initi
           <span className="eyebrow">Paso 3 de 4</span>
           <h3 className="font-headline-sm text-headline-sm font-semibold">Elige fecha y hora</h3>
           <DateSlotPicker businessId={business.id} duration={duration} staffId={staffId} serviceIds={sel} date={date} time={time} onChange={(d, t) => { setDate(d); setTime(t); }}
+            staff={eligibleStaff} pickedStaff={pickStaff} onPickStaff={setPickStaff}
             footer={empty => <WaitlistJoin key={`${date}-${staffId}`} businessId={business.id} staffId={staffId} staffName={staff.find(s => s.id === staffId)?.name.split(' ')[0] || null} serviceIds={sel} date={date} empty={empty} />} />
           <HeldSlots businessId={business.id} date={date} staffId={staffId} serviceIds={sel} />
         </section>
