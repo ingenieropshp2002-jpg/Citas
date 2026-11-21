@@ -3,14 +3,6 @@
 // tiene 10 ms de procesador; servir una copia reciente cuesta casi nada.
 // @ts-expect-error: lo genera OpenNext al compilar
 import handler from './.open-next/worker.js';
-import { asegurarMigracion, copiar } from './lib/migrar';
-
-type Env = { DB_HYPERDRIVE?: string; DATABASE_URL?: string; HYPERDRIVE?: { connectionString: string } };
-/** Cambio a la base nueva: antes de la primera petición copia todo desde la base actual (una sola vez). */
-async function migrar(env: unknown) {
-  const e = env as Env;
-  if (e.DB_HYPERDRIVE === '1' && e.HYPERDRIVE) await asegurarMigracion(e.DATABASE_URL, e.HYPERDRIVE.connectionString);
-}
 
 const TTL_MS = 60_000;
 const MAX_ENTRIES = 80;
@@ -42,13 +34,6 @@ export default {
     if (!env.AUTH_SECRET) { console.error('[cron] falta AUTH_SECRET'); return; }
     const base = (env.APP_URL || 'https://reserva-citas.ingenieropshp2002.workers.dev').replace(/\/$/, '');
     const req = new Request(`${base}/api/cron/recordatorios`, { headers: { authorization: `Bearer cron:${await cronKey(env.AUTH_SECRET)}` } });
-    try { await migrar(env); } catch (err) { console.error('[migracion]', err); return; }
-    // Ensayo antes del cambio: con Hyperdrive conectado pero sin activar, el cron copia todo a la base nueva para revisarla.
-    const e = env as Env;
-    if (e.DB_HYPERDRIVE !== '1' && e.HYPERDRIVE && e.DATABASE_URL) {
-      try { const r = await copiar(e.DATABASE_URL, e.HYPERDRIVE.connectionString); console.log('[ensayo copia]', JSON.stringify(r?.filter(x => x.origen !== x.destino))); }
-      catch (err) { console.error('[ensayo copia]', err); }
-    }
     const res: Response = await handler.fetch(req, env, ctx);
     console.log('[cron]', res.status, await res.text());
   },
@@ -61,7 +46,6 @@ export default {
         return new Response(hit.body, { status: hit.status, headers: h });
       }
     }
-    try { await migrar(env); } catch (err) { console.error('[migracion]', err); return new Response('Estamos actualizando la app. Intenta de nuevo en un minuto.', { status: 503, headers: { 'retry-after': '30', 'content-type': 'text/plain; charset=utf-8' } }); }
     const res: Response = await handler.fetch(req, env, ctx);
     if (!key || res.status !== 200 || res.headers.has('set-cookie')) return res;
     const body = await res.arrayBuffer();
