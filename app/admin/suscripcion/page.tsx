@@ -8,16 +8,23 @@ import { cop, fechaLarga, METHOD_LABEL } from '@/lib/format';
 import { subscriptionState } from '@/lib/subscription';
 import { getSettings, yearPrice } from '@/lib/settings';
 import { provider } from '@/lib/payments';
-import { paySubscription } from '../_actions/subscription';
+import { paySubscription, startMpSubscription } from '../_actions/subscription';
+import { AutoRenew } from './AutoRenew';
+import { dueDate } from '@/lib/billing';
+import { principalId } from '@/lib/sedes';
 
 export const metadata = { title: 'Suscripción' };
-export default async function Suscripcion({ searchParams }: { searchParams: Promise<{ pago?: string; error?: string }> }) {
+export default async function Suscripcion({ searchParams }: { searchParams: Promise<{ pago?: string; error?: string; auto?: string }> }) {
   const { business: b, perms, user } = await requireBusiness(undefined, { allowExpired: true });
   const PLANS = (await getSettings()).plans;
   const sp = await searchParams;
   const s = subscriptionState(b);
   const payments = await db.payment.findMany({ where: { businessId: b.id, appointmentId: null, saleId: null }, orderBy: { createdAt: 'desc' }, take: 6 });
   const owner = perms === 'ALL';
+  const main = b.parentId ? await db.business.findUniqueOrThrow({ where: { id: await principalId(b.id) } }) : b;
+  const prov = await provider();
+  const autoPlan = PLANS.find(p => p.id === main.plan) || PLANS[0];
+  const autoAmount = main.billingPeriod === 'ANUAL' ? yearPrice(autoPlan) : autoPlan.price;
   return (
     <>
       <PageHeader eyebrow="Tu cuenta" title="Suscripción" />
@@ -29,8 +36,19 @@ export default async function Suscripcion({ searchParams }: { searchParams: Prom
         {s.state === 'GRACIA' && <><p className="eyebrow !text-danger">Período de gracia</p><h2 className="font-headline-sm text-headline-sm">Tu plan venció: te quedan {s.graceLeft} {s.graceLeft === 1 ? 'día' : 'días'} para pagar</h2><p className="text-on-surface-variant mt-1">Todo sigue funcionando por ahora. Si no pagas a tiempo, tu negocio se suspende y deja de recibir reservas.</p></>}
         {s.state === 'VENCIDA' && <><p className="eyebrow !text-danger">Suspendido</p><h2 className="font-headline-sm text-headline-sm">Tu negocio está suspendido por falta de pago</h2><p className="text-on-surface-variant mt-1">Tus datos están guardados y tu página de reservas sigue funcionando. Para volver a usar el Admin, elige un plan.</p></>}
       </section>
+      {sp.auto === 'mp' && <p className="mb-4 p-3 rounded-xl bg-[#ECFDF5] text-[#065F46] font-label-lg">Listo. Cuando Mercado Pago confirme la autorización, verás la renovación automática activa aquí.</p>}
+      {sp.error === 'mp' && <p className="mb-4 p-3 rounded-xl bg-[#FFF1F2] text-danger font-label-lg">Mercado Pago no respondió. Intenta de nuevo en unos minutos.</p>}
+      {owner && <AutoRenew on={main.autoRenew} card={main.billingCard} provider={main.autoRenew ? main.billingProvider || prov : prov} plans={PLANS.map(p => ({ id: p.id, name: p.name, price: p.price, year: yearPrice(p) }))} plan={autoPlan.id} period={main.billingPeriod} nextAt={fechaLarga(dueDate(main))} amount={autoAmount} fails={main.billingFails} error={main.billingError} trial={s.state === 'PRUEBA'} />}
+      {owner && prov === 'MERCADOPAGO' && !main.autoRenew && (
+        <form action={startMpSubscription} className="card-raised p-5 mb-4 flex flex-wrap items-end gap-3">
+          <div className="flex-1 min-w-[220px]"><h2 className="h-section">Renovación automática con Mercado Pago</h2><p className="text-on-surface-variant font-body-sm">Autorizas una sola vez en Mercado Pago y el plan se cobra solo{s.state === 'PRUEBA' ? ' desde que termine la prueba' : ''}. Lo cancelas cuando quieras.</p></div>
+          <select name="plan" defaultValue={autoPlan.id} className="input !w-auto">{PLANS.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select>
+          <select name="period" defaultValue="MENSUAL" className="input !w-auto"><option value="MENSUAL">Cada mes</option><option value="ANUAL">Cada año</option></select>
+          <Submit className="btn-primary">Continuar en Mercado Pago</Submit>
+        </form>
+      )}
       {!owner && <p className="mb-4 text-on-surface-variant">Solo el dueño del negocio puede pagar la suscripción.</p>}
-      <p className="mb-3 text-on-surface-variant">Paga mes a mes o ahorra pagando el año completo.</p>
+      <p className="mb-3 text-on-surface-variant">{main.autoRenew ? '¿Prefieres pagar ya? También puedes pagar a mano:' : 'O paga a mano: mes a mes o el año completo con descuento.'}</p>
       <div className="grid md:grid-cols-3 gap-4">{PLANS.map(p => {
         const year = yearPrice(p); const save = p.price * 12 - year; const freeMonths = Math.round(save / Math.max(1, p.price));
         return (
@@ -50,7 +68,7 @@ export default async function Suscripcion({ searchParams }: { searchParams: Prom
             <Submit className="btn-primary w-full mt-2">Pagar</Submit></>}
         </form>
       ); })}</div>
-      {provider() === 'SIMULADO' && <p className="mt-3 font-body-sm text-on-surface-variant">La pasarela está en modo de prueba: configura Wompi o Mercado Pago para cobrar de verdad.</p>}
+      {prov === 'SIMULADO' && <p className="mt-3 font-body-sm text-on-surface-variant">La pasarela está en modo de prueba: configura Wompi o Mercado Pago para cobrar de verdad.</p>}
       {payments.length > 0 && <section className="card p-5 mt-4"><h2 className="h-section mb-3">Pagos de suscripción</h2><ul className="space-y-1">{payments.map(p => <li key={p.id} className="flex justify-between"><span>{fechaLarga(p.createdAt)} · {METHOD_LABEL[p.method] || p.method}</span><span className="tnum">{cop(p.amount)} · {p.status.toLowerCase()}</span></li>)}</ul></section>}
     </>
   );

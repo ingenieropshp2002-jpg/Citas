@@ -48,4 +48,4 @@ export const STATUS_LABEL: Record<string, string> = {
   PENDIENTE: 'Pendiente', CONFIRMADA: 'Confirmada', EN_SERVICIO: 'En servicio', COMPLETADA: 'Completada', NO_ASISTIO: 'No asistió', CANCELADA: 'Cancelada'
 };
 export const CATEGORY_LABEL: Record<string, string> = { PELUQUERIA: 'Peluquería', BARBERIA: 'Barbería', SPA: 'Spa', UNAS: 'Uñas' };
-export const METHOD_LABEL: Record<string, string> = { EFECTIVO: 'Efectivo', TARJETA: 'Tarjeta', NEQUI: 'Nequi', PSE: 'PSE', DAVIPLATA: 'Daviplata', TRANSFERENCIA: 'Transferencia', EN_LOCAL: 'Pago en el local', PAQUETE: 'Paquete / membresía', REGALO: 'Tarjeta de regalo' };
+export const METHOD_LABEL: Record<string, string> = { EFECTIVO: 'Efectivo', TARJETA: 'Tarjeta', NEQUI: 'Nequi', PSE: 'PSE', DAVIPLATA: 'Daviplata', TRANSFERENCIA: 'Transferencia', EN_LOCAL: 'Pago en el local', PAQUETE: 'Paquete / membresía', REGALO: 'Tarjeta de regalo', AUTOMATICO: 'Cobro automático' };

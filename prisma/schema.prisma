@@ -79,6 +79,15 @@ model Business {
   active              Boolean     @default(true)
   featured            Boolean     @default(false) // destacado en el buscador (lo marca el superadmin)
   waitEntries         WaitEntry[]
+  autoRenew           Boolean     @default(false) // renovación automática de la suscripción
+  billingPeriod       String      @default("MENSUAL") // MENSUAL | ANUAL
+  billingProvider     String? // WOMPI | MERCADOPAGO | SIMULADO
+  billingRef          String? // Wompi: payment_source_id; Mercado Pago: preapproval id
+  billingCard         String? // "VISA •••• 4242"
+  billingEmail        String?
+  billingFails        Int         @default(0)
+  billingLastTryAt    DateTime?
+  billingError        String?
   onboarding          String      @default("{}") // guía de primeros pasos: { done: string[], hidden: boolean }
   ownerId             String
   parentId            String? // sede principal (si esta es una sede adicional)

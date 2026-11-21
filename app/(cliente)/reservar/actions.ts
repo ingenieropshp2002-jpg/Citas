@@ -121,6 +121,7 @@ export async function settlePayment(reference: string, approved: boolean, provid
   if (!pay || pay.status === 'APROBADO') return pay;
   await db.payment.update({ where: { id: pay.id }, data: { status: approved ? 'APROBADO' : 'RECHAZADO', providerRef } });
   if (approved && reference.startsWith('SUB-')) { const { applySubscriptionPayment } = await import('@/app/admin/_actions/subscription'); await applySubscriptionPayment(pay.businessId, reference.slice(4).split('_')[0]); }
+  if (!approved && pay.method === 'AUTOMATICO') { const b = await db.business.findUnique({ where: { id: pay.businessId }, select: { billingError: true } }); await (await import('@/lib/billing')).chargeFailed(pay.businessId, b?.billingError || 'La tarjeta fue rechazada.'); }
   if (pay.appointment) {
     await db.appointment.update({ where: { id: pay.appointment.id }, data: approved ? { depositStatus: 'PAGADO', status: 'CONFIRMADA' } : { depositStatus: 'PENDIENTE' } });
     if (approved && pay.appointment.customer.phone) await sendWhatsapp(pay.appointment.customer.phone, `✅ Tu cita ${pay.appointment.code} en ${pay.appointment.business.name} está confirmada. Te recordaremos antes de tu cita.`, { phoneId: pay.appointment.business.waPhoneId, businessId: pay.appointment.businessId, template: { kind: 'CONFIRMACION', params: [pay.appointment.customer.name.split(' ')[0], pay.appointment.business.name, `${fechaCorta(pay.appointment.start)} a las ${time12(hm(pay.appointment.start))}`, 'confirmada', `${appUrl()}/cita/${pay.appointment.code}`] } });
