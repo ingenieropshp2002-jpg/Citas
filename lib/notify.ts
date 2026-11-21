@@ -3,7 +3,7 @@
 // Fuera de la ventana de 24 h Meta solo deja enviar PLANTILLAS aprobadas; por eso cada aviso automático tiene su plantilla.
 import { db } from './db';
 
-export type WaKind = 'RECORDATORIO' | 'CONFIRMACION' | 'CUMPLEANOS' | 'RECUPERAR' | 'CAMPANA' | 'TURNO' | 'RESENA' | 'CUPO_LIBRE';
+export type WaKind = 'RECORDATORIO' | 'CONFIRMACION' | 'CUMPLEANOS' | 'RECUPERAR' | 'CAMPANA' | 'TURNO' | 'RESENA' | 'CUPO_LIBRE' | 'AVISO_NEGOCIO' | 'RESUMEN_DIA';
 export type WaTemplate = { kind: WaKind; params: string[] };
 export type WaConfig = { token: string; phoneId: string; verifyToken: string; appSecret: string; lang: string; templates: Partial<Record<WaKind, string>> };
 
@@ -16,6 +16,8 @@ export const WA_TEMPLATES: { kind: WaKind; name: string; label: string; body: st
   { kind: 'RESENA', name: 'pedir_resena', label: 'Pedir reseña después de la cita', body: 'Hola {{1}}, gracias por visitarnos en {{2}}. ¿Nos regalas tu opinión? Toma menos de un minuto: {{3}}' },
   { kind: 'CUMPLEANOS', name: 'feliz_cumpleanos', label: 'Saludo de cumpleaños', body: '¡Feliz cumpleaños, {{1}}! 🎉 En {{2}} te tenemos un regalo especial.' },
   { kind: 'CAMPANA', name: 'promocion', label: 'Campañas y promociones', body: 'Hola {{1}}, {{2}} te trae una promoción: {{3}}' },
+  { kind: 'AVISO_NEGOCIO', name: 'aviso_cita_negocio', label: 'Aviso al negocio: cita nueva, cancelada o movida', body: '{{1}} en {{2}}: {{3}}, {{4}}, con {{5}}. Servicio: {{6}}. Mira la agenda: {{7}}' },
+  { kind: 'RESUMEN_DIA', name: 'resumen_dia_profesional', label: 'Resumen de la mañana para cada profesional', body: 'Buenos días {{1}}, hoy tienes {{2}} en {{3}}: {{4}}. Mira tu agenda: {{5}}' },
   { kind: 'RECUPERAR', name: 'codigo_acceso', label: 'Código o enlace de acceso', body: 'Tu código de acceso es {{1}}.' }
 ];
 

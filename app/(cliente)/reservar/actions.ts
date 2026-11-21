@@ -13,6 +13,7 @@ import { createCheckout } from '@/lib/payments';
 import { sendWhatsapp } from '@/lib/notify';
 import { revalidatePath } from 'next/cache';
 import { uniqueCode } from '@/lib/codigo';
+import { avisarNegocio } from '@/lib/avisos';
 
 const appUrl = () => process.env.APP_URL || 'http://localhost:3000';
 /** Código de 6 caracteres, único en toda la plataforma (ver lib/codigo.ts). */
@@ -100,6 +101,7 @@ export async function createBooking(input: { businessId: string; serviceIds: str
     } catch (e) { if (!isOverlapError(e)) throw e; }
   }
   if (!appt) return await taken(b.id, input, dur);
+  await avisarNegocio(appt.id, 'NUEVA');
   // Ya consiguió cita: sale de la lista de espera de este negocio.
   if (user) await db.waitEntry.updateMany({ where: { businessId: b.id, userId: user.id, status: 'ACTIVA' }, data: { status: 'RESERVADA' } });
   if (couponCode) await db.coupon.updateMany({ where: { businessId: b.id, code: couponCode }, data: { uses: { increment: 1 } } });
@@ -145,6 +147,7 @@ export async function cancelMine(code: string) {
   await db.appointment.update({ where: { id: a.id }, data: { status: 'CANCELADA', depositStatus: a.depositStatus === 'PAGADO' ? (refundable ? 'REEMBOLSADO' : 'PAGADO') : a.depositStatus } });
   revalidatePath('/mis-citas');
   await notifyFreed([a], null);
+  await avisarNegocio(a.id, 'CANCELADA');
   await pushToBusiness(a.businessId, { title: '❌ Cita cancelada', body: `${a.customer.name} canceló su cita del ${fechaCorta(a.start)} a las ${time12(hm(a.start))}`, url: '/admin/agenda', tag: `cita-${a.code}` }, a.staffId);
   return { ok: true, refundable };
 }
@@ -161,6 +164,7 @@ export async function rescheduleMine(code: string, date: string, time: string) {
   try { await db.appointment.update({ where: { id: a.id }, data: { start, end, reminderSent: false } }); }
   catch (e) { if (isOverlapError(e)) return { error: 'Alguien acaba de tomar ese horario. Elige otro.' }; throw e; }
   revalidatePath('/mis-citas');
+  await avisarNegocio(a.id, 'REPROGRAMADA', a.start);
   return { redirect: `/cita/${code}` };
 }
 

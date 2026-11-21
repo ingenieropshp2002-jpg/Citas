@@ -115,6 +115,8 @@ model Business {
   paidUntil           DateTime?
   // WhatsApp (número propio del negocio en WhatsApp Business Cloud API, opcional)
   waPhoneId           String?
+  notifyTo            String      @default("RECEPCION") // avisos de citas al negocio: RECEPCION | PROFESIONAL | AMBOS | NADIE
+  receptionWhatsapp   String?     // WhatsApp de la recepción/secretaria
   autoConfirmRequest  Boolean     @default(true) // pedir confirmación por WhatsApp 24 h antes
   // Fidelización
   loyaltyEnabled      Boolean     @default(true)
@@ -174,6 +176,8 @@ model Staff {
   user                 User?          @relation(fields: [userId], references: [id])
   name                 String
   title                String
+  whatsapp             String?        // para avisos de citas y el resumen del día
+  summaryDay           String?        // último día (AAAA-MM-DD) en que se le envió el resumen
   photo                String?
   color                String         @default("#0d2538")
   commissionPct        Int            @default(40)

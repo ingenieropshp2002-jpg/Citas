@@ -166,6 +166,7 @@ async function runTool(name: string, input: Record<string, unknown>, ctx: { b: B
     ctx.out.booked = code;
     if (ctx.chatId) await db.waChat.update({ where: { id: ctx.chatId }, data: { bookings: { increment: 1 }, name: customer.name } });
     await pushToBusiness(b.id, { title: '🤖 Nueva cita por WhatsApp', body: `${customer.name} · ${sv.map(s => s.name).join(' + ')} · ${date} ${time}`, url: '/admin/agenda', tag: `cita-${code}` }, appt.staffId);
+    await (await import('./avisos')).avisarNegocio(appt.id, 'NUEVA');
     return { ok: true, codigo: code, profesional: staffName(appt.staffId), cuando: when(start), servicios: sv.map(s => s.name), total: cop(total), pago: 'En el local', ver_o_cambiar: `${appUrl()}/cita/${code}` };
   }
 
@@ -187,6 +188,7 @@ async function runTool(name: string, input: Record<string, unknown>, ctx: { b: B
       const { notifyFreed } = await import('./espera');
       await notifyFreed([a], null);
       await pushToBusiness(b.id, { title: '❌ Cita cancelada por WhatsApp', body: `${a.customer.name} canceló su cita del ${when(a.start)}`, url: '/admin/agenda', tag: `cita-${a.code}` }, a.staffId);
+      await (await import('./avisos')).avisarNegocio(a.id, 'CANCELADA');
       return { ok: true, cuando: when(a.start), anticipo: a.depositStatus === 'PAGADO' ? (refundable ? 'Se devuelve el anticipo.' : `El anticipo no se devuelve porque faltaban menos de ${b.cancellationHours} horas.`) : undefined };
     }
     if (hoursLeft < b.cancellationHours) return { error: `Solo se puede mover con ${b.cancellationHours} horas de anticipación. Ofrece pasar con una persona del equipo.` };
@@ -198,6 +200,7 @@ async function runTool(name: string, input: Record<string, unknown>, ctx: { b: B
     try { await db.appointment.update({ where: { id: a.id }, data: { start, end, reminderSent: false } }); }
     catch (e) { if (isOverlapError(e)) return { error: 'Alguien acaba de tomar ese horario.' }; throw e; }
     await pushToBusiness(b.id, { title: '🔁 Cita movida por WhatsApp', body: `${a.customer.name}: ${when(a.start)} → ${when(start)}`, url: '/admin/agenda', tag: `cita-${a.code}` }, a.staffId);
+    await (await import('./avisos')).avisarNegocio(a.id, 'REPROGRAMADA', a.start);
     return { ok: true, antes: when(a.start), ahora: when(start), profesional: a.staff.name };
   }
 
