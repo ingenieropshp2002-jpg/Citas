@@ -11,5 +11,5 @@
   // Base de datos en Supabase pneerwnctmwkfanugkwx (cuenta ingenieropshp2002) por Hyperdrive, sin caché. Aprobado por Inge el 2026-11-21.
   // La primera petición después del cambio copia todo desde la base anterior (DATABASE_URL), una sola vez (lib/migrar.ts).
   "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "ed90a2661507406a98951ba8756bd3dd", "localConnectionString": "postgresql://x:y@localhost:5432/z" }],
-  "vars": { "DB_SCHEMA": "citas" }
+  "vars": { "DB_SCHEMA": "citas", "DB_HYPERDRIVE": "1" }
 }
